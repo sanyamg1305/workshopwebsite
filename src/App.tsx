@@ -111,6 +111,11 @@ const useWorkshop = () => {
 const Step0LeadCapture = () => {
   const { state, updateInput, setStep, completeStep, setSubmissionId } = useWorkshop();
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (error) setError('');
+  }, [state.inputs.fullName, state.inputs.workEmail, state.inputs.phone, state.inputs.companyName, state.inputs.leadRole]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,50 +126,52 @@ const Step0LeadCapture = () => {
       return;
     }
 
-    try {
-      // Save to Supabase
-      const { data, error: sbError } = await supabase
-        .from('workshop_submissions')
-        .insert({
-          full_name: fullName,
-          work_email: workEmail,
-          phone: phone,
-          company_name: companyName,
-          lead_role: leadRole,
-          current_step: 0,
-          workshop_inputs: state.inputs,
-          workshop_outputs: state.outputs
-        })
-        .select()
-        .single();
+    setLoading(true);
+    setError('');
 
-      if (sbError) {
-        console.error("Supabase Insert Error:", sbError);
-        throw sbError;
+    try {
+      // Save to Supabase (Optional - don't block the workshop if it fails)
+      try {
+        const { data, error: sbError } = await supabase
+          .from('workshop_submissions')
+          .insert({
+            full_name: fullName,
+            work_email: workEmail,
+            phone: phone,
+            company_name: companyName,
+            lead_role: leadRole,
+            current_step: 0,
+            workshop_inputs: state.inputs,
+            workshop_outputs: state.outputs
+          })
+          .select()
+          .single();
+
+        if (sbError) {
+          console.warn("Supabase Insert Error (Non-blocking):", sbError);
+        } else if (data) {
+          setSubmissionId(data.id);
+          // Save submission ID to localStorage for recovery
+          const leadData = { fullName, workEmail, phone, companyName, leadRole, submissionId: data.id };
+          localStorage.setItem('userLeadData', JSON.stringify(leadData));
+        }
+      } catch (sbCatchError) {
+        console.warn("Supabase Catch Error (Non-blocking):", sbCatchError);
       }
 
-      if (!data) throw new Error("No data returned from database.");
-
-      // Save to localStorage
-      const leadData = { fullName, workEmail, phone, companyName, leadRole, submissionId: data.id };
-      localStorage.setItem('userLeadData', JSON.stringify(leadData));
+      // Always save to localStorage as a fallback
+      if (!localStorage.getItem('userLeadData')) {
+        const leadData = { fullName, workEmail, phone, companyName, leadRole };
+        localStorage.setItem('userLeadData', JSON.stringify(leadData));
+      }
       
-      setSubmissionId(data.id);
       completeStep(0);
       setStep(1);
     } catch (err: any) {
       console.error("Workshop Start Error:", err);
-      let errorMessage = 'Failed to start workshop. Please try again.';
-      
-      if (err.message?.includes('relation "workshop_submissions" does not exist')) {
-        errorMessage = 'Database table "workshop_submissions" is missing in your Supabase project.';
-      } else if (err.message?.includes('row-level security policy')) {
-        errorMessage = 'Database permission denied. Please check your Supabase RLS policies.';
-      } else if (err.message?.includes('Failed to fetch')) {
-        errorMessage = 'Network error. Please check your internet connection or Supabase URL.';
-      }
-      
-      setError(errorMessage);
+      setError('Failed to start workshop. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -252,10 +259,20 @@ const Step0LeadCapture = () => {
 
           <button
             type="submit"
-            className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-primary/30 flex items-center justify-center gap-3 mt-4"
+            disabled={loading}
+            className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-primary/30 flex items-center justify-center gap-3 mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Start Workshop
-            <ArrowRight size={24} />
+            {loading ? (
+              <>
+                <Loader2 className="animate-spin" size={24} />
+                Starting...
+              </>
+            ) : (
+              <>
+                Start Workshop
+                <ArrowRight size={24} />
+              </>
+            )}
           </button>
         </form>
       </motion.div>
@@ -1314,7 +1331,7 @@ export default function App() {
 
   if (state.currentStep === 0) {
     return (
-      <WorkshopContext.Provider value={{ state, setStep, updateInput, completeStep, generateOutput }}>
+      <WorkshopContext.Provider value={{ state, setStep, updateInput, completeStep, generateOutput, setSubmissionId }}>
         <Step0LeadCapture />
       </WorkshopContext.Provider>
     );
