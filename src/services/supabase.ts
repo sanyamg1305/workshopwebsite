@@ -1,13 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Use environment variables if available, otherwise fallback to hardcoded values for the preview environment
+const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL || (process.env as any).VITE_SUPABASE_URL || 'https://aocccmaofrektmcnsgda.supabase.co';
+const supabaseKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || (process.env as any).VITE_SUPABASE_ANON_KEY || 'sb_publishable_QoYwA0c28sESjdwB6Bv3Pg_S_xgpvSA';
 
-if (!supabaseUrl || !supabaseKey) {
-  console.warn("Supabase credentials are missing. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
-}
-
-export const supabase = createClient(supabaseUrl || '', supabaseKey || '');
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
 export const saveWorkshopSubmission = async (data: any) => {
   const { id, ...rest } = data;

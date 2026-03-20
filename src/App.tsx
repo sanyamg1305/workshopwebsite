@@ -19,7 +19,14 @@ import {
   LayoutDashboard,
   ArrowRight,
   ExternalLink,
-  Loader2
+  Loader2,
+  Sparkles,
+  User,
+  Briefcase,
+  Image,
+  Share2,
+  Calendar,
+  Layers
 } from 'lucide-react';
 import * as gemini from './services/gemini';
 import { supabase } from './services/supabase';
@@ -131,7 +138,12 @@ const Step0LeadCapture = () => {
         .select()
         .single();
 
-      if (sbError) throw sbError;
+      if (sbError) {
+        console.error("Supabase Insert Error:", sbError);
+        throw sbError;
+      }
+
+      if (!data) throw new Error("No data returned from database.");
 
       // Save to localStorage
       const leadData = { fullName, workEmail, phone, companyName, leadRole, submissionId: data.id };
@@ -140,9 +152,19 @@ const Step0LeadCapture = () => {
       setSubmissionId(data.id);
       completeStep(0);
       setStep(1);
-    } catch (err) {
-      console.error("Supabase Error:", err);
-      setError('Failed to start workshop. Please try again.');
+    } catch (err: any) {
+      console.error("Workshop Start Error:", err);
+      let errorMessage = 'Failed to start workshop. Please try again.';
+      
+      if (err.message?.includes('relation "workshop_submissions" does not exist')) {
+        errorMessage = 'Database table "workshop_submissions" is missing in your Supabase project.';
+      } else if (err.message?.includes('row-level security policy')) {
+        errorMessage = 'Database permission denied. Please check your Supabase RLS policies.';
+      } else if (err.message?.includes('Failed to fetch')) {
+        errorMessage = 'Network error. Please check your internet connection or Supabase URL.';
+      }
+      
+      setError(errorMessage);
     }
   };
 
@@ -271,7 +293,7 @@ const Chip = ({ label, selected, onClick }: any) => (
   </button>
 );
 
-const OutputCard = ({ title, children, highlight = false, copyText }: any) => (
+const OutputCard = ({ title, children, highlight = false, copyText, icon: Icon }: any) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
@@ -280,11 +302,15 @@ const OutputCard = ({ title, children, highlight = false, copyText }: any) => (
     } shadow-sm`}
   >
     <div className="flex items-center justify-between mb-4">
-      <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary">{title}</h4>
+      <div className="flex items-center gap-2">
+        {Icon && <Icon size={16} className="text-primary" />}
+        <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary">{title}</h4>
+      </div>
       <button 
         onClick={() => {
           const text = copyText || (typeof children === 'string' ? children : document.getElementById(`output-${title}`)?.innerText);
           navigator.clipboard.writeText(text || '');
+          alert('Copied to clipboard!');
         }}
         className="p-2 hover:bg-white/5 rounded-lg transition-colors text-text-secondary hover:text-primary"
       >
@@ -304,8 +330,8 @@ const Step1ProfileCheck = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const roles = ['Founder', 'CEO', 'Consultant', 'Freelancer', 'Agency Owner', 'Other'];
-  const tones = ['Bold', 'Professional', 'Casual'];
+  const roles = ['Founder', 'CEO', 'Consultant', 'Freelancer', 'Agency Owner', 'Sales Leader', 'Marketing Director', 'Other'];
+  const tones = ['Bold', 'Professional', 'Casual', 'Witty', 'Direct', 'Empathetic', 'Data-driven'];
 
   const handleOptimize = async () => {
     setLoading(true);
@@ -391,14 +417,19 @@ const Step1ProfileCheck = () => {
         <button
           onClick={handleOptimize}
           disabled={loading || !state.inputs.linkedinHeadline || !state.inputs.linkedinAbout || !state.inputs.role || !state.inputs.targetIcp || !state.inputs.tonePreference}
-          className="w-full py-4 bg-primary text-black rounded-xl font-bold hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+          className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
         >
           {loading ? (
             <>
-              <Loader2 className="animate-spin" size={20} />
-              Optimizing...
+              <Loader2 className="animate-spin" size={24} />
+              Optimizing Profile...
             </>
-          ) : 'Optimize My Profile'}
+          ) : (
+            <>
+              Optimize My Profile
+              <Zap size={24} />
+            </>
+          )}
         </button>
       </div>
 
@@ -426,13 +457,19 @@ const Step1ProfileCheck = () => {
           </div>
 
           <div className="space-y-4">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary">Optimized Headlines</h4>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-2">
+              <Sparkles size={16} className="text-primary" />
+              Optimized Headlines
+            </h4>
             <div className="space-y-3">
               {state.outputs.optimizedHeadlines.map((h, i) => (
                 <div key={i} className="p-5 bg-section border border-border rounded-xl flex items-center justify-between group hover:border-primary/50 transition-all">
                   <span className="text-sm font-medium leading-relaxed">{h}</span>
                   <button 
-                    onClick={() => navigator.clipboard.writeText(h)}
+                    onClick={() => {
+                      navigator.clipboard.writeText(h);
+                      alert('Headline copied!');
+                    }}
                     className="p-2 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/10 rounded-lg text-primary"
                   >
                     <Copy size={16} />
@@ -442,7 +479,7 @@ const Step1ProfileCheck = () => {
             </div>
           </div>
 
-          <OutputCard title="Optimized About Section" copyText={state.outputs.optimizedAbout}>
+          <OutputCard title="Optimized About Section" copyText={state.outputs.optimizedAbout} icon={User}>
             <div className="text-sm leading-relaxed whitespace-pre-wrap font-normal text-text-secondary">
               {state.outputs.optimizedAbout}
             </div>
@@ -451,13 +488,19 @@ const Step1ProfileCheck = () => {
           <div className="p-8 bg-primary/5 border-2 border-primary/20 rounded-2xl relative group overflow-hidden">
             <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
               <button 
-                onClick={() => navigator.clipboard.writeText(state.outputs.optimizedPositioning)}
+                onClick={() => {
+                  navigator.clipboard.writeText(state.outputs.optimizedPositioning);
+                  alert('Positioning copied!');
+                }}
                 className="p-2 hover:bg-primary/10 rounded-lg text-primary"
               >
                 <Copy size={16} />
               </button>
             </div>
-            <h4 className="text-xs font-bold uppercase text-primary mb-4 tracking-widest">Strategic Positioning</h4>
+            <h4 className="text-xs font-bold uppercase text-primary mb-4 tracking-widest flex items-center gap-2">
+              <Target size={16} />
+              Strategic Positioning
+            </h4>
             <p className="text-xl font-bold italic leading-relaxed">"{state.outputs.optimizedPositioning}"</p>
           </div>
         </motion.div>
@@ -562,10 +605,10 @@ const Step2ICPBuilder = () => {
       <button
         onClick={handleGenerate}
         disabled={loading}
-        className="w-full py-4 bg-black text-white rounded-xl font-bold hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2"
+        className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
       >
-        {loading && <Loader2 className="animate-spin" size={20} />}
-        {loading ? 'Generating...' : 'Generate ICP Summary'}
+        {loading && <Loader2 className="animate-spin" size={24} />}
+        {loading ? 'Generating ICP...' : 'Generate ICP Summary'}
       </button>
 
       {state.outputs.icpSummary && (
@@ -633,10 +676,10 @@ const Step3ValueProp = () => {
       <button
         onClick={handleGenerate}
         disabled={loading}
-        className="w-full py-4 bg-black text-white rounded-xl font-bold hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2"
+        className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
       >
-        {loading && <Loader2 className="animate-spin" size={20} />}
-        {loading ? 'Generating...' : 'Generate Value Prop'}
+        {loading && <Loader2 className="animate-spin" size={24} />}
+        {loading ? 'Generating Value Prop...' : 'Generate Value Prop'}
       </button>
 
       {state.outputs.valueProp && (
@@ -712,10 +755,10 @@ const Step4WebsiteBuilder = () => {
       <button
         onClick={handleGenerate}
         disabled={loading}
-        className="w-full py-4 bg-black text-white rounded-xl font-bold hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2"
+        className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
       >
-        {loading && <Loader2 className="animate-spin" size={20} />}
-        {loading ? 'Generating...' : 'Generate Website Prompt'}
+        {loading && <Loader2 className="animate-spin" size={24} />}
+        {loading ? 'Generating Prompt...' : 'Generate Website Prompt'}
       </button>
 
       {state.outputs.websitePrompt && (
@@ -758,10 +801,10 @@ const Step5GTMStrategy = () => {
       <button
         onClick={handleGenerate}
         disabled={loading}
-        className="w-full py-4 bg-black text-white rounded-xl font-bold hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2"
+        className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
       >
-        {loading && <Loader2 className="animate-spin" size={20} />}
-        {loading ? 'Generating...' : 'Generate GTM Report'}
+        {loading && <Loader2 className="animate-spin" size={24} />}
+        {loading ? 'Generating Report...' : 'Generate GTM Report'}
       </button>
 
       {state.outputs.gtmReport.primary && (
@@ -826,9 +869,9 @@ const Step6OutreachCampaign = () => {
     }
   };
 
-  const types = ['LinkedIn', 'Email', 'Hybrid'];
-  const tones = ['Friendly', 'Direct', 'Insight-led', 'Curious'];
-  const ctas = ['Soft', 'Direct', 'Question-based'];
+  const types = ['LinkedIn', 'Email', 'Hybrid', 'Twitter/X', 'Cold Call Script'];
+  const tones = ['Friendly', 'Direct', 'Insight-led', 'Curious', 'Challenger', 'Helpful', 'Urgent'];
+  const ctas = ['Soft', 'Direct', 'Question-based', 'Value-first', 'Calendar Link', 'Reply-based'];
 
   return (
     <div className="space-y-8">
@@ -869,30 +912,43 @@ const Step6OutreachCampaign = () => {
       <button
         onClick={handleGenerate}
         disabled={loading || !state.inputs.campaignType || !state.inputs.tone || !state.inputs.cta}
-        className="w-full py-4 bg-black text-white rounded-xl font-bold hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2"
+        className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
       >
-        {loading && <Loader2 className="animate-spin" size={20} />}
-        {loading ? 'Generating...' : 'Generate Campaign Flow'}
+        {loading && <Loader2 className="animate-spin" size={24} />}
+        {loading ? 'Generating Flow...' : 'Generate Campaign Flow'}
       </button>
 
       {state.outputs.campaignFlow.length > 0 && (
-        <div className="mt-12 p-8 bg-section rounded-3xl border border-border">
-          <h4 className="text-xs font-bold uppercase text-text-secondary mb-8 text-center tracking-widest">Sequence Flow</h4>
-          <div className="flex flex-col md:flex-row items-center justify-center gap-4">
+        <div className="space-y-6">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-2">
+            <Layers size={16} className="text-primary" />
+            Campaign Sequence
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {state.outputs.campaignFlow.map((step, i) => (
-              <React.Fragment key={i}>
-                <motion.div 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  className="px-6 py-4 bg-bg border-2 border-primary rounded-2xl font-bold shadow-sm text-center"
-                >
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.1 }}
+                className="p-5 bg-section border border-border rounded-2xl relative group hover:border-primary transition-all"
+              >
+                <div className="absolute -top-3 -left-3 w-8 h-8 bg-primary text-black rounded-full flex items-center justify-center font-bold text-sm shadow-lg">
+                  {i + 1}
+                </div>
+                <div className="text-xs text-text-secondary leading-relaxed">
                   {step}
-                </motion.div>
-                {i < state.outputs.campaignFlow.length - 1 && (
-                  <ArrowRight className="text-primary rotate-90 md:rotate-0" size={24} />
-                )}
-              </React.Fragment>
+                </div>
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(step);
+                    alert('Step content copied!');
+                  }}
+                  className="mt-4 w-full py-2 text-[10px] font-bold uppercase tracking-wider border border-border rounded-lg hover:bg-primary hover:border-primary hover:text-black transition-all"
+                >
+                  Copy Step
+                </button>
+              </motion.div>
             ))}
           </div>
         </div>
@@ -914,8 +970,8 @@ const Step7DMGenerator = () => {
     }
   };
 
-  const angles = ['Pain', 'Curiosity', 'Insight', 'Trend'];
-  const tones = ['Friendly', 'Professional', 'Direct'];
+  const angles = ['Pain', 'Curiosity', 'Insight', 'Trend', 'Case Study', 'Mutual Connection', 'Recent News', 'Compliment'];
+  const tones = ['Friendly', 'Professional', 'Direct', 'Witty', 'Empathetic', 'Bold'];
 
   return (
     <div className="space-y-8">
@@ -947,18 +1003,21 @@ const Step7DMGenerator = () => {
       <button
         onClick={handleGenerate}
         disabled={loading}
-        className="w-full py-4 bg-black text-white rounded-xl font-bold hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2"
+        className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
       >
-        {loading && <Loader2 className="animate-spin" size={20} />}
-        {loading ? 'Generating...' : 'Generate Messages'}
+        {loading && <Loader2 className="animate-spin" size={24} />}
+        {loading ? 'Generating Messages...' : 'Generate Messages'}
       </button>
 
       <div className="space-y-4">
         {state.outputs.dmMessages.map((msg, i) => (
-          <OutputCard key={i} title={msg.name} copyText={msg.message}>
+          <OutputCard key={i} title={msg.name} copyText={msg.message} icon={MessageSquare}>
             <div className="text-base font-normal whitespace-pre-wrap mb-4">{msg.message}</div>
             <div className="p-4 bg-primary/10 border border-primary/20 rounded-xl">
-              <div className="text-[10px] font-bold uppercase text-primary mb-1">Why it works</div>
+              <div className="text-[10px] font-bold uppercase text-primary mb-1 flex items-center gap-1">
+                <Zap size={10} />
+                Why it works
+              </div>
               <div className="text-xs text-text-secondary leading-relaxed">{msg.whyItWorks}</div>
             </div>
           </OutputCard>
@@ -973,7 +1032,7 @@ const Step8Summary = () => {
 
   const handleDownload = () => {
     const content = `
-MYNTMORE WORKSHOP SUMMARY
+B2B LEAD GENERATION WORKSHOP SUMMARY
 -------------------------
 ICP: ${state.outputs.icpSummary}
 VALUE PROP: ${state.outputs.valueProp}
@@ -992,48 +1051,71 @@ EXPECTED RESULTS: ${state.outputs.gtmReport.results}
   return (
     <div className="space-y-8">
       <div className="text-center mb-12">
-        <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto mb-6">
-          <CheckCircle2 size={40} className="text-black" />
-        </div>
-        <h2 className="text-3xl font-bold mb-2">Workshop Complete!</h2>
-        <p className="text-text-secondary">You've built a complete B2B lead generation engine. Here's your summary.</p>
+        <motion.div 
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          className="w-24 h-24 bg-primary rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl shadow-primary/20"
+        >
+          <CheckCircle2 size={48} className="text-black" />
+        </motion.div>
+        <h2 className="text-4xl font-black mb-2">Workshop Complete!</h2>
+        <p className="text-text-secondary text-lg">You've built a complete B2B lead generation engine. Here's your summary.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="p-6 border border-border rounded-2xl bg-section shadow-sm">
-          <h4 className="text-xs font-bold uppercase text-text-secondary mb-4">ICP</h4>
-          <p className="text-sm line-clamp-4">{state.outputs.icpSummary}</p>
+        <div className="p-8 border-2 border-border rounded-3xl bg-section shadow-sm hover:border-primary transition-colors group">
+          <div className="flex items-center gap-3 mb-4">
+            <Target className="text-primary group-hover:scale-110 transition-transform" size={20} />
+            <h4 className="text-xs font-bold uppercase tracking-widest text-text-secondary">Ideal Customer Profile</h4>
+          </div>
+          <p className="text-sm leading-relaxed line-clamp-4">{state.outputs.icpSummary}</p>
         </div>
-        <div className="p-6 border border-border rounded-2xl bg-section shadow-sm">
-          <h4 className="text-xs font-bold uppercase text-text-secondary mb-4">Value Proposition</h4>
-          <p className="text-sm font-bold text-primary">{state.outputs.valueProp}</p>
+        
+        <div className="p-8 border-2 border-primary/30 rounded-3xl bg-primary/5 shadow-sm hover:border-primary transition-colors group">
+          <div className="flex items-center gap-3 mb-4">
+            <Zap className="text-primary group-hover:scale-110 transition-transform" size={20} />
+            <h4 className="text-xs font-bold uppercase tracking-widest text-text-secondary">Winning Value Prop</h4>
+          </div>
+          <p className="text-lg font-black text-primary leading-tight">{state.outputs.valueProp}</p>
         </div>
-        <div className="p-6 border border-border rounded-2xl bg-section shadow-sm">
-          <h4 className="text-xs font-bold uppercase text-text-secondary mb-4">GTM Strategy</h4>
-          <p className="text-sm">{state.outputs.gtmReport.primary} & {state.outputs.gtmReport.secondary}</p>
+
+        <div className="p-8 border-2 border-border rounded-3xl bg-section shadow-sm hover:border-primary transition-colors group">
+          <div className="flex items-center gap-3 mb-4">
+            <TrendingUp className="text-primary group-hover:scale-110 transition-transform" size={20} />
+            <h4 className="text-xs font-bold uppercase tracking-widest text-text-secondary">GTM Strategy</h4>
+          </div>
+          <div className="space-y-1">
+            <div className="text-sm font-bold">{state.outputs.gtmReport.primary}</div>
+            <div className="text-xs text-text-secondary">Secondary: {state.outputs.gtmReport.secondary}</div>
+          </div>
         </div>
-        <div className="p-6 border border-border rounded-2xl bg-section shadow-sm">
-          <h4 className="text-xs font-bold uppercase text-text-secondary mb-4">Campaign Type</h4>
-          <p className="text-sm">{state.inputs.campaignType} ({state.inputs.tone})</p>
+
+        <div className="p-8 border-2 border-border rounded-3xl bg-section shadow-sm hover:border-primary transition-colors group">
+          <div className="flex items-center gap-3 mb-4">
+            <Layers className="text-primary group-hover:scale-110 transition-transform" size={20} />
+            <h4 className="text-xs font-bold uppercase tracking-widest text-text-secondary">Campaign Setup</h4>
+          </div>
+          <div className="text-sm font-bold">{state.inputs.campaignType}</div>
+          <div className="text-xs text-text-secondary">{state.inputs.tone} Tone · {state.inputs.cta} CTA</div>
         </div>
       </div>
 
-      <div className="flex gap-4 mt-12">
+      <div className="flex flex-col sm:flex-row gap-4 mt-12">
         <button
           onClick={() => {
             navigator.clipboard.writeText(JSON.stringify(state, null, 2));
             alert('Full state copied to clipboard!');
           }}
-          className="flex-1 py-4 border-2 border-black rounded-xl font-bold hover:bg-black hover:text-white transition-all flex items-center justify-center gap-2"
+          className="flex-1 py-5 border-2 border-border rounded-2xl font-bold hover:bg-section transition-all flex items-center justify-center gap-3"
         >
-          <Copy size={18} />
-          Copy All Data
+          <Copy size={20} />
+          Copy Full Data
         </button>
         <button
           onClick={handleDownload}
-          className="flex-1 py-4 bg-primary text-black rounded-xl font-bold hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+          className="flex-1 py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
         >
-          <Send size={18} />
+          <Send size={20} />
           Download Summary
         </button>
       </div>
@@ -1245,8 +1327,8 @@ export default function App() {
         <aside className="w-72 border-r border-border fixed h-full bg-bg z-20 hidden lg:block">
           <div className="p-8">
             <div className="flex items-center gap-2 mb-12">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center font-black text-black">M</div>
-              <span className="font-bold text-xl tracking-tight text-text-primary">Myntmore</span>
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center font-black text-black">B2B</div>
+              <span className="font-bold text-xl tracking-tight text-text-primary">Lead Gen</span>
             </div>
             <nav className="space-y-1">
               {steps.map(s => (
