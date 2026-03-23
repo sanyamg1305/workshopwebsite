@@ -319,7 +319,8 @@ const MultiSelectDropdown = ({
               type="text"
               required
               placeholder="Type your answer..."
-              className={`w-full px-4 py-3 rounded-xl border ${!otherValue ? 'border-red-500/50' : 'border-border'} focus:ring-2 focus:ring-primary/50 outline-none bg-bg text-sm transition-all text-white`}
+              style={{ backgroundColor: '#000000', color: '#FFFFFF' }}
+              className={`w-full px-4 py-3 rounded-xl border ${!otherValue ? 'border-red-500/50' : 'border-border'} focus:border-[#FFC947] focus:ring-1 focus:ring-[#FFC947] outline-none text-sm transition-all`}
               value={otherValue}
               onChange={(e) => onOtherChange(e.target.value)}
             />
@@ -953,116 +954,9 @@ const Step2ICPBuilder = () => {
   );
 };
 
-const ValuePropTableComponent = ({ 
-  table, 
-  onChange 
-}: { 
-  table: gemini.ValuePropTable; 
-  onChange: (updated: gemini.ValuePropTable) => void 
-}) => {
-  const updateField = (section: keyof gemini.ValuePropTable, field: string, value: string) => {
-    const updated = { ...table };
-    if (section === 'icpName') {
-      (updated as any).icpName = value;
-    } else {
-      (updated[section] as any)[field] = value;
-    }
-    onChange(updated);
-  };
-
-  const SectionHeader = ({ title, icon: Icon }: { title: string; icon: any }) => (
-    <div className="flex items-center gap-2 px-4 py-3 bg-section-alt border-y border-border">
-      <Icon size={16} className="text-primary" />
-      <span className="text-xs font-black uppercase tracking-widest text-text-secondary">{title}</span>
-    </div>
-  );
-
-  const EditableCell = ({ 
-    label, 
-    value, 
-    onChange: onCellChange 
-  }: { 
-    label: string; 
-    value: string; 
-    onChange: (val: string) => void 
-  }) => (
-    <div className="group border-b border-border last:border-b-0 hover:bg-primary/5 transition-colors">
-      <div className="grid grid-cols-1 md:grid-cols-4 min-h-[60px]">
-        <div className="p-4 bg-section-alt/50 md:border-r border-border flex items-center">
-          <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">{label}</span>
-        </div>
-        <div className="col-span-3 p-4">
-          <textarea
-            className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm leading-relaxed resize-none overflow-hidden"
-            value={value}
-            onChange={(e) => {
-              onCellChange(e.target.value);
-              e.target.style.height = 'auto';
-              e.target.style.height = e.target.scrollHeight + 'px';
-            }}
-            onFocus={(e) => {
-              e.target.style.height = 'auto';
-              e.target.style.height = e.target.scrollHeight + 'px';
-            }}
-            rows={1}
-          />
-        </div>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="bg-section rounded-2xl border border-border overflow-hidden shadow-sm">
-      <div className="p-6 border-b border-border bg-gradient-to-r from-primary/5 to-transparent">
-        <input
-          type="text"
-          className="text-2xl font-black bg-transparent border-none focus:ring-0 p-0 w-full"
-          value={table.icpName}
-          onChange={(e) => updateField('icpName', '', e.target.value)}
-        />
-      </div>
-
-      <SectionHeader title="General Information" icon={User} />
-      <EditableCell label="Vertical / Product" value={table.general.vertical} onChange={(v) => updateField('general', 'vertical', v)} />
-      <EditableCell label="Target Customer" value={table.general.targetCustomer} onChange={(v) => updateField('general', 'targetCustomer', v)} />
-      <EditableCell label="Use Case" value={table.general.useCase} onChange={(v) => updateField('general', 'useCase', v)} />
-
-      <SectionHeader title="Customer Pain Points" icon={Zap} />
-      <EditableCell label="Functional Pain" value={table.pains.functional} onChange={(v) => updateField('pains', 'functional', v)} />
-      <EditableCell label="Financial Pain" value={table.pains.financial} onChange={(v) => updateField('pains', 'financial', v)} />
-      <EditableCell label="Emotional Pain" value={table.pains.emotional} onChange={(v) => updateField('pains', 'emotional', v)} />
-      <EditableCell label="Trust Pain" value={table.pains.trust} onChange={(v) => updateField('pains', 'trust', v)} />
-      <EditableCell label="Awareness Pain" value={table.pains.awareness} onChange={(v) => updateField('pains', 'awareness', v)} />
-
-      <SectionHeader title="Solution Description" icon={Layers} />
-      <EditableCell label="What it is" value={table.solution.description} onChange={(v) => updateField('solution', 'description', v)} />
-      <EditableCell label="Key Features" value={table.solution.features} onChange={(v) => updateField('solution', 'features', v)} />
-      <EditableCell label="Delivery" value={table.solution.delivery} onChange={(v) => updateField('solution', 'delivery', v)} />
-      <EditableCell label="Why Different" value={table.solution.differentiation} onChange={(v) => updateField('solution', 'differentiation', v)} />
-
-      <SectionHeader title="Benefits / Outcomes" icon={TrendingUp} />
-      <EditableCell label="Tangible" value={table.benefits.tangible} onChange={(v) => updateField('benefits', 'tangible', v)} />
-      <EditableCell label="Emotional" value={table.benefits.emotional} onChange={(v) => updateField('benefits', 'emotional', v)} />
-      <EditableCell label="Business Impact" value={table.benefits.impact} onChange={(v) => updateField('benefits', 'impact', v)} />
-
-      <SectionHeader title="Proof & Differentiation" icon={CheckCircle2} />
-      <EditableCell label="Credibility" value={table.proof.credibility} onChange={(v) => updateField('proof', 'credibility', v)} />
-      <EditableCell label="Mechanisms" value={table.proof.mechanisms} onChange={(v) => updateField('proof', 'mechanisms', v)} />
-      <EditableCell label="Competitor Fail" value={table.proof.competitorFailure} onChange={(v) => updateField('proof', 'competitorFailure', v)} />
-
-      <SectionHeader title="Messaging / Positioning" icon={MessageSquare} />
-      <EditableCell label="One-Liner" value={table.messaging.oneLiner} onChange={(v) => updateField('messaging', 'oneLiner', v)} />
-      <EditableCell label="Problem+Sol+Ben" value={table.messaging.psb} onChange={(v) => updateField('messaging', 'psb', v)} />
-      <EditableCell label="Positioning" value={table.messaging.positioning} onChange={(v) => updateField('messaging', 'positioning', v)} />
-      <EditableCell label="CTA" value={table.messaging.cta} onChange={(v) => updateField('messaging', 'cta', v)} />
-    </div>
-  );
-};
-
 const Step3ValueProp = () => {
-  const { state, updateInput, updateOutput, generateOutput } = useWorkshop();
+  const { state, setStep, updateOutput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState(0);
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -1073,10 +967,6 @@ const Step3ValueProp = () => {
     }
   };
 
-  const outcomes = ['More leads', 'More calls', 'Better conversion', 'Scale outbound', 'Better ROI'];
-  const methods = ['LinkedIn outreach', 'Cold email', 'Automation', 'AI', 'Content'];
-  const replacements = ['Expensive ads', 'Hiring SDRs', 'Manual work', 'Inconsistent pipeline'];
-
   return (
     <div className="space-y-8">
       <div>
@@ -1084,89 +974,78 @@ const Step3ValueProp = () => {
         <p className="text-text-secondary">Generate structured, strategic value prop tables for your top 3 ICPs.</p>
       </div>
 
-      <div className="bg-section p-6 rounded-2xl border border-border space-y-8">
-        <MultiSelectDropdown
-          label="Primary Outcome"
-          options={outcomes}
-          selected={state.inputs.outcome}
-          onChange={(val) => updateInput('outcome', val)}
-          otherValue={state.inputs.outcomeOther}
-          onOtherChange={(val) => updateInput('outcomeOther', val)}
-          placeholder="Select Outcome(s)"
-        />
-
-        <MultiSelectDropdown
-          label="Your Method"
-          options={methods}
-          selected={state.inputs.method}
-          onChange={(val) => updateInput('method', val)}
-          otherValue={state.inputs.methodOther}
-          onOtherChange={(val) => updateInput('methodOther', val)}
-          placeholder="Select Method(s)"
-        />
-
-        <MultiSelectDropdown
-          label="What you replace"
-          options={replacements}
-          selected={state.inputs.replacement}
-          onChange={(val) => updateInput('replacement', val)}
-          otherValue={state.inputs.replacementOther}
-          onOtherChange={(val) => updateInput('replacementOther', val)}
-          placeholder="Select Replacement(s)"
-        />
-      </div>
-
-      <button
-        onClick={handleGenerate}
-        disabled={loading || state.inputs.outcome.length === 0 || state.inputs.method.length === 0 || state.inputs.replacement.length === 0}
-        className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
-      >
-        {loading && <Loader2 className="animate-spin" size={24} />}
-        {loading ? 'Generating Strategy Assets...' : 'Generate Value Proposition Tables'}
-      </button>
-
-      {state.outputs.valuePropTables.length > 0 && (
-        <div className="space-y-8">
-          <div className="flex gap-2 p-1 bg-section border border-border rounded-xl w-fit">
-            {state.outputs.valuePropTables.map((table, i) => (
-              <button
-                key={i}
-                onClick={() => setActiveTab(i)}
-                className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${
-                  activeTab === i 
-                    ? 'bg-primary text-black shadow-lg shadow-primary/20' 
-                    : 'text-text-secondary hover:text-text hover:bg-section-alt'
-                }`}
-              >
-                ICP {i + 1}
-              </button>
-            ))}
+      {state.outputs.valuePropTables.length === 0 ? (
+        <button
+          onClick={handleGenerate}
+          disabled={loading}
+          className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
+        >
+          {loading && <Loader2 className="animate-spin" size={24} />}
+          {loading ? 'Inferring Strategy...' : 'Generate Positioning Strategy'}
+        </button>
+      ) : (
+        <div className="space-y-8 animate-in fade-in duration-500">
+          <div className="p-6 bg-primary/10 border border-primary/20 rounded-2xl text-center">
+            <h3 className="text-lg font-bold text-primary">
+              Based on your inputs, here’s how your positioning looks across your top ICPs.
+            </h3>
           </div>
 
-          <ValuePropTableComponent 
-            table={state.outputs.valuePropTables[activeTab]} 
-            onChange={(updated) => {
-              const newTables = [...state.outputs.valuePropTables];
-              newTables[activeTab] = updated;
-              updateOutput('valuePropTables', newTables);
-            }}
-          />
-
-          {state.outputs.globalSolution && (
-            <div className="p-8 bg-section border border-border rounded-2xl space-y-4">
-              <h3 className="text-xl font-black flex items-center gap-2">
-                <Globe size={24} className="text-primary" />
-                Global Solution Section
-              </h3>
-              <div className="prose prose-invert max-w-none">
-                {state.outputs.globalSolution.split('\n').map((p, i) => (
-                  <p key={i} className="text-text-secondary leading-relaxed mb-4 last:mb-0">
-                    {p}
-                  </p>
+          <div className="overflow-x-auto rounded-2xl border border-border">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-section-alt border-b border-border">
+                  <th className="p-4 text-xs font-black uppercase text-text-secondary tracking-widest whitespace-nowrap">ICP</th>
+                  <th className="p-4 text-xs font-black uppercase text-text-secondary tracking-widest whitespace-nowrap">Desired Outcome</th>
+                  <th className="p-4 text-xs font-black uppercase text-text-secondary tracking-widest min-w-[200px]">Current Problem</th>
+                  <th className="p-4 text-xs font-black uppercase text-text-secondary tracking-widest min-w-[200px]">Your Method</th>
+                  <th className="p-4 text-xs font-black uppercase text-text-secondary tracking-widest min-w-[150px]">What You Replace</th>
+                  <th className="p-4 text-xs font-black uppercase text-text-secondary tracking-widest whitespace-nowrap">Core Angle</th>
+                </tr>
+              </thead>
+              <tbody className="bg-section divide-y divide-border">
+                {state.outputs.valuePropTables.map((row: any, i: number) => (
+                  <tr key={i} className="hover:bg-primary/5 transition-colors">
+                    <td className="p-4 text-sm font-bold text-white align-top">{row.icp}</td>
+                    <td className="p-4 text-sm text-text-secondary align-top">{row.desiredOutcome}</td>
+                    <td className="p-4 text-sm text-text-secondary align-top">{row.currentProblem}</td>
+                    <td className="p-4 text-sm text-text-secondary align-top">{row.method}</td>
+                    <td className="p-4 text-sm text-text-secondary align-top">{row.replacement}</td>
+                    <td className="p-4 text-sm text-text-secondary align-top font-medium text-primary">{row.coreAngle}</td>
+                  </tr>
                 ))}
-              </div>
-            </div>
-          )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex flex-col md:flex-row items-center gap-4 mt-8">
+            <button
+              onClick={() => {
+                const completeStep = (state as any).completeStep || (() => {});
+                completeStep(3);
+                setStep(4);
+              }}
+              className="w-full md:flex-1 py-4 bg-primary text-black rounded-xl font-bold text-lg hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+            >
+              Confirm & Generate Strategy
+              <ArrowRight size={20} />
+            </button>
+            
+            <button
+              onClick={handleGenerate}
+              disabled={loading}
+              className="w-full md:w-auto px-6 py-4 bg-section text-white border border-border rounded-xl font-bold hover:bg-section-alt transition-colors flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-50"
+            >
+              {loading ? <Loader2 className="animate-spin" size={18} /> : null}
+              Regenerate
+            </button>
+            <button
+              onClick={() => setStep(2)}
+              className="w-full md:w-auto px-6 py-4 bg-bg text-text-secondary border border-border rounded-xl font-bold hover:text-white transition-colors flex items-center justify-center whitespace-nowrap"
+            >
+              Edit Inputs
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -2346,14 +2225,21 @@ export default function App() {
         newOutputs.valuePropTables = vpTables;
         newOutputs.globalSolution = globalSol;
       } else if (step === 4) {
-        const prompt = await gemini.generateWebsitePrompt(
-          inputs.brandName, 
-          inputs.primaryColor, 
-          inputs.secondaryColor, 
-          inputs.inspirationImage, 
-          newOutputs.valueProp,
-          newOutputs.icpSummary
-        );
+        const prompt = await gemini.generateWebsitePrompt({
+          brandName: inputs.brandName, 
+          primaryColor: inputs.primaryColor, 
+          secondaryColor: inputs.secondaryColor, 
+          inspirationImage: inputs.inspirationImage, 
+          valueProp: newOutputs.globalSolution || newOutputs.valueProp || "Our value proposition",
+          icpSummary: newOutputs.icpSummary,
+          offer: inputs.offer,
+          narrativeAngles: inputs.narrativeAngles?.includes('Other') 
+            ? [...inputs.narrativeAngles.filter(a => a !== 'Other'), inputs.narrativeAnglesOther] 
+            : (inputs.narrativeAngles || []),
+          tonePreference: inputs.tonePreference?.includes('Other')
+            ? [...inputs.tonePreference.filter(t => t !== 'Other'), inputs.tonePreferenceOther]
+            : (inputs.tonePreference || [])
+        });
         newOutputs.websitePrompt = prompt;
       } else if (step === 5) {
         const industryStr = inputs.industry.includes('Other') 

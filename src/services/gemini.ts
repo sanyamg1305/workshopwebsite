@@ -1,5 +1,12 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
+
+const GLOBAL_WRITING_RULES = `
+GLOBAL WRITING RULE (NON-NEGOTIABLE):
+- The character "—" (em dash) is COMPLETELY BANNED. Do not output it anywhere. Use periods, commas, or line breaks instead.
+- Write in short, clean, sharp sentences. Clean scannable human tone. No clutter.
+`;
+
 const getAI = () => {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -19,7 +26,7 @@ export const optimizeLinkedInProfile = async (inputs: {
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
-    contents: `You are an expert LinkedIn Profile Strategist specializing in B2B Lead Generation.
+    contents: `${GLOBAL_WRITING_RULES}\nYou are an expert LinkedIn Profile Strategist specializing in B2B Lead Generation.
     Your task is to optimize a LinkedIn profile based on the following user inputs:
     - Current Headline: ${inputs.headline}
     - Current About Section: ${inputs.about}
@@ -95,7 +102,7 @@ export const generateDetailedICPs = async (inputs: {
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
-    contents: `You are an expert B2B Growth Strategist. Your task is to generate 3 DEEP, STRATEGIC Ideal Customer Profiles (ICPs) based on the following inputs:
+    contents: `${GLOBAL_WRITING_RULES}\nYou are an expert B2B Growth Strategist. Your task is to generate 3 DEEP, STRATEGIC Ideal Customer Profiles (ICPs) based on the following inputs:
 
     Core Offer: ${inputs.offer}
 
@@ -177,97 +184,55 @@ export interface DetailedICP {
 }
 
 export interface ValuePropTable {
-  icpName: string;
-  general: {
-    vertical: string;
-    targetCustomer: string;
-    useCase: string;
-  };
-  pains: {
-    functional: string;
-    financial: string;
-    emotional: string;
-    trust: string;
-    awareness: string;
-  };
-  solution: {
-    description: string;
-    features: string;
-    delivery: string;
-    differentiation: string;
-  };
-  benefits: {
-    tangible: string;
-    emotional: string;
-    impact: string;
-  };
-  proof: {
-    credibility: string;
-    mechanisms: string;
-    competitorFailure: string;
-  };
-  messaging: {
-    oneLiner: string;
-    psb: string;
-    positioning: string;
-    cta: string;
-  };
+  icp: string;
+  desiredOutcome: string;
+  currentProblem: string;
+  method: string;
+  replacement: string;
+  coreAngle: string;
 }
 
 export const generateValuePropTables = async (inputs: {
   icps: any[];
   offer: string;
+  narrativeAngles: string[];
+  tonePreference: string[];
 }) => {
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
-    contents: `You are an expert Value Proposition Architect. Your task is to generate 3 highly detailed, structured Value Proposition Tables for these ICPs:
-    ${JSON.stringify(inputs.icps)}
+    contents: `${GLOBAL_WRITING_RULES}\nYou are an expert Value Proposition Engine and B2B Strategic Advisor.
+    Your task is to infer and auto-generate a structured Value Proposition Table for EXACTLY 3 ICPs.
     
-    Core Offer: ${inputs.offer}
+    INPUTS:
+    - Core Offer / Client Details: ${inputs.offer}
+    - ICPs & Pain Points: ${JSON.stringify(inputs.icps)}
+    - Narrative Angles: ${inputs.narrativeAngles.join(', ')}
+    - Tone: ${inputs.tonePreference.join(', ')}
     
-    For EACH ICP, generate a strategic asset with these sections:
     
-    1. GENERAL INFORMATION:
-       - Vertical / Product: Based on the offer.
-       - Target Customer / ICP: Expanded into a detailed persona.
-       - Use Case / Scenario: Define when and why they need the solution.
-    
-    2. CUSTOMER PAIN POINTS:
-       - Functional / Operational Pain: Specific daily bottlenecks.
-       - Financial / Business Pain: Impact on revenue, costs, or growth.
-       - Emotional / Strategic Pain: Stress, fear of falling behind, or strategic misalignment.
-       - Trust Pain: Why they are skeptical of existing solutions.
-       - Awareness Pain: What they don't know they're missing.
-    
-    3. SOLUTION DESCRIPTION:
-       - What the solution is: Clear definition.
-       - Key features / components: Specific tools or modules.
-       - Delivery mechanism: How it's delivered (SaaS, service, hybrid).
-       - Why it's different: Unique approach that directly solves the pains.
-    
-    4. BENEFITS / OUTCOMES:
-       - Tangible outcomes: Quantifiable results (e.g., "60% reduction in X").
-       - Emotional outcomes: Peace of mind, confidence, status.
-       - Business impact: Long-term strategic value.
-    
-    5. PROOF & DIFFERENTIATION:
-       - Credibility signals: What makes you trustworthy.
-       - Unique mechanisms: The "secret sauce" or proprietary method.
-       - Why competitors fail: Specific weaknesses in alternative approaches.
-    
-    6. MESSAGING / POSITIONING:
-       - One-line value prop: Punchy and clear.
-       - Problem + solution + benefit: A cohesive narrative sentence.
-       - ICP-specific positioning statement: How you fit into their world.
-       - CTA: What we want them to do next.
+    TABLE READABILITY FIX (CRITICAL):
+    Each cell in the table MUST:
+    1. Be maximum 2 lines.
+    2. Max 12-14 words per cell.
+    3. Use simple, scannable phrasing. No paragraph-style text.
+    4. Format strictly like: Line 1: Outcome/Idea\nLine 2: Method/Qualifier
+    OR Line 1: Problem\nLine 2: Impact. Use actual line breaks (\n).
+\n    INFERENCE ENGINE RULES:
+    For EACH of the 3 ICPs, infer and generate:
+    1. Desired Outcome: Specific, tangible, not generic (e.g., NOT "increase growth").
+    2. Current Problem: Pain-led, contextually realistic to this specific ICP.
+    3. Your Method: How the solution actively solves this (must feel distinct per ICP).
+    4. What You Replace: Specific current alternatives (agencies, SDRs, tools, guesswork).
+    5. Core Angle: Mapped to the chosen narrative array.
     
     QUALITY RULES:
-    - DEPTH OVER GENERIC: Avoid "save time". Use "Reduce manual lead qualification time by 60-70%".
-    - ICP-SPECIFIC: Each table must feel personalized and context-aware.
-    - LOGICAL ALIGNMENT: Solutions must directly address the identified pain points.
+    - Never use vague phrases.
+    - Do not repeat the same method across rows.
+    - Sound strategic, sharp, and specific.
+    - Provide exactly 3 ICP rows.
     
-    Return a JSON array of 3 objects.`,
+    Return a JSON array of EXACTLY 3 objects.`,
     config: {
       responseMimeType: "application/json",
       responseSchema: {
@@ -275,67 +240,14 @@ export const generateValuePropTables = async (inputs: {
         items: {
           type: Type.OBJECT,
           properties: {
-            icpName: { type: Type.STRING },
-            general: {
-              type: Type.OBJECT,
-              properties: {
-                vertical: { type: Type.STRING },
-                targetCustomer: { type: Type.STRING },
-                useCase: { type: Type.STRING }
-              },
-              required: ["vertical", "targetCustomer", "useCase"]
-            },
-            pains: {
-              type: Type.OBJECT,
-              properties: {
-                functional: { type: Type.STRING },
-                financial: { type: Type.STRING },
-                emotional: { type: Type.STRING },
-                trust: { type: Type.STRING },
-                awareness: { type: Type.STRING }
-              },
-              required: ["functional", "financial", "emotional", "trust", "awareness"]
-            },
-            solution: {
-              type: Type.OBJECT,
-              properties: {
-                description: { type: Type.STRING },
-                features: { type: Type.STRING },
-                delivery: { type: Type.STRING },
-                differentiation: { type: Type.STRING }
-              },
-              required: ["description", "features", "delivery", "differentiation"]
-            },
-            benefits: {
-              type: Type.OBJECT,
-              properties: {
-                tangible: { type: Type.STRING },
-                emotional: { type: Type.STRING },
-                impact: { type: Type.STRING }
-              },
-              required: ["tangible", "emotional", "impact"]
-            },
-            proof: {
-              type: Type.OBJECT,
-              properties: {
-                credibility: { type: Type.STRING },
-                mechanisms: { type: Type.STRING },
-                competitorFailure: { type: Type.STRING }
-              },
-              required: ["credibility", "mechanisms", "competitorFailure"]
-            },
-            messaging: {
-              type: Type.OBJECT,
-              properties: {
-                oneLiner: { type: Type.STRING },
-                psb: { type: Type.STRING },
-                positioning: { type: Type.STRING },
-                cta: { type: Type.STRING }
-              },
-              required: ["oneLiner", "psb", "positioning", "cta"]
-            }
+            icp: { type: Type.STRING },
+            desiredOutcome: { type: Type.STRING },
+            currentProblem: { type: Type.STRING },
+            method: { type: Type.STRING },
+            replacement: { type: Type.STRING },
+            coreAngle: { type: Type.STRING }
           },
-          required: ["icpName", "general", "pains", "solution", "benefits", "proof", "messaging"]
+          required: ["icp", "desiredOutcome", "currentProblem", "method", "replacement", "coreAngle"]
         }
       }
     }
@@ -347,7 +259,7 @@ export const generateGlobalSolution = async (vpTables: ValuePropTable[]) => {
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
-    contents: `Based on these 3 Value Proposition Tables: ${JSON.stringify(vpTables)}, 
+    contents: `${GLOBAL_WRITING_RULES}\nBased on these 3 Value Proposition Tables: ${JSON.stringify(vpTables)}, 
     generate a GLOBAL SOLUTION SECTION that:
     1. Adapts to ALL 3 ICPs
     2. Highlights flexibility across segments
@@ -362,7 +274,7 @@ export const generateDMAngles = async (industry: string, icp: string, offer: str
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
-    contents: `You are an expert B2B growth strategist specializing in outbound messaging psychology.
+    contents: `${GLOBAL_WRITING_RULES}\nYou are an expert B2B growth strategist specializing in outbound messaging psychology.
     Generate 5 highly personalized DM angles for:
     - Industry: ${industry}
     - ICP: ${icp}
@@ -402,7 +314,7 @@ export const generateValueProp = async (outcome: string, method: string, replace
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
-    contents: `Generate a high-converting B2B value proposition.
+    contents: `${GLOBAL_WRITING_RULES}\nGenerate a high-converting B2B value proposition.
     Outcome: ${outcome}
     Method: ${method}
     Replacing: ${replacement}
@@ -458,7 +370,7 @@ export const generateDetailedGTM = async (inputs: {
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
-    contents: `You are an expert GTM Strategist. Generate a HIGHLY DETAILED, ACTIONABLE Go-To-Market strategy for:
+    contents: `${GLOBAL_WRITING_RULES}\nYou are an expert GTM Strategist. Generate a HIGHLY DETAILED, ACTIONABLE Go-To-Market strategy for:
     
     Offer: ${inputs.offer}
     Industry: ${inputs.industry}
@@ -615,7 +527,7 @@ export const generateGTMStrategy = async (industry: string, icp: string, offer: 
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
-    contents: `Generate a 90-day GTM Strategy for:
+    contents: `${GLOBAL_WRITING_RULES}\nGenerate a 90-day GTM Strategy for:
     - Industry: ${industry}
     - ICP: ${icp}
     - Offer: ${offer}
@@ -646,45 +558,59 @@ export const generateGTMStrategy = async (industry: string, icp: string, offer: 
   return JSON.parse(response.text);
 };
 
-export const generateWebsitePrompt = async (
-  brandName: string, 
-  primaryColor: string, 
-  secondaryColor: string, 
-  inspirationImage: string | null, 
-  valueProp: string,
-  icpSummary: string
-) => {
+export const generateWebsitePrompt = async (inputs: {
+  brandName: string;
+  primaryColor: string;
+  secondaryColor: string;
+  inspirationImage: string | null;
+  valueProp: string;
+  icpSummary: string;
+  offer: string;
+  narrativeAngles: string[];
+  tonePreference: string[];
+}) => {
   const ai = getAI();
   
   const parts: any[] = [
     {
-      text: `You are a world-class conversion rate optimization (CRO) expert and web designer. 
-      Generate a comprehensive, high-converting website structure and copy prompt for:
-      - Brand Name: ${brandName}
-      - Primary Color (HEX): ${primaryColor}
-      - Secondary Color (HEX): ${secondaryColor}
-      - Value Proposition: ${valueProp}
-      - Target Audience (ICP): ${icpSummary}
+      text: `${GLOBAL_WRITING_RULES}\nYou are a world-class conversion rate optimization (CRO) expert, Website Conversion + Strategy Engine, and B2B web designer. 
+      Generate a comprehensive, high-converting website structure and copy prompt using ALL these inputs:
+      - Brand Name: ${inputs.brandName}
+      - Primary Color (HEX): ${inputs.primaryColor}
+      - Secondary Color (HEX): ${inputs.secondaryColor}
+      - Business Description / Offer: ${inputs.offer}
+      - Value Proposition: ${inputs.valueProp}
+      - Target Audience (ICP) & Pains: ${inputs.icpSummary}
+      - Narrative Angles: ${inputs.narrativeAngles.join(', ')}
+      - Tone: ${inputs.tonePreference.join(', ')}
 
-      The generated website MUST include these sections in order:
+      The generated website MUST include exactly these 8 sections in this EXACT order. This is a NON-NEGOTIABLE system override.
+      
       1. Hero Section: Catchy headline, sub-headline, and primary CTA.
       2. Problem Section: Agitate the core pain points of the ICP.
-      3. Solution Section: How ${brandName} solves these problems.
-      4. Benefits / Outcomes: Focus on the "after" state for the customer.
-      5. Social Proof / Credibility: Testimonial placeholders and trust signals.
+      3. Solution Section: How ${inputs.brandName} solves these problems.
+      4. Value Proposition Section: Focus on the specific outcomes and strategic difference.
+      5. 🚀 Free Resource / Free Tool Section (MANDATORY INSERTION): 
+         - Must include EXACTLY 3 resources:
+           1. Interactive Tool (calculator / generator / analyzer)
+           2. Template / Resource (checklist / swipe file)
+           3. Insight-based Asset (audit / teardown / report)
+         - Format for EACH resource: Name, Type, What it does (1-2 lines, outcome-focused), Who it is for (specific ICP), Pain it solves, Why it works (psychology), and CTA example (for outreach).
+         - Must feel specific, premium, high-value, non-generic (no simple ebooks), and align with earlier sections.
       6. CTA Section: Final push for conversion.
-      7. FAQ Section (NEW): 6-10 highly relevant questions addressing:
-         - "Is this relevant for someone like me?"
-         - "How is this different from alternatives?"
-         - "How long does it take to see results?"
-         - "Do I need prior experience?"
-         - "What kind of support is included?"
-         - "Is this worth the cost?"
-         
+      7. ❓ FAQ Section (Objection Handling): 6-10 highly relevant questions answering:
+         - Trust (credibility)
+         - Process (how it works)
+         - Time (results timeline)
+         - Effort required
+         - Differentiation (vs alternatives)
+         - Fit (who it is NOT for)
+         - Risk / uncertainty
+      8. Final CTA / Footer
+
       FAQ Rules:
-      - Answers must be clear, honest, and non-salesy.
-      - Focus on objection-handling and trust-building.
-      - 2-4 lines max per answer.
+      - Answers must be clear, direct, and non-corporate.
+      - Focus on true objection-handling. No fluff.
 
       If an inspiration image is provided, infer the layout style and structure from it (do not copy, adapt to the content).
       
@@ -712,7 +638,7 @@ export const generateCampaignFlow = async (type: string, tone: string, cta: stri
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
-    contents: `Generate a 4-step B2B outreach campaign flow for:
+    contents: `${GLOBAL_WRITING_RULES}\nGenerate a 4-step B2B outreach campaign flow for:
     - Campaign Type: ${type}
     - Tone: ${tone}
     - CTA Style: ${cta}
