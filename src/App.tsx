@@ -26,7 +26,12 @@ import {
   Image,
   Share2,
   Calendar,
-  Layers
+  Layers,
+  Search,
+  Check,
+  ChevronDown,
+  X,
+  Upload
 } from 'lucide-react';
 import * as gemini from './services/gemini';
 import { supabase } from './services/supabase';
@@ -44,47 +49,102 @@ interface WorkshopState {
     workEmail: string;
     phone: string;
     companyName: string;
-    leadRole: string;
+    leadRole: string[];
+    leadRoleOther: string;
     linkedinHeadline: string;
     linkedinAbout: string;
-    role: string;
-    targetIcp: string;
-    tonePreference: string;
-    industry: string;
-    companySize: string;
-    geography: string;
-    decisionMaker: string;
+    role: string[];
+    roleOther: string;
+    targetIcp: string[];
+    targetIcpOther: string;
+    tonePreference: string[];
+    tonePreferenceOther: string;
+    offer: string;
+    
+    // ICP 1
+    icp1_roles: string[];
+    icp1_rolesOther: string;
+    icp1_sizes: string[];
+    icp1_sizesOther: string;
+    icp1_industries: string[];
+    icp1_industriesOther: string;
+
+    // ICP 2
+    icp2_roles: string[];
+    icp2_rolesOther: string;
+    icp2_sizes: string[];
+    icp2_sizesOther: string;
+    icp2_industries: string[];
+    icp2_industriesOther: string;
+
+    // ICP 3
+    icp3_roles: string[];
+    icp3_rolesOther: string;
+    icp3_sizes: string[];
+    icp3_sizesOther: string;
+    icp3_industries: string[];
+    icp3_industriesOther: string;
+
+    industry: string[];
+    industryOther: string;
+    companySize: string[];
+    companySizeOther: string;
+    geography: string[];
+    geographyOther: string;
+    decisionMaker: string[];
+    decisionMakerOther: string;
     painPoints: string[];
-    budget: string;
-    outcome: string;
-    method: string;
-    replacement: string;
+    painPointsOther: string;
+    budget: string[];
+    budgetOther: string;
+    outcome: string[];
+    outcomeOther: string;
+    method: string[];
+    methodOther: string;
+    replacement: string[];
+    replacementOther: string;
     brandName: string;
-    brandColor: string;
-    inspirationUrl: string;
-    campaignType: string;
-    tone: string;
-    cta: string;
-    dmAngle: string;
-    dmTone: string;
+    primaryColor: string;
+    secondaryColor: string;
+    inspirationImage: string | null;
+    campaignType: string[];
+    campaignTypeOther: string;
+    tone: string[];
+    toneOther: string;
+    cta: string[];
+    ctaOther: string;
+    numFollowUps: string;
+    numFollowUpsOther: string;
+    freeOfferType: string;
+    freeOfferTypeOther: string;
+    toolName: string;
+    toolDescription: string;
+    strategicNotes: string;
+    narrativeAngles: string[];
+    narrativeAnglesOther: string;
+    dmAngle: string[];
+    dmAngleOther: string;
+    dmTone: string[];
+    dmToneOther: string;
   };
   outputs: {
     profileClarityScore: number;
+    scoreMeaning: string;
+    scoreExplanation: string;
     optimizedHeadlines: string[];
     optimizedAbout: string;
-    optimizedPositioning: string;
+    positioningAngles: string;
     keywordScore: number;
+    icps: gemini.DetailedICP[];
     icpSummary: string;
     valueProp: string;
     websitePrompt: string;
-    gtmReport: {
-      primary: string;
-      secondary: string;
-      plan: string[];
-      results: string;
-    };
+    gtmStrategy: gemini.GTMStrategy | null;
     campaignFlow: string[];
+    outreachCampaign: gemini.OutreachCampaign | null;
     dmMessages: { name: string; message: string; whyItWorks: string }[];
+    valuePropTables: gemini.ValuePropTable[];
+    globalSolution: string;
     profileImprovements?: string[];
   };
 }
@@ -97,6 +157,7 @@ const WorkshopContext = createContext<{
   updateInput: (key: keyof WorkshopState['inputs'], value: any) => void;
   completeStep: (step: StepId) => void;
   generateOutput: (step: StepId) => Promise<void>;
+  updateOutput: (key: keyof WorkshopState['outputs'], value: any) => void;
   setSubmissionId: (id: string) => void;
 } | null>(null);
 
@@ -107,6 +168,170 @@ const useWorkshop = () => {
 };
 
 // --- Components ---
+
+const MultiSelectDropdown = ({ 
+  label, 
+  options: initialOptions, 
+  selected, 
+  onChange, 
+  placeholder = "Select options...",
+  isSearchable = true,
+  showOther = true,
+  otherValue = "",
+  onOtherChange = () => {},
+  singleSelect = false
+}: {
+  label: string;
+  options: string[];
+  selected: string[];
+  onChange: (values: string[]) => void;
+  placeholder?: string;
+  isSearchable?: boolean;
+  showOther?: boolean;
+  otherValue?: string;
+  onOtherChange?: (val: string) => void;
+  singleSelect?: boolean;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Ensure "Other" is the last option if showOther is true
+  const options = showOther 
+    ? [...initialOptions.filter(o => o !== 'Other'), 'Other'] 
+    : initialOptions;
+
+  // Filter options based on search term, but ALWAYS keep "Other" if it exists
+  const filteredOptions = options.filter(opt => {
+    if (opt === 'Other') return true; // Always show "Other" at the bottom
+    return opt.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+
+  const toggleOption = (opt: string) => {
+    if (singleSelect) {
+      if (selected.includes(opt)) {
+        onChange([]); // Deselect if already selected
+      } else {
+        onChange([opt]);
+      }
+      setIsOpen(false);
+    } else {
+      const next = selected.includes(opt)
+        ? selected.filter(v => v !== opt)
+        : [...selected, opt];
+      onChange(next);
+    }
+  };
+
+  const isOtherSelected = selected.includes('Other');
+
+  return (
+    <div className="space-y-2" ref={dropdownRef}>
+      <label className="text-xs font-bold uppercase text-text-secondary tracking-wider">{label}</label>
+      <div className="relative">
+        <div 
+          onClick={() => setIsOpen(!isOpen)}
+          className={`min-h-[52px] w-full px-4 py-2 rounded-xl border ${isOpen ? 'border-primary' : 'border-border'} bg-bg flex flex-wrap gap-2 items-center cursor-pointer hover:border-primary/50 transition-all pr-10`}
+        >
+          {selected.length === 0 && <span className="text-text-secondary text-sm">{placeholder}</span>}
+          {selected.map(val => (
+            <div key={val} className="flex items-center gap-1 bg-primary/10 text-primary text-xs font-bold px-2 py-1 rounded-lg border border-primary/20">
+              {val === 'Other' && otherValue ? `Other: ${otherValue}` : val}
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleOption(val);
+                }}
+                className="hover:text-primary-dark"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ))}
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary">
+            <ChevronDown size={20} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          </div>
+        </div>
+
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="absolute z-50 w-full mt-2 bg-section border border-border rounded-2xl shadow-2xl overflow-hidden"
+            >
+              {isSearchable && (
+                <div className="p-3 border-b border-border flex items-center gap-2 bg-bg/50">
+                  <Search size={16} className="text-text-secondary" />
+                  <input 
+                    type="text"
+                    placeholder="Search options..."
+                    className="bg-transparent border-none outline-none text-sm w-full text-white"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+              )}
+              <div className="max-h-60 overflow-y-auto p-2 space-y-1">
+                {filteredOptions.map(opt => (
+                  <div 
+                    key={opt}
+                    onClick={() => toggleOption(opt)}
+                    className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors ${selected.includes(opt) ? 'bg-primary/10 text-primary' : 'hover:bg-bg'}`}
+                  >
+                    <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${selected.includes(opt) ? 'bg-primary border-primary' : 'border-border'}`}>
+                      {selected.includes(opt) && <Check size={14} className="text-black" />}
+                    </div>
+                    <span className="text-sm font-medium">{opt}</span>
+                  </div>
+                ))}
+                {filteredOptions.length === 0 && (
+                  <div className="p-4 text-center text-text-secondary text-sm italic">No options found</div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <AnimatePresence>
+        {showOther && isOtherSelected && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }} 
+            animate={{ opacity: 1, height: 'auto' }} 
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-3 space-y-2 overflow-hidden"
+          >
+            <label className="text-[10px] font-bold uppercase text-primary tracking-widest">Please specify *</label>
+            <input
+              type="text"
+              required
+              placeholder="Type your answer..."
+              className={`w-full px-4 py-3 rounded-xl border ${!otherValue ? 'border-red-500/50' : 'border-border'} focus:ring-2 focus:ring-primary/50 outline-none bg-bg text-sm transition-all text-white`}
+              value={otherValue}
+              onChange={(e) => onOtherChange(e.target.value)}
+            />
+            {!otherValue && (
+              <p className="text-[10px] text-red-500 font-medium">Please specify your selection</p>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
 
 const Step0LeadCapture = () => {
   const { state, updateInput, setStep, completeStep, setSubmissionId } = useWorkshop();
@@ -240,19 +465,15 @@ const Step0LeadCapture = () => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase text-text-secondary">Role (Optional)</label>
-            <select
-              className="w-full px-4 py-4 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg text-lg appearance-none cursor-pointer"
-              value={state.inputs.leadRole}
-              onChange={(e) => updateInput('leadRole', e.target.value)}
-            >
-              <option value="">Select Role</option>
-              <option value="Founder">Founder</option>
-              <option value="Marketer">Marketer</option>
-              <option value="Sales">Sales</option>
-              <option value="Freelancer">Freelancer</option>
-              <option value="Other">Other</option>
-            </select>
+            <MultiSelectDropdown
+              label="Role (Optional)"
+              options={['Founder', 'Marketer', 'Sales', 'Freelancer']}
+              selected={state.inputs.leadRole}
+              onChange={(val) => updateInput('leadRole', val)}
+              otherValue={state.inputs.leadRoleOther}
+              onOtherChange={(val) => updateInput('leadRoleOther', val)}
+              placeholder="Select Role(s)"
+            />
           </div>
 
           {error && <p className="text-red-500 text-sm font-medium text-center">{error}</p>}
@@ -347,7 +568,8 @@ const Step1ProfileCheck = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const roles = ['Founder', 'CEO', 'Consultant', 'Freelancer', 'Agency Owner', 'Sales Leader', 'Marketing Director', 'Other'];
+  const roles = ['Founder', 'CEO', 'Consultant', 'Freelancer', 'Agency Owner', 'Sales Leader', 'Marketing Director'];
+  const icps = ['SaaS Founders', 'Talent Leaders', 'Marketing Managers', 'Sales Directors', 'E-commerce Owners', 'Tech Recruiters', 'Operations Heads'];
   const tones = ['Bold', 'Professional', 'Casual', 'Witty', 'Direct', 'Empathetic', 'Data-driven'];
 
   const handleOptimize = async () => {
@@ -393,47 +615,51 @@ const Step1ProfileCheck = () => {
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase text-text-secondary">Role</label>
-          <select
-            className="w-full px-4 py-3 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg appearance-none cursor-pointer"
-            value={state.inputs.role}
-            onChange={(e) => updateInput('role', e.target.value)}
-          >
-            <option value="">Select Role</option>
-            {roles.map(r => (
-              <option key={r} value={r}>{r}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-xs font-bold uppercase text-text-secondary">Target ICP</label>
+          <label className="text-xs font-bold uppercase text-text-secondary">What do you offer?</label>
           <input
             type="text"
-            placeholder="e.g. Talent Leaders, SaaS Founders..."
+            placeholder="e.g. We help [ICP] achieve [outcome] or X → Y for Z"
             className="w-full px-4 py-3 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg"
-            value={state.inputs.targetIcp}
-            onChange={(e) => updateInput('targetIcp', e.target.value)}
+            value={state.inputs.offer}
+            onChange={(e) => updateInput('offer', e.target.value)}
+          />
+          <p className="text-[10px] text-text-secondary">Example: "Reduce hiring time → for Talent Leaders → using automation"</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <MultiSelectDropdown
+            label="Your Role"
+            options={roles}
+            selected={state.inputs.role}
+            onChange={(val) => updateInput('role', val)}
+            otherValue={state.inputs.roleOther}
+            onOtherChange={(val) => updateInput('roleOther', val)}
+            placeholder="Select Role(s)"
+          />
+          <MultiSelectDropdown
+            label="Target ICP"
+            options={icps}
+            selected={state.inputs.targetIcp}
+            onChange={(val) => updateInput('targetIcp', val)}
+            otherValue={state.inputs.targetIcpOther}
+            onOtherChange={(val) => updateInput('targetIcpOther', val)}
+            placeholder="Select ICP(s)"
           />
         </div>
 
-        <div className="space-y-2">
-          <label className="text-xs font-bold uppercase text-text-secondary">Tone Preference</label>
-          <div className="flex flex-wrap gap-2">
-            {tones.map(t => (
-              <Chip 
-                key={t} 
-                label={t} 
-                selected={state.inputs.tonePreference === t} 
-                onClick={() => updateInput('tonePreference', t)} 
-              />
-            ))}
-          </div>
-        </div>
+        <MultiSelectDropdown
+          label="Tone Preference"
+          options={tones}
+          selected={state.inputs.tonePreference}
+          onChange={(val) => updateInput('tonePreference', val)}
+          otherValue={state.inputs.tonePreferenceOther}
+          onOtherChange={(val) => updateInput('tonePreferenceOther', val)}
+          placeholder="Select Tone(s)"
+        />
 
         <button
           onClick={handleOptimize}
-          disabled={loading || !state.inputs.linkedinHeadline || !state.inputs.linkedinAbout || !state.inputs.role || !state.inputs.targetIcp || !state.inputs.tonePreference}
+          disabled={loading || !state.inputs.linkedinHeadline || !state.inputs.linkedinAbout || state.inputs.role.length === 0 || state.inputs.targetIcp.length === 0 || state.inputs.tonePreference.length === 0 || !state.inputs.offer}
           className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
         >
           {loading ? (
@@ -473,6 +699,17 @@ const Step1ProfileCheck = () => {
             </div>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-6 bg-section border border-border rounded-2xl">
+              <h4 className="text-xs font-bold uppercase text-text-secondary mb-3">Score Meaning</h4>
+              <p className="text-sm leading-relaxed">{state.outputs.scoreMeaning}</p>
+            </div>
+            <div className="p-6 bg-section border border-border rounded-2xl">
+              <h4 className="text-xs font-bold uppercase text-text-secondary mb-3">User Explanation</h4>
+              <p className="text-sm leading-relaxed">{state.outputs.scoreExplanation}</p>
+            </div>
+          </div>
+
           <div className="space-y-4">
             <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-2">
               <Sparkles size={16} className="text-primary" />
@@ -506,7 +743,7 @@ const Step1ProfileCheck = () => {
             <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
               <button 
                 onClick={() => {
-                  navigator.clipboard.writeText(state.outputs.optimizedPositioning);
+                  navigator.clipboard.writeText(state.outputs.positioningAngles);
                   alert('Positioning copied!');
                 }}
                 className="p-2 hover:bg-primary/10 rounded-lg text-primary"
@@ -516,9 +753,9 @@ const Step1ProfileCheck = () => {
             </div>
             <h4 className="text-xs font-bold uppercase text-primary mb-4 tracking-widest flex items-center gap-2">
               <Target size={16} />
-              Strategic Positioning
+              Positioning Angles
             </h4>
-            <p className="text-xl font-bold italic leading-relaxed">"{state.outputs.optimizedPositioning}"</p>
+            <p className="text-xl font-bold italic leading-relaxed">"{state.outputs.positioningAngles}"</p>
           </div>
         </motion.div>
       )}
@@ -529,6 +766,7 @@ const Step1ProfileCheck = () => {
 const Step2ICPBuilder = () => {
   const { state, updateInput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
+  const [activeIcp, setActiveIcp] = useState<1 | 2 | 3>(1);
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -539,85 +777,89 @@ const Step2ICPBuilder = () => {
     }
   };
 
-  const industries = ['SaaS', 'Agencies', 'E-commerce', 'Coaches', 'Local', 'Other'];
-  const sizes = ['1–10', '10–50', '50–200', '200+'];
-  const geos = ['India', 'US', 'Europe', 'Global'];
-  const dms = ['Founder', 'CEO', 'Head of Marketing', 'Head of Sales', 'Growth Lead'];
-  const pains = ['Not enough leads', 'Low calls', 'Poor conversion', 'Expensive ads', 'No system'];
-  const budgets = ['<1k', '1–5k', '5–20k', '20k+'];
+  const roles = [
+    'Founder', 'Co-founder', 'CEO', 'COO', 'CMO', 'Head of Marketing', 'Head of Sales', 
+    'VP Sales', 'Growth Lead', 'Demand Gen Manager', 'SDR Manager', 'Recruiter', 
+    'Head of Talent', 'CHRO', 'Product Manager', 'CTO', 'Operations Head', 
+    'Consultant', 'Agency Owner', 'Freelancer', 'Other'
+  ];
+  const sizes = ['1–10', '10–50', '50–200', '200–500', '500–1000', '1000+', 'Other'];
+  const industries = [
+    'SaaS', 'Fintech', 'Healthtech', 'Edtech', 'E-commerce', 'D2C', 'Agencies', 
+    'Consulting', 'Coaching', 'Real Estate', 'Manufacturing', 'Logistics', 
+    'HR Tech', 'Martech', 'Legal', 'Finance', 'Healthcare', 'Recruitment', 
+    'IT Services', 'Web3 / Crypto', 'Gaming', 'Media', 'Hospitality', 
+    'Travel', 'Education', 'Non-profit', 'Government', 'Local Businesses', 
+    'Freelancers', 'B2B Services', 'B2B SaaS', 'Marketplaces', 'AI / ML Startups', 
+    'Enterprise Software', 'Cybersecurity', 'DevTools', 'Climate Tech', 'Automotive', 'Retail', 'Other'
+  ];
+
+  const renderIcpForm = (num: 1 | 2 | 3) => {
+    const prefix = `icp${num}_` as any;
+    return (
+      <motion.div 
+        key={num}
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="space-y-6 bg-section p-8 rounded-3xl border border-border"
+      >
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-black">
+            {num}
+          </div>
+          <h3 className="text-xl font-bold">Define ICP {num}</h3>
+        </div>
+
+        <MultiSelectDropdown
+          label="Designation / Role"
+          options={roles}
+          selected={state.inputs[`icp${num}_roles` as keyof WorkshopState['inputs']] as string[]}
+          onChange={(val) => updateInput(`icp${num}_roles` as any, val)}
+          otherValue={state.inputs[`icp${num}_rolesOther` as keyof WorkshopState['inputs']] as string}
+          onOtherChange={(val) => updateInput(`icp${num}_rolesOther` as any, val)}
+        />
+
+        <MultiSelectDropdown
+          label="Company Size"
+          options={sizes}
+          selected={state.inputs[`icp${num}_sizes` as keyof WorkshopState['inputs']] as string[]}
+          onChange={(val) => updateInput(`icp${num}_sizes` as any, val)}
+          otherValue={state.inputs[`icp${num}_sizesOther` as keyof WorkshopState['inputs']] as string}
+          onOtherChange={(val) => updateInput(`icp${num}_sizesOther` as any, val)}
+        />
+
+        <MultiSelectDropdown
+          label="Industry"
+          options={industries}
+          selected={state.inputs[`icp${num}_industries` as keyof WorkshopState['inputs']] as string[]}
+          onChange={(val) => updateInput(`icp${num}_industries` as any, val)}
+          otherValue={state.inputs[`icp${num}_industriesOther` as keyof WorkshopState['inputs']] as string}
+          onOtherChange={(val) => updateInput(`icp${num}_industriesOther` as any, val)}
+        />
+      </motion.div>
+    );
+  };
 
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-2xl font-bold mb-2">ICP Builder</h2>
-        <p className="text-text-secondary">Define your Ideal Customer Profile with a few clicks.</p>
+        <h2 className="text-2xl font-bold mb-2">Deep ICP Builder</h2>
+        <p className="text-text-secondary">Define your Top 3 Ideal Customer Profiles for strategic targeting.</p>
       </div>
 
-      <div className="space-y-6">
-        <section>
-          <label className="block text-sm font-bold mb-3 uppercase tracking-wider text-text-secondary">Industry</label>
-          <div className="flex flex-wrap gap-2">
-            {industries.map(i => (
-              <Chip key={i} label={i} selected={state.inputs.industry === i} onClick={() => updateInput('industry', i)} />
-            ))}
-          </div>
-        </section>
-
-        <section>
-          <label className="block text-sm font-bold mb-3 uppercase tracking-wider text-text-secondary">Company Size</label>
-          <div className="flex flex-wrap gap-2">
-            {sizes.map(s => (
-              <Chip key={s} label={s} selected={state.inputs.companySize === s} onClick={() => updateInput('companySize', s)} />
-            ))}
-          </div>
-        </section>
-
-        <section>
-          <label className="block text-sm font-bold mb-3 uppercase tracking-wider text-text-secondary">Geography</label>
-          <div className="flex flex-wrap gap-2">
-            {geos.map(g => (
-              <Chip key={g} label={g} selected={state.inputs.geography === g} onClick={() => updateInput('geography', g)} />
-            ))}
-          </div>
-        </section>
-
-        <section>
-          <label className="block text-sm font-bold mb-3 uppercase tracking-wider text-text-secondary">Decision Maker</label>
-          <div className="flex flex-wrap gap-2">
-            {dms.map(d => (
-              <Chip key={d} label={d} selected={state.inputs.decisionMaker === d} onClick={() => updateInput('decisionMaker', d)} />
-            ))}
-          </div>
-        </section>
-
-        <section>
-          <label className="block text-sm font-bold mb-3 uppercase tracking-wider text-text-secondary">Pain Points (Multi-select)</label>
-          <div className="flex flex-wrap gap-2">
-            {pains.map(p => (
-              <Chip 
-                key={p} 
-                label={p} 
-                selected={state.inputs.painPoints.includes(p)} 
-                onClick={() => {
-                  const newPains = state.inputs.painPoints.includes(p)
-                    ? state.inputs.painPoints.filter(x => x !== p)
-                    : [...state.inputs.painPoints, p];
-                  updateInput('painPoints', newPains);
-                }} 
-              />
-            ))}
-          </div>
-        </section>
-
-        <section>
-          <label className="block text-sm font-bold mb-3 uppercase tracking-wider text-text-secondary">Monthly Budget</label>
-          <div className="flex flex-wrap gap-2">
-            {budgets.map(b => (
-              <Chip key={b} label={b} selected={state.inputs.budget === b} onClick={() => updateInput('budget', b)} />
-            ))}
-          </div>
-        </section>
+      <div className="flex gap-2 p-1 bg-section rounded-2xl border border-border w-fit">
+        {[1, 2, 3].map((num) => (
+          <button
+            key={num}
+            onClick={() => setActiveIcp(num as 1 | 2 | 3)}
+            className={`px-6 py-2 rounded-xl font-bold text-sm transition-all ${activeIcp === num ? 'bg-primary text-black shadow-lg' : 'text-text-secondary hover:text-text'}`}
+          >
+            ICP {num}
+          </button>
+        ))}
       </div>
+
+      {renderIcpForm(activeIcp)}
 
       <button
         onClick={handleGenerate}
@@ -625,21 +867,202 @@ const Step2ICPBuilder = () => {
         className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
       >
         {loading && <Loader2 className="animate-spin" size={24} />}
-        {loading ? 'Generating ICP...' : 'Generate ICP Summary'}
+        {loading ? 'Generating Strategic ICPs...' : 'Generate Top 3 ICP Profiles'}
       </button>
 
-      {state.outputs.icpSummary && (
-        <OutputCard title="ICP Summary" copyText={state.outputs.icpSummary}>
-          {state.outputs.icpSummary}
-        </OutputCard>
+      {state.outputs.icps && state.outputs.icps.length > 0 && (
+        <div className="space-y-8">
+          {state.outputs.icps.map((icp, idx) => (
+            <motion.div 
+              key={idx}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.1 }}
+              className="bg-section border border-border rounded-3xl overflow-hidden shadow-sm"
+            >
+              <div className="p-8 border-b border-border bg-primary/5">
+                <div className="flex items-center gap-3 mb-2">
+                  <Target className="text-primary" size={24} />
+                  <span className="text-xs font-black uppercase tracking-[0.2em] text-primary">ICP {idx + 1} Profile</span>
+                </div>
+                <h3 className="text-3xl font-black">{icp.name}</h3>
+              </div>
+
+              <div className="p-8 space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <section>
+                    <h4 className="text-xs font-bold uppercase text-text-secondary mb-3 tracking-widest">🔹 Who They Are</h4>
+                    <p className="text-sm leading-relaxed text-text-secondary">{icp.whoTheyAre}</p>
+                  </section>
+                  <section>
+                    <h4 className="text-xs font-bold uppercase text-text-secondary mb-3 tracking-widest">🔹 Core Responsibilities</h4>
+                    <p className="text-sm leading-relaxed text-text-secondary">{icp.responsibilities}</p>
+                  </section>
+                </div>
+
+                <section>
+                  <h4 className="text-xs font-bold uppercase text-text-secondary mb-4 tracking-widest">🔹 Pain Points (Detailed)</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {icp.painPoints.map((p, i) => (
+                      <div key={i} className="flex items-start gap-3 p-3 bg-bg rounded-xl border border-border">
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                        <span className="text-sm text-text-secondary">{p}</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <section>
+                    <h4 className="text-xs font-bold uppercase text-text-secondary mb-3 tracking-widest">🔹 Goals & Desires</h4>
+                    <p className="text-sm leading-relaxed text-text-secondary">{icp.goals}</p>
+                  </section>
+                  <section>
+                    <h4 className="text-xs font-bold uppercase text-text-secondary mb-3 tracking-widest">🔹 Buying Triggers</h4>
+                    <p className="text-sm leading-relaxed text-text-secondary">{icp.triggers}</p>
+                  </section>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <section>
+                    <h4 className="text-xs font-bold uppercase text-text-secondary mb-3 tracking-widest">🔹 Objections</h4>
+                    <p className="text-sm leading-relaxed text-text-secondary">{icp.objections}</p>
+                  </section>
+                  <section>
+                    <h4 className="text-xs font-bold uppercase text-text-secondary mb-3 tracking-widest">🔹 Psychology</h4>
+                    <p className="text-sm leading-relaxed text-text-secondary">{icp.psychology}</p>
+                  </section>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <section>
+                    <h4 className="text-xs font-bold uppercase text-text-secondary mb-3 tracking-widest">🔹 Where They Hang Out</h4>
+                    <p className="text-sm leading-relaxed text-text-secondary">{icp.hangouts}</p>
+                  </section>
+                  <section className="p-6 bg-primary/5 rounded-2xl border border-primary/20">
+                    <h4 className="text-xs font-bold uppercase text-primary mb-3 tracking-widest">🔹 How to Position</h4>
+                    <p className="text-sm font-medium leading-relaxed">{icp.positioning}</p>
+                  </section>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
       )}
     </div>
   );
 };
 
+const ValuePropTableComponent = ({ 
+  table, 
+  onChange 
+}: { 
+  table: gemini.ValuePropTable; 
+  onChange: (updated: gemini.ValuePropTable) => void 
+}) => {
+  const updateField = (section: keyof gemini.ValuePropTable, field: string, value: string) => {
+    const updated = { ...table };
+    if (section === 'icpName') {
+      (updated as any).icpName = value;
+    } else {
+      (updated[section] as any)[field] = value;
+    }
+    onChange(updated);
+  };
+
+  const SectionHeader = ({ title, icon: Icon }: { title: string; icon: any }) => (
+    <div className="flex items-center gap-2 px-4 py-3 bg-section-alt border-y border-border">
+      <Icon size={16} className="text-primary" />
+      <span className="text-xs font-black uppercase tracking-widest text-text-secondary">{title}</span>
+    </div>
+  );
+
+  const EditableCell = ({ 
+    label, 
+    value, 
+    onChange: onCellChange 
+  }: { 
+    label: string; 
+    value: string; 
+    onChange: (val: string) => void 
+  }) => (
+    <div className="group border-b border-border last:border-b-0 hover:bg-primary/5 transition-colors">
+      <div className="grid grid-cols-1 md:grid-cols-4 min-h-[60px]">
+        <div className="p-4 bg-section-alt/50 md:border-r border-border flex items-center">
+          <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">{label}</span>
+        </div>
+        <div className="col-span-3 p-4">
+          <textarea
+            className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm leading-relaxed resize-none overflow-hidden"
+            value={value}
+            onChange={(e) => {
+              onCellChange(e.target.value);
+              e.target.style.height = 'auto';
+              e.target.style.height = e.target.scrollHeight + 'px';
+            }}
+            onFocus={(e) => {
+              e.target.style.height = 'auto';
+              e.target.style.height = e.target.scrollHeight + 'px';
+            }}
+            rows={1}
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="bg-section rounded-2xl border border-border overflow-hidden shadow-sm">
+      <div className="p-6 border-b border-border bg-gradient-to-r from-primary/5 to-transparent">
+        <input
+          type="text"
+          className="text-2xl font-black bg-transparent border-none focus:ring-0 p-0 w-full"
+          value={table.icpName}
+          onChange={(e) => updateField('icpName', '', e.target.value)}
+        />
+      </div>
+
+      <SectionHeader title="General Information" icon={User} />
+      <EditableCell label="Vertical / Product" value={table.general.vertical} onChange={(v) => updateField('general', 'vertical', v)} />
+      <EditableCell label="Target Customer" value={table.general.targetCustomer} onChange={(v) => updateField('general', 'targetCustomer', v)} />
+      <EditableCell label="Use Case" value={table.general.useCase} onChange={(v) => updateField('general', 'useCase', v)} />
+
+      <SectionHeader title="Customer Pain Points" icon={Zap} />
+      <EditableCell label="Functional Pain" value={table.pains.functional} onChange={(v) => updateField('pains', 'functional', v)} />
+      <EditableCell label="Financial Pain" value={table.pains.financial} onChange={(v) => updateField('pains', 'financial', v)} />
+      <EditableCell label="Emotional Pain" value={table.pains.emotional} onChange={(v) => updateField('pains', 'emotional', v)} />
+      <EditableCell label="Trust Pain" value={table.pains.trust} onChange={(v) => updateField('pains', 'trust', v)} />
+      <EditableCell label="Awareness Pain" value={table.pains.awareness} onChange={(v) => updateField('pains', 'awareness', v)} />
+
+      <SectionHeader title="Solution Description" icon={Layers} />
+      <EditableCell label="What it is" value={table.solution.description} onChange={(v) => updateField('solution', 'description', v)} />
+      <EditableCell label="Key Features" value={table.solution.features} onChange={(v) => updateField('solution', 'features', v)} />
+      <EditableCell label="Delivery" value={table.solution.delivery} onChange={(v) => updateField('solution', 'delivery', v)} />
+      <EditableCell label="Why Different" value={table.solution.differentiation} onChange={(v) => updateField('solution', 'differentiation', v)} />
+
+      <SectionHeader title="Benefits / Outcomes" icon={TrendingUp} />
+      <EditableCell label="Tangible" value={table.benefits.tangible} onChange={(v) => updateField('benefits', 'tangible', v)} />
+      <EditableCell label="Emotional" value={table.benefits.emotional} onChange={(v) => updateField('benefits', 'emotional', v)} />
+      <EditableCell label="Business Impact" value={table.benefits.impact} onChange={(v) => updateField('benefits', 'impact', v)} />
+
+      <SectionHeader title="Proof & Differentiation" icon={CheckCircle2} />
+      <EditableCell label="Credibility" value={table.proof.credibility} onChange={(v) => updateField('proof', 'credibility', v)} />
+      <EditableCell label="Mechanisms" value={table.proof.mechanisms} onChange={(v) => updateField('proof', 'mechanisms', v)} />
+      <EditableCell label="Competitor Fail" value={table.proof.competitorFailure} onChange={(v) => updateField('proof', 'competitorFailure', v)} />
+
+      <SectionHeader title="Messaging / Positioning" icon={MessageSquare} />
+      <EditableCell label="One-Liner" value={table.messaging.oneLiner} onChange={(v) => updateField('messaging', 'oneLiner', v)} />
+      <EditableCell label="Problem+Sol+Ben" value={table.messaging.psb} onChange={(v) => updateField('messaging', 'psb', v)} />
+      <EditableCell label="Positioning" value={table.messaging.positioning} onChange={(v) => updateField('messaging', 'positioning', v)} />
+      <EditableCell label="CTA" value={table.messaging.cta} onChange={(v) => updateField('messaging', 'cta', v)} />
+    </div>
+  );
+};
+
 const Step3ValueProp = () => {
-  const { state, updateInput, generateOutput } = useWorkshop();
+  const { state, updateInput, updateOutput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState(0);
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -657,52 +1080,94 @@ const Step3ValueProp = () => {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-2xl font-bold mb-2">Value Proposition</h2>
-        <p className="text-text-secondary">Craft a high-converting one-liner for your business.</p>
+        <h2 className="text-2xl font-bold mb-2">Value Proposition Engine</h2>
+        <p className="text-text-secondary">Generate structured, strategic value prop tables for your top 3 ICPs.</p>
       </div>
 
-      <div className="space-y-6">
-        <section>
-          <label className="block text-sm font-bold mb-3 uppercase tracking-wider text-text-secondary">Primary Outcome</label>
-          <div className="flex flex-wrap gap-2">
-            {outcomes.map(o => (
-              <Chip key={o} label={o} selected={state.inputs.outcome === o} onClick={() => updateInput('outcome', o)} />
-            ))}
-          </div>
-        </section>
+      <div className="bg-section p-6 rounded-2xl border border-border space-y-8">
+        <MultiSelectDropdown
+          label="Primary Outcome"
+          options={outcomes}
+          selected={state.inputs.outcome}
+          onChange={(val) => updateInput('outcome', val)}
+          otherValue={state.inputs.outcomeOther}
+          onOtherChange={(val) => updateInput('outcomeOther', val)}
+          placeholder="Select Outcome(s)"
+        />
 
-        <section>
-          <label className="block text-sm font-bold mb-3 uppercase tracking-wider text-text-secondary">Your Method</label>
-          <div className="flex flex-wrap gap-2">
-            {methods.map(m => (
-              <Chip key={m} label={m} selected={state.inputs.method === m} onClick={() => updateInput('method', m)} />
-            ))}
-          </div>
-        </section>
+        <MultiSelectDropdown
+          label="Your Method"
+          options={methods}
+          selected={state.inputs.method}
+          onChange={(val) => updateInput('method', val)}
+          otherValue={state.inputs.methodOther}
+          onOtherChange={(val) => updateInput('methodOther', val)}
+          placeholder="Select Method(s)"
+        />
 
-        <section>
-          <label className="block text-sm font-bold mb-3 uppercase tracking-wider text-text-secondary">What you replace</label>
-          <div className="flex flex-wrap gap-2">
-            {replacements.map(r => (
-              <Chip key={r} label={r} selected={state.inputs.replacement === r} onClick={() => updateInput('replacement', r)} />
-            ))}
-          </div>
-        </section>
+        <MultiSelectDropdown
+          label="What you replace"
+          options={replacements}
+          selected={state.inputs.replacement}
+          onChange={(val) => updateInput('replacement', val)}
+          otherValue={state.inputs.replacementOther}
+          onOtherChange={(val) => updateInput('replacementOther', val)}
+          placeholder="Select Replacement(s)"
+        />
       </div>
 
       <button
         onClick={handleGenerate}
-        disabled={loading}
+        disabled={loading || state.inputs.outcome.length === 0 || state.inputs.method.length === 0 || state.inputs.replacement.length === 0}
         className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
       >
         {loading && <Loader2 className="animate-spin" size={24} />}
-        {loading ? 'Generating Value Prop...' : 'Generate Value Prop'}
+        {loading ? 'Generating Strategy Assets...' : 'Generate Value Proposition Tables'}
       </button>
 
-      {state.outputs.valueProp && (
-        <OutputCard title="Value Proposition" highlight copyText={state.outputs.valueProp}>
-          {state.outputs.valueProp}
-        </OutputCard>
+      {state.outputs.valuePropTables.length > 0 && (
+        <div className="space-y-8">
+          <div className="flex gap-2 p-1 bg-section border border-border rounded-xl w-fit">
+            {state.outputs.valuePropTables.map((table, i) => (
+              <button
+                key={i}
+                onClick={() => setActiveTab(i)}
+                className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${
+                  activeTab === i 
+                    ? 'bg-primary text-black shadow-lg shadow-primary/20' 
+                    : 'text-text-secondary hover:text-text hover:bg-section-alt'
+                }`}
+              >
+                ICP {i + 1}
+              </button>
+            ))}
+          </div>
+
+          <ValuePropTableComponent 
+            table={state.outputs.valuePropTables[activeTab]} 
+            onChange={(updated) => {
+              const newTables = [...state.outputs.valuePropTables];
+              newTables[activeTab] = updated;
+              updateOutput('valuePropTables', newTables);
+            }}
+          />
+
+          {state.outputs.globalSolution && (
+            <div className="p-8 bg-section border border-border rounded-2xl space-y-4">
+              <h3 className="text-xl font-black flex items-center gap-2">
+                <Globe size={24} className="text-primary" />
+                Global Solution Section
+              </h3>
+              <div className="prose prose-invert max-w-none">
+                {state.outputs.globalSolution.split('\n').map((p, i) => (
+                  <p key={i} className="text-text-secondary leading-relaxed mb-4 last:mb-0">
+                    {p}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
@@ -721,8 +1186,34 @@ const Step4WebsiteBuilder = () => {
     }
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        updateInput('inspirationImage', reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
     <div className="space-y-8">
+      <div className="bg-primary/10 p-6 rounded-2xl border border-primary/20 flex items-center gap-4">
+        <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-black font-black text-xl shrink-0">👉</div>
+        <div>
+          <h3 className="font-bold text-lg">To generate your website, use Google AI Studio:</h3>
+          <a 
+            href="https://aistudio.google.com/apps" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-primary hover:underline font-medium"
+          >
+            https://aistudio.google.com/apps
+          </a>
+        </div>
+      </div>
+
       <div>
         <h2 className="text-2xl font-bold mb-2">Website Builder</h2>
         <p className="text-text-secondary">Generate a structured prompt for your high-converting landing page.</p>
@@ -739,33 +1230,69 @@ const Step4WebsiteBuilder = () => {
             onChange={(e) => updateInput('brandName', e.target.value)}
           />
         </div>
-        <div className="space-y-2">
-          <label className="text-xs font-bold uppercase text-text-secondary">Brand Color</label>
-          <div className="flex gap-3">
-            <input
-              type="color"
-              className="h-12 w-20 rounded-xl border border-border p-1 cursor-pointer"
-              value={state.inputs.brandColor}
-              onChange={(e) => updateInput('brandColor', e.target.value)}
-            />
-            <input
-              type="text"
-              className="flex-1 px-4 py-3 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none font-mono text-sm"
-              value={state.inputs.brandColor}
-              onChange={(e) => updateInput('brandColor', e.target.value)}
-            />
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase text-text-secondary">Primary Color</label>
+            <div className="flex gap-2">
+              <input
+                type="color"
+                className="h-12 w-12 rounded-lg border border-border p-1 cursor-pointer shrink-0"
+                value={state.inputs.primaryColor}
+                onChange={(e) => updateInput('primaryColor', e.target.value)}
+              />
+              <input
+                type="text"
+                className="w-full px-3 py-3 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none font-mono text-xs"
+                value={state.inputs.primaryColor}
+                onChange={(e) => updateInput('primaryColor', e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase text-text-secondary">Secondary Color</label>
+            <div className="flex gap-2">
+              <input
+                type="color"
+                className="h-12 w-12 rounded-lg border border-border p-1 cursor-pointer shrink-0"
+                value={state.inputs.secondaryColor}
+                onChange={(e) => updateInput('secondaryColor', e.target.value)}
+              />
+              <input
+                type="text"
+                className="w-full px-3 py-3 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none font-mono text-xs"
+                value={state.inputs.secondaryColor}
+                onChange={(e) => updateInput('secondaryColor', e.target.value)}
+              />
+            </div>
           </div>
         </div>
+
         <div className="md:col-span-2 space-y-2">
-          <label className="text-xs font-bold uppercase text-text-secondary">Design Inspiration URL</label>
-          <input
-            type="text"
-            className="w-full px-4 py-3 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none"
-            placeholder="Paste a Pinterest or Dribbble link"
-            value={state.inputs.inspirationUrl}
-            onChange={(e) => updateInput('inspirationUrl', e.target.value)}
-          />
-          <p className="text-[10px] text-text-secondary">Find a website style you like and paste it here.</p>
+          <label className="text-xs font-bold uppercase text-text-secondary">Design Inspiration (Screenshot)</label>
+          <div className="flex items-center gap-4">
+            <label className="flex-1 flex flex-col items-center justify-center h-32 border-2 border-dashed border-border rounded-2xl hover:border-primary hover:bg-primary/5 transition-all cursor-pointer group">
+              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                <Upload className="w-8 h-8 text-text-secondary group-hover:text-primary mb-2" />
+                <p className="text-xs text-text-secondary group-hover:text-primary">
+                  {state.inputs.inspirationImage ? 'Change Screenshot' : 'Upload UI Inspiration'}
+                </p>
+              </div>
+              <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+            </label>
+            {state.inputs.inspirationImage && (
+              <div className="w-32 h-32 rounded-2xl border border-border overflow-hidden relative group">
+                <img src={state.inputs.inspirationImage} alt="Inspiration" className="w-full h-full object-cover" />
+                <button 
+                  onClick={() => updateInput('inspirationImage', null)}
+                  className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+          </div>
+          <p className="text-[10px] text-text-secondary">Upload a screenshot of a website layout you love. We'll infer the structure.</p>
         </div>
       </div>
 
@@ -798,6 +1325,7 @@ const Step4WebsiteBuilder = () => {
 const Step5GTMStrategy = () => {
   const { state, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'leadGen' | 'partner' | 'event' | 'magnets'>('leadGen');
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -808,11 +1336,13 @@ const Step5GTMStrategy = () => {
     }
   };
 
+  const strategy = state.outputs.gtmStrategy;
+
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-2xl font-bold mb-2">GTM Strategy</h2>
-        <p className="text-text-secondary">Your customized Go-To-Market roadmap for the next 90 days.</p>
+        <h2 className="text-2xl font-bold mb-2">GTM Strategy Engine</h2>
+        <p className="text-text-secondary">Generate a highly detailed, actionable Go-To-Market strategy for your business.</p>
       </div>
 
       <button
@@ -821,53 +1351,333 @@ const Step5GTMStrategy = () => {
         className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
       >
         {loading && <Loader2 className="animate-spin" size={24} />}
-        {loading ? 'Generating Report...' : 'Generate GTM Report'}
+        {loading ? 'Generating Strategy...' : 'Generate GTM Strategy'}
       </button>
 
-      {state.outputs.gtmReport.primary && (
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-section border border-border rounded-2xl overflow-hidden shadow-lg"
-        >
-          <div className="bg-primary p-6">
-            <h3 className="text-xl font-bold flex items-center gap-2 text-black">
-              <TrendingUp size={24} />
-              GTM Strategy Report
-            </h3>
+      {strategy && (
+        <div className="space-y-8">
+          {/* Tabs */}
+          <div className="flex flex-wrap gap-2 p-1 bg-section border border-border rounded-xl w-fit">
+            <button
+              onClick={() => setActiveTab('leadGen')}
+              className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${
+                activeTab === 'leadGen' ? 'bg-primary text-black shadow-lg shadow-primary/20' : 'text-text-secondary hover:text-text hover:bg-section-alt'
+              }`}
+            >
+              B2B Lead Gen
+            </button>
+            <button
+              onClick={() => setActiveTab('partner')}
+              className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${
+                activeTab === 'partner' ? 'bg-primary text-black shadow-lg shadow-primary/20' : 'text-text-secondary hover:text-text hover:bg-section-alt'
+              }`}
+            >
+              Partner Growth
+            </button>
+            <button
+              onClick={() => setActiveTab('event')}
+              className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${
+                activeTab === 'event' ? 'bg-primary text-black shadow-lg shadow-primary/20' : 'text-text-secondary hover:text-text hover:bg-section-alt'
+              }`}
+            >
+              Event Growth
+            </button>
+            <button
+              onClick={() => setActiveTab('magnets')}
+              className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${
+                activeTab === 'magnets' ? 'bg-primary text-black shadow-lg shadow-primary/20' : 'text-text-secondary hover:text-text hover:bg-section-alt'
+              }`}
+            >
+              Lead Magnets
+            </button>
           </div>
-          <div className="p-8 space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div>
-                <label className="text-xs font-bold uppercase text-text-secondary mb-2 block">Primary Channel</label>
-                <div className="text-2xl font-bold text-text-primary">{state.outputs.gtmReport.primary}</div>
-              </div>
-              <div>
-                <label className="text-xs font-bold uppercase text-text-secondary mb-2 block">Secondary Channel</label>
-                <div className="text-2xl font-bold text-text-primary">{state.outputs.gtmReport.secondary}</div>
-              </div>
-            </div>
 
-            <div>
-              <label className="text-xs font-bold uppercase text-text-secondary mb-4 block">Weekly Action Plan</label>
-              <div className="space-y-3">
-                {state.outputs.gtmReport.plan.map((p, i) => (
-                  <div key={i} className="flex items-center gap-4 p-4 bg-bg rounded-xl border border-border">
-                    <div className="w-8 h-8 rounded-full bg-primary text-black flex items-center justify-center font-bold text-sm">
-                      {i + 1}
+          {/* Content */}
+          <div className="space-y-8">
+            {activeTab === 'leadGen' && (
+              <div className="space-y-8">
+                <section className="space-y-4">
+                  <h3 className="text-xl font-black flex items-center gap-2">
+                    <Target size={24} className="text-primary" />
+                    Targeting Strategy
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {strategy.leadGen.targeting.map((t, i) => (
+                      <div key={i} className="p-6 bg-section border border-border rounded-2xl space-y-3">
+                        <div className="text-xs font-black uppercase text-primary tracking-widest">{t.icp}</div>
+                        <div className="space-y-2">
+                          <div className="text-sm font-bold">Roles: <span className="text-text-secondary font-normal">{t.roles}</span></div>
+                          <div className="text-sm font-bold">Size: <span className="text-text-secondary font-normal">{t.size}</span></div>
+                          <div className="text-sm font-bold">Industry: <span className="text-text-secondary font-normal">{t.industries}</span></div>
+                          <div className="text-sm font-bold">Geo: <span className="text-text-secondary font-normal">{t.geo}</span></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="space-y-4">
+                  <h3 className="text-xl font-black flex items-center gap-2">
+                    <Globe size={24} className="text-primary" />
+                    Channel Strategy
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {strategy.leadGen.channels.map((c, i) => (
+                      <div key={i} className="p-6 bg-section border border-border rounded-2xl space-y-2">
+                        <div className="text-lg font-black">{c.channel}</div>
+                        <div className="text-sm text-text-secondary leading-relaxed"><span className="font-bold text-text">Why:</span> {c.why}</div>
+                        <div className="text-sm text-text-secondary leading-relaxed"><span className="font-bold text-text">Approach:</span> {c.approach}</div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="space-y-4">
+                  <h3 className="text-xl font-black flex items-center gap-2">
+                    <Send size={24} className="text-primary" />
+                    Outreach Strategy
+                  </h3>
+                  <div className="space-y-6">
+                    {strategy.leadGen.outreach.map((o, i) => (
+                      <div key={i} className="p-8 bg-section border border-border rounded-2xl space-y-6">
+                        <div className="text-lg font-black text-primary uppercase tracking-widest">{o.icp}</div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                          <div className="space-y-4">
+                            <h4 className="text-xs font-black uppercase tracking-widest text-text-secondary">Angles & Hooks</h4>
+                            <div className="space-y-2">
+                              {o.angles.map((a, j) => <div key={j} className="text-sm p-3 bg-section-alt rounded-lg border border-border">{a}</div>)}
+                            </div>
+                            <div className="space-y-2">
+                              {o.hooks.map((h, j) => <div key={j} className="text-sm p-3 bg-primary/5 rounded-lg border border-primary/20 italic">"{h}"</div>)}
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-4">
+                            <h4 className="text-xs font-black uppercase tracking-widest text-text-secondary">Sample Messages</h4>
+                            <div className="space-y-4">
+                              <div className="space-y-2">
+                                <div className="text-[10px] font-bold uppercase text-text-secondary">LinkedIn DMs</div>
+                                {o.dms.map((dm, j) => (
+                                  <div key={j} className="text-xs p-4 bg-section-alt rounded-xl border border-border leading-relaxed relative group">
+                                    {dm}
+                                    <button onClick={() => navigator.clipboard.writeText(dm)} className="absolute top-2 right-2 p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary"><Copy size={12}/></button>
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="space-y-2">
+                                <div className="text-[10px] font-bold uppercase text-text-secondary">Cold Emails</div>
+                                {o.emails.map((em, j) => (
+                                  <div key={j} className="text-xs p-4 bg-section-alt rounded-xl border border-border leading-relaxed relative group">
+                                    {em}
+                                    <button onClick={() => navigator.clipboard.writeText(em)} className="absolute top-2 right-2 p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary"><Copy size={12}/></button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="space-y-4">
+                  <h3 className="text-xl font-black flex items-center gap-2">
+                    <TrendingUp size={24} className="text-primary" />
+                    Funnel Design
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    {strategy.leadGen.funnel.map((f, i) => (
+                      <div key={i} className="p-6 bg-section border border-border rounded-2xl relative">
+                        <div className="absolute -top-3 -left-3 w-8 h-8 bg-primary text-black rounded-full flex items-center justify-center font-black text-xs shadow-lg">{i + 1}</div>
+                        <div className="text-xs font-black uppercase tracking-widest text-primary mb-2">{f.step}</div>
+                        <div className="text-xs text-text-secondary leading-relaxed">{f.description}</div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              </div>
+            )}
+
+            {activeTab === 'partner' && (
+              <div className="space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <section className="space-y-4">
+                    <h3 className="text-xl font-black flex items-center gap-2">
+                      <User size={24} className="text-primary" />
+                      Ideal Partners
+                    </h3>
+                    <div className="space-y-4">
+                      {strategy.partnerGrowth.idealPartners.map((ip, i) => (
+                        <div key={i} className="p-6 bg-section border border-border rounded-2xl space-y-2">
+                          <div className="text-xs font-black uppercase text-primary tracking-widest">{ip.icp}</div>
+                          <div className="flex flex-wrap gap-2">
+                            {ip.partners.map((p, j) => <span key={j} className="px-3 py-1 bg-section-alt rounded-full text-xs font-bold border border-border">{p}</span>)}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <span className="font-medium">{p}</span>
+                  </section>
+
+                  <section className="space-y-4">
+                    <h3 className="text-xl font-black flex items-center gap-2">
+                      <Layers size={24} className="text-primary" />
+                      Partnership Models
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      {strategy.partnerGrowth.models.map((m, i) => (
+                        <div key={i} className="p-4 bg-section border border-border rounded-xl text-sm font-bold flex items-center gap-2">
+                          <CheckCircle2 size={16} className="text-primary" />
+                          {m}
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                </div>
+
+                <section className="space-y-4">
+                  <h3 className="text-xl font-black flex items-center gap-2">
+                    <MessageSquare size={24} className="text-primary" />
+                    Partner Outreach
+                  </h3>
+                  <div className="p-8 bg-section border border-border rounded-2xl space-y-6">
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-black uppercase tracking-widest text-text-secondary">Pitch Message</h4>
+                      <div className="p-6 bg-section-alt rounded-2xl border border-border text-sm leading-relaxed italic relative group">
+                        {strategy.partnerGrowth.outreach.pitch}
+                        <button onClick={() => navigator.clipboard.writeText(strategy.partnerGrowth.outreach.pitch)} className="absolute top-4 right-4 p-2 opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary"><Copy size={16}/></button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-black uppercase tracking-widest text-text-secondary">Value Exchange Logic</h4>
+                      <div className="text-sm text-text-secondary leading-relaxed">{strategy.partnerGrowth.outreach.logic}</div>
+                    </div>
+                  </div>
+                </section>
+
+                  <section className="space-y-4">
+                    <h3 className="text-xl font-black flex items-center gap-2">
+                      <TrendingUp size={24} className="text-primary" />
+                      Scale Strategy
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {strategy.partnerGrowth.scale.map((s, i) => (
+                        <div key={i} className="p-6 bg-section border border-border rounded-2xl text-sm leading-relaxed">
+                          <span className="text-primary font-black mr-2">0{i+1}.</span>
+                          {s}
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                </div>
+              )}
+
+            {activeTab === 'event' && (
+              <div className="space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <section className="space-y-4">
+                    <h3 className="text-xl font-black flex items-center gap-2">
+                      <Calendar size={24} className="text-primary" />
+                      Event Types
+                    </h3>
+                    <div className="flex flex-wrap gap-3">
+                      {strategy.eventGrowth.types.map((t, i) => (
+                        <div key={i} className="px-6 py-3 bg-section border border-border rounded-xl font-bold text-sm shadow-sm">
+                          {t}
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section className="space-y-4">
+                    <h3 className="text-xl font-black flex items-center gap-2">
+                      <Sparkles size={24} className="text-primary" />
+                      Event Ideas
+                    </h3>
+                    <div className="space-y-4">
+                      {strategy.eventGrowth.ideas.map((id, i) => (
+                        <div key={i} className="p-6 bg-section border border-border rounded-2xl space-y-3">
+                          <div className="text-xs font-black uppercase text-primary tracking-widest">{id.icp}</div>
+                          <ul className="space-y-2">
+                            {id.topics.map((topic, j) => (
+                              <li key={j} className="text-sm flex items-start gap-2">
+                                <ArrowRight size={14} className="text-primary mt-1 shrink-0" />
+                                {topic}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <section className="space-y-4">
+                    <h3 className="text-xl font-black flex items-center gap-2">
+                      <TrendingUp size={24} className="text-primary" />
+                      Event Funnel
+                    </h3>
+                    <div className="p-6 bg-section border border-border rounded-2xl text-sm leading-relaxed text-text-secondary">
+                      {strategy.eventGrowth.funnel}
+                    </div>
+                  </section>
+
+                  <section className="space-y-4">
+                    <h3 className="text-xl font-black flex items-center gap-2">
+                      <Zap size={24} className="text-primary" />
+                      Conversion Strategy
+                    </h3>
+                    <div className="p-6 bg-section border border-border rounded-2xl text-sm leading-relaxed text-text-secondary">
+                      {strategy.eventGrowth.conversion}
+                    </div>
+                  </section>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'magnets' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {strategy.leadMagnets.map((lm, i) => (
+                  <div key={i} className="p-8 bg-section border border-border rounded-3xl space-y-6 relative overflow-hidden group hover:border-primary transition-colors">
+                    <div className="absolute top-0 right-0 p-4 bg-primary/10 rounded-bl-3xl">
+                      <Sparkles size={24} className="text-primary" />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-xs font-black uppercase text-primary tracking-widest">{lm.targetIcp}</div>
+                      <h3 className="text-2xl font-black">{lm.name}</h3>
+                      <p className="text-sm text-text-secondary leading-relaxed">{lm.description}</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
+                      <div className="space-y-1">
+                        <div className="text-[10px] font-black uppercase text-text-secondary">Problem Solved</div>
+                        <div className="text-xs font-bold">{lm.problemSolved}</div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-[10px] font-black uppercase text-text-secondary">Connection</div>
+                        <div className="text-xs font-bold">{lm.connectionToOffer}</div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h4 className="text-xs font-black uppercase tracking-widest text-text-secondary">Outreach Integration</h4>
+                      <div className="space-y-3">
+                        {lm.outreachSamples.map((sample, j) => (
+                          <div key={j} className="p-4 bg-section-alt rounded-2xl border border-border text-xs leading-relaxed italic relative group/msg">
+                            {sample}
+                            <button onClick={() => navigator.clipboard.writeText(sample)} className="absolute top-2 right-2 p-1 opacity-0 group-hover/msg:opacity-100 transition-opacity hover:text-primary"><Copy size={12}/></button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
-            </div>
-
-            <div className="p-6 bg-primary text-black rounded-2xl">
-              <label className="text-xs font-bold uppercase opacity-60 mb-2 block">Expected Results (90 Days)</label>
-              <div className="text-xl font-medium italic">"{state.outputs.gtmReport.results}"</div>
-            </div>
+            )}
           </div>
-        </motion.div>
+        </div>
       )}
     </div>
   );
@@ -889,6 +1699,8 @@ const Step6OutreachCampaign = () => {
   const types = ['LinkedIn', 'Email', 'Hybrid', 'Twitter/X', 'Cold Call Script'];
   const tones = ['Friendly', 'Direct', 'Insight-led', 'Curious', 'Challenger', 'Helpful', 'Urgent'];
   const ctas = ['Soft', 'Direct', 'Question-based', 'Value-first', 'Calendar Link', 'Reply-based'];
+  const angles = ['Visibility/Inbound', 'Positioning/Differentiation', 'Authority/Credibility', 'Contrarian/Insight', 'Revenue/Opportunity'];
+  const offers = ['Lead Magnet', 'Free Audit', 'Strategy Session', 'Custom Tool', 'Case Study', 'Checklist'];
 
   return (
     <div className="space-y-8">
@@ -898,76 +1710,193 @@ const Step6OutreachCampaign = () => {
       </div>
 
       <div className="space-y-6">
-        <section>
-          <label className="block text-sm font-bold mb-3 uppercase tracking-wider text-text-secondary">Campaign Type</label>
-          <div className="flex flex-wrap gap-2">
-            {types.map(t => (
-              <Chip key={t} label={t} selected={state.inputs.campaignType === t} onClick={() => updateInput('campaignType', t)} />
-            ))}
-          </div>
-        </section>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <MultiSelectDropdown
+            label="Campaign Type"
+            options={types}
+            selected={state.inputs.campaignType}
+            onChange={(val) => updateInput('campaignType', val)}
+            otherValue={state.inputs.campaignTypeOther}
+            onOtherChange={(val) => updateInput('campaignTypeOther', val)}
+            placeholder="Select Type(s)"
+          />
 
-        <section>
-          <label className="block text-sm font-bold mb-3 uppercase tracking-wider text-text-secondary">Tone of Voice</label>
-          <div className="flex flex-wrap gap-2">
-            {tones.map(t => (
-              <Chip key={t} label={t} selected={state.inputs.tone === t} onClick={() => updateInput('tone', t)} />
-            ))}
-          </div>
-        </section>
+          <MultiSelectDropdown
+            label="Tone of Voice"
+            options={tones}
+            selected={state.inputs.tone}
+            onChange={(val) => updateInput('tone', val)}
+            otherValue={state.inputs.toneOther}
+            onOtherChange={(val) => updateInput('toneOther', val)}
+            placeholder="Select Tone(s)"
+          />
+        </div>
 
-        <section>
-          <label className="block text-sm font-bold mb-3 uppercase tracking-wider text-text-secondary">Call to Action</label>
-          <div className="flex flex-wrap gap-2">
-            {ctas.map(c => (
-              <Chip key={c} label={c} selected={state.inputs.cta === c} onClick={() => updateInput('cta', c)} />
-            ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <MultiSelectDropdown
+            label="Call to Action"
+            options={ctas}
+            selected={state.inputs.cta}
+            onChange={(val) => updateInput('cta', val)}
+            otherValue={state.inputs.ctaOther}
+            onOtherChange={(val) => updateInput('ctaOther', val)}
+            placeholder="Select CTA(s)"
+          />
+
+          <MultiSelectDropdown
+            label="Narrative Angles"
+            options={angles}
+            selected={state.inputs.narrativeAngles}
+            onChange={(val) => updateInput('narrativeAngles', val)}
+            otherValue={state.inputs.narrativeAnglesOther}
+            onOtherChange={(val) => updateInput('narrativeAnglesOther', val)}
+            placeholder="Select Angle(s)"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <MultiSelectDropdown
+            label="Number of Follow-ups"
+            options={['1', '2', '3', '4', '5', '6', '7']}
+            selected={[state.inputs.numFollowUps]}
+            onChange={(val) => {
+              if (val.length > 0) updateInput('numFollowUps', val[0]);
+            }}
+            singleSelect={true}
+            otherValue={state.inputs.numFollowUpsOther}
+            onOtherChange={(val) => updateInput('numFollowUpsOther', val)}
+          />
+
+          <MultiSelectDropdown
+            label="Free Offer Type"
+            options={offers}
+            selected={[state.inputs.freeOfferType]}
+            onChange={(val) => {
+              if (val.length > 0) updateInput('freeOfferType', val[0]);
+            }}
+            singleSelect={true}
+            otherValue={state.inputs.freeOfferTypeOther}
+            onOtherChange={(val) => updateInput('freeOfferTypeOther', val)}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase text-text-secondary tracking-wider">Tool Name (Optional)</label>
+            <input
+              type="text"
+              placeholder="e.g. ROI Calculator"
+              className="w-full px-4 py-3 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg"
+              value={state.inputs.toolName}
+              onChange={(e) => updateInput('toolName', e.target.value)}
+            />
           </div>
-        </section>
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase text-text-secondary tracking-wider">Tool Description (Optional)</label>
+            <input
+              type="text"
+              placeholder="e.g. Helps calculate potential savings..."
+              className="w-full px-4 py-3 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg"
+              value={state.inputs.toolDescription}
+              onChange={(e) => updateInput('toolDescription', e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-xs font-bold uppercase text-text-secondary tracking-wider">Strategic Notes</label>
+          <textarea
+            placeholder="Any specific instructions or context for the AI..."
+            className="w-full px-4 py-3 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg min-h-[100px]"
+            value={state.inputs.strategicNotes}
+            onChange={(e) => updateInput('strategicNotes', e.target.value)}
+          />
+        </div>
       </div>
 
       <button
         onClick={handleGenerate}
-        disabled={loading || !state.inputs.campaignType || !state.inputs.tone || !state.inputs.cta}
+        disabled={loading || state.inputs.campaignType.length === 0 || state.inputs.tone.length === 0 || state.inputs.cta.length === 0}
         className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
       >
         {loading && <Loader2 className="animate-spin" size={24} />}
-        {loading ? 'Generating Flow...' : 'Generate Campaign Flow'}
+        {loading ? 'Generating Campaign...' : 'Generate Outreach Campaign'}
       </button>
 
-      {state.outputs.campaignFlow.length > 0 && (
-        <div className="space-y-6">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-2">
-            <Layers size={16} className="text-primary" />
-            Campaign Sequence
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {state.outputs.campaignFlow.map((step, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: i * 0.1 }}
-                className="p-5 bg-section border border-border rounded-2xl relative group hover:border-primary transition-all"
-              >
-                <div className="absolute -top-3 -left-3 w-8 h-8 bg-primary text-black rounded-full flex items-center justify-center font-bold text-sm shadow-lg">
-                  {i + 1}
-                </div>
-                <div className="text-xs text-text-secondary leading-relaxed">
-                  {step}
-                </div>
-                <button 
-                  onClick={() => {
-                    navigator.clipboard.writeText(step);
-                    alert('Step content copied!');
-                  }}
-                  className="mt-4 w-full py-2 text-[10px] font-bold uppercase tracking-wider border border-border rounded-lg hover:bg-primary hover:border-primary hover:text-black transition-all"
-                >
-                  Copy Step
-                </button>
-              </motion.div>
-            ))}
+      {state.outputs.outreachCampaign && (
+        <div className="space-y-12">
+          <div className="p-8 bg-primary/5 border-2 border-primary/20 rounded-3xl">
+            <h4 className="text-xs font-bold uppercase tracking-widest text-primary mb-4 flex items-center gap-2">
+              <Sparkles size={16} />
+              Campaign Strategy Summary
+            </h4>
+            <p className="text-lg font-medium leading-relaxed italic">
+              "{state.outputs.outreachCampaign.strategySummary}"
+            </p>
           </div>
+
+          <div className="space-y-6">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-2">
+              <Send size={16} className="text-primary" />
+              Connection Notes (3 Versions)
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {['version1', 'version2', 'version3'].map((v, i) => (
+                <div key={v} className="p-6 bg-section border border-border rounded-2xl relative group hover:border-primary transition-all">
+                  <div className="absolute -top-3 -left-3 w-8 h-8 bg-primary text-black rounded-full flex items-center justify-center font-bold text-sm shadow-lg">
+                    V{i + 1}
+                  </div>
+                  <div className="text-sm text-text-primary leading-relaxed mb-4">
+                    {(state.outputs.outreachCampaign?.connectionNotes as any)[v]}
+                  </div>
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText((state.outputs.outreachCampaign?.connectionNotes as any)[v]);
+                      alert('Copied!');
+                    }}
+                    className="w-full py-2 text-[10px] font-bold uppercase tracking-wider border border-border rounded-lg hover:bg-primary hover:border-primary hover:text-black transition-all"
+                  >
+                    Copy
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {[1, 2, 3].map(num => {
+            const followUp = (state.outputs.outreachCampaign as any)[`followUp${num}`];
+            if (!followUp) return null;
+
+            return (
+              <div key={num} className="space-y-6">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-2">
+                  <MessageSquare size={16} className="text-primary" />
+                  Follow-up {num} (3 Versions)
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {['version1', 'version2', 'version3'].map((v, i) => (
+                    <div key={v} className="p-6 bg-section border border-border rounded-2xl relative group hover:border-primary transition-all">
+                      <div className="absolute -top-3 -left-3 w-8 h-8 bg-primary text-black rounded-full flex items-center justify-center font-bold text-sm shadow-lg">
+                        V{i + 1}
+                      </div>
+                      <div className="text-xs text-text-primary leading-relaxed mb-4 whitespace-pre-wrap">
+                        {followUp[v]}
+                      </div>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(followUp[v]);
+                          alert('Copied!');
+                        }}
+                        className="w-full py-2 text-[10px] font-bold uppercase tracking-wider border border-border rounded-lg hover:bg-primary hover:border-primary hover:text-black transition-all"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -998,28 +1927,30 @@ const Step7DMGenerator = () => {
       </div>
 
       <div className="space-y-6">
-        <section>
-          <label className="block text-sm font-bold mb-3 uppercase tracking-wider text-text-secondary">Message Angle</label>
-          <div className="flex flex-wrap gap-2">
-            {angles.map(a => (
-              <Chip key={a} label={a} selected={state.inputs.dmAngle === a} onClick={() => updateInput('dmAngle', a)} />
-            ))}
-          </div>
-        </section>
+        <MultiSelectDropdown
+          label="Message Angle"
+          options={angles}
+          selected={state.inputs.dmAngle}
+          onChange={(val) => updateInput('dmAngle', val)}
+          otherValue={state.inputs.dmAngleOther}
+          onOtherChange={(val) => updateInput('dmAngleOther', val)}
+          placeholder="Select Angle(s)"
+        />
 
-        <section>
-          <label className="block text-sm font-bold mb-3 uppercase tracking-wider text-text-secondary">Message Tone</label>
-          <div className="flex flex-wrap gap-2">
-            {tones.map(t => (
-              <Chip key={t} label={t} selected={state.inputs.dmTone === t} onClick={() => updateInput('dmTone', t)} />
-            ))}
-          </div>
-        </section>
+        <MultiSelectDropdown
+          label="Message Tone"
+          options={tones}
+          selected={state.inputs.dmTone}
+          onChange={(val) => updateInput('dmTone', val)}
+          otherValue={state.inputs.dmToneOther}
+          onOtherChange={(val) => updateInput('dmToneOther', val)}
+          placeholder="Select Tone(s)"
+        />
       </div>
 
       <button
         onClick={handleGenerate}
-        disabled={loading}
+        disabled={loading || state.inputs.dmAngle.length === 0 || state.inputs.dmTone.length === 0}
         className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
       >
         {loading && <Loader2 className="animate-spin" size={24} />}
@@ -1053,8 +1984,7 @@ B2B LEAD GENERATION WORKSHOP SUMMARY
 -------------------------
 ICP: ${state.outputs.icpSummary}
 VALUE PROP: ${state.outputs.valueProp}
-GTM STRATEGY: ${state.outputs.gtmReport.primary} + ${state.outputs.gtmReport.secondary}
-EXPECTED RESULTS: ${state.outputs.gtmReport.results}
+GTM STRATEGY: ${state.outputs.gtmStrategy?.leadGen.channels.map(c => c.channel).join(', ') || 'N/A'}
     `.trim();
     
     const blob = new Blob([content], { type: 'text/plain' });
@@ -1102,8 +2032,8 @@ EXPECTED RESULTS: ${state.outputs.gtmReport.results}
             <h4 className="text-xs font-bold uppercase tracking-widest text-text-secondary">GTM Strategy</h4>
           </div>
           <div className="space-y-1">
-            <div className="text-sm font-bold">{state.outputs.gtmReport.primary}</div>
-            <div className="text-xs text-text-secondary">Secondary: {state.outputs.gtmReport.secondary}</div>
+            <div className="text-sm font-bold">{state.outputs.gtmStrategy?.leadGen.channels[0]?.channel || 'N/A'}</div>
+            <div className="text-xs text-text-secondary">Secondary: {state.outputs.gtmStrategy?.leadGen.channels[1]?.channel || 'N/A'}</div>
           </div>
         </div>
 
@@ -1112,8 +2042,14 @@ EXPECTED RESULTS: ${state.outputs.gtmReport.results}
             <Layers className="text-primary group-hover:scale-110 transition-transform" size={20} />
             <h4 className="text-xs font-bold uppercase tracking-widest text-text-secondary">Campaign Setup</h4>
           </div>
-          <div className="text-sm font-bold">{state.inputs.campaignType}</div>
-          <div className="text-xs text-text-secondary">{state.inputs.tone} Tone · {state.inputs.cta} CTA</div>
+          <div className="text-sm font-bold">{state.inputs.campaignType.join(', ')}</div>
+          <div className="text-xs text-text-secondary">{state.inputs.tone.join(', ')} Tone · {state.inputs.cta.join(', ')} CTA</div>
+          {state.outputs.outreachCampaign && (
+            <div className="mt-4 pt-4 border-t border-border">
+              <div className="text-[10px] font-bold uppercase text-primary mb-1">Strategy</div>
+              <p className="text-xs text-text-secondary line-clamp-2 italic">"{state.outputs.outreachCampaign.strategySummary}"</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1150,29 +2086,83 @@ export default function App() {
       workEmail: '',
       phone: '',
       companyName: '',
-      leadRole: '',
+      leadRole: [],
+      leadRoleOther: '',
       linkedinHeadline: '',
       linkedinAbout: '',
-      role: '',
-      targetIcp: '',
-      tonePreference: '',
-      industry: '',
-      companySize: '',
-      geography: '',
-      decisionMaker: '',
+      role: [],
+      roleOther: '',
+      targetIcp: [],
+      targetIcpOther: '',
+      tonePreference: [],
+      tonePreferenceOther: '',
+      offer: '',
+      
+      // ICP 1
+      icp1_roles: [],
+      icp1_rolesOther: '',
+      icp1_sizes: [],
+      icp1_sizesOther: '',
+      icp1_industries: [],
+      icp1_industriesOther: '',
+
+      // ICP 2
+      icp2_roles: [],
+      icp2_rolesOther: '',
+      icp2_sizes: [],
+      icp2_sizesOther: '',
+      icp2_industries: [],
+      icp2_industriesOther: '',
+
+      // ICP 3
+      icp3_roles: [],
+      icp3_rolesOther: '',
+      icp3_sizes: [],
+      icp3_sizesOther: '',
+      icp3_industries: [],
+      icp3_industriesOther: '',
+
+      industry: [],
+      industryOther: '',
+      companySize: [],
+      companySizeOther: '',
+      geography: [],
+      geographyOther: '',
+      decisionMaker: [],
+      decisionMakerOther: '',
       painPoints: [],
-      budget: '',
-      outcome: '',
-      method: '',
-      replacement: '',
+      painPointsOther: '',
+      budget: [],
+      budgetOther: '',
+      outcome: [],
+      outcomeOther: '',
+      method: [],
+      methodOther: '',
+      replacement: [],
+      replacementOther: '',
       brandName: '',
-      brandColor: '#FFC947',
-      inspirationUrl: '',
-      campaignType: '',
-      tone: '',
-      cta: '',
-      dmAngle: '',
-      dmTone: '',
+      primaryColor: '#FFC947',
+      secondaryColor: '#000000',
+      inspirationImage: null,
+      campaignType: [],
+      campaignTypeOther: '',
+      tone: [],
+      toneOther: '',
+      cta: [],
+      ctaOther: '',
+      numFollowUps: '3',
+      numFollowUpsOther: '',
+      freeOfferType: 'Lead Magnet',
+      freeOfferTypeOther: '',
+      toolName: '',
+      toolDescription: '',
+      strategicNotes: '',
+      narrativeAngles: [],
+      narrativeAnglesOther: '',
+      dmAngle: [],
+      dmAngleOther: '',
+      dmTone: [],
+      dmToneOther: '',
     };
 
     if (savedLeadData) {
@@ -1185,16 +2175,22 @@ export default function App() {
           inputs: { ...initialInputs, ...parsed },
           outputs: {
             profileClarityScore: 0,
+            scoreMeaning: '',
+            scoreExplanation: '',
             optimizedHeadlines: [],
             optimizedAbout: '',
-            optimizedPositioning: '',
+            positioningAngles: '',
             keywordScore: 0,
+            icps: [],
             icpSummary: '',
             valueProp: '',
             websitePrompt: '',
-            gtmReport: { primary: '', secondary: '', plan: [], results: '' },
+            gtmStrategy: null,
             campaignFlow: [],
+            outreachCampaign: null,
             dmMessages: [],
+            valuePropTables: [],
+            globalSolution: '',
           }
         };
       } catch (e) {
@@ -1209,17 +2205,23 @@ export default function App() {
       inputs: initialInputs,
       outputs: {
         profileClarityScore: 0,
+        scoreMeaning: '',
+        scoreExplanation: '',
         optimizedHeadlines: [],
         optimizedAbout: '',
-        optimizedPositioning: '',
+        positioningAngles: '',
         keywordScore: 0,
+        icps: [],
         icpSummary: '',
         valueProp: '',
         websitePrompt: '',
-        gtmReport: { primary: '', secondary: '', plan: [], results: '' },
+        gtmStrategy: null,
         campaignFlow: [],
+        outreachCampaign: null,
         dmMessages: [],
-      }
+        valuePropTables: [],
+        globalSolution: '',
+      },
     };
   });
 
@@ -1238,6 +2240,13 @@ export default function App() {
       completedSteps: prev.completedSteps.includes(step) 
         ? prev.completedSteps 
         : [...prev.completedSteps, step]
+    }));
+  };
+
+  const updateOutput = (key: keyof WorkshopState['outputs'], value: any) => {
+    setState(prev => ({
+      ...prev,
+      outputs: { ...prev.outputs, [key]: value }
     }));
   };
 
@@ -1276,35 +2285,154 @@ export default function App() {
 
     try {
       if (step === 1) {
+        const roleStr = inputs.leadRole.includes('Other') 
+          ? [...inputs.leadRole.filter(r => r !== 'Other'), inputs.leadRoleOther].join(', ')
+          : inputs.leadRole.join(', ');
+        const targetIcpStr = inputs.targetIcp.includes('Other')
+          ? [...inputs.targetIcp.filter(i => i !== 'Other'), inputs.targetIcpOther].join(', ')
+          : inputs.targetIcp.join(', ');
+        const toneStr = inputs.tonePreference.includes('Other')
+          ? [...inputs.tonePreference.filter(t => t !== 'Other'), inputs.tonePreferenceOther].join(', ')
+          : inputs.tonePreference.join(', ');
+
         const result = await gemini.optimizeLinkedInProfile({
           headline: inputs.linkedinHeadline,
           about: inputs.linkedinAbout,
-          role: inputs.role,
-          targetIcp: inputs.targetIcp,
-          tone: inputs.tonePreference
+          role: roleStr,
+          targetIcp: targetIcpStr,
+          tone: toneStr,
+          offer: inputs.offer
         });
         newOutputs.profileClarityScore = result.clarityScore;
+        newOutputs.scoreMeaning = result.scoreMeaning;
+        newOutputs.scoreExplanation = result.scoreExplanation;
         newOutputs.optimizedHeadlines = result.headlines;
         newOutputs.optimizedAbout = result.aboutSection;
-        newOutputs.optimizedPositioning = result.positioning;
+        newOutputs.positioningAngles = result.positioningAngles;
         newOutputs.keywordScore = result.keywordScore;
       } else if (step === 2) {
-        const summary = `We target ${inputs.industry} companies with ${inputs.companySize} employees in ${inputs.geography}. Our primary contact is the ${inputs.decisionMaker} who is struggling with ${inputs.painPoints.join(', ')} and has a budget of ${inputs.budget}/mo.`;
-        newOutputs.icpSummary = summary;
+        const icp1 = {
+          roles: inputs.icp1_roles.includes('Other') ? [...inputs.icp1_roles.filter(r => r !== 'Other'), inputs.icp1_rolesOther] : inputs.icp1_roles,
+          sizes: inputs.icp1_sizes.includes('Other') ? [...inputs.icp1_sizes.filter(s => s !== 'Other'), inputs.icp1_sizesOther] : inputs.icp1_sizes,
+          industries: inputs.icp1_industries.includes('Other') ? [...inputs.icp1_industries.filter(i => i !== 'Other'), inputs.icp1_industriesOther] : inputs.icp1_industries,
+        };
+        const icp2 = {
+          roles: inputs.icp2_roles.includes('Other') ? [...inputs.icp2_roles.filter(r => r !== 'Other'), inputs.icp2_rolesOther] : inputs.icp2_roles,
+          sizes: inputs.icp2_sizes.includes('Other') ? [...inputs.icp2_sizes.filter(s => s !== 'Other'), inputs.icp2_sizesOther] : inputs.icp2_sizes,
+          industries: inputs.icp2_industries.includes('Other') ? [...inputs.icp2_industries.filter(i => i !== 'Other'), inputs.icp2_industriesOther] : inputs.icp2_industries,
+        };
+        const icp3 = {
+          roles: inputs.icp3_roles.includes('Other') ? [...inputs.icp3_roles.filter(r => r !== 'Other'), inputs.icp3_rolesOther] : inputs.icp3_roles,
+          sizes: inputs.icp3_sizes.includes('Other') ? [...inputs.icp3_sizes.filter(s => s !== 'Other'), inputs.icp3_sizesOther] : inputs.icp3_sizes,
+          industries: inputs.icp3_industries.includes('Other') ? [...inputs.icp3_industries.filter(i => i !== 'Other'), inputs.icp3_industriesOther] : inputs.icp3_industries,
+        };
+
+        const result = await gemini.generateDetailedICPs({
+          icp1,
+          icp2,
+          icp3,
+          offer: inputs.offer
+        });
+        newOutputs.icps = result;
+        newOutputs.icpSummary = `Generated 3 detailed strategic ICPs: ${result.map(r => r.name).join(', ')}`;
       } else if (step === 3) {
-        const prop = await gemini.generateValueProp(inputs.outcome, inputs.method, inputs.replacement);
-        newOutputs.valueProp = prop;
+        const vpTables = await gemini.generateValuePropTables({
+          icps: newOutputs.icps,
+          offer: inputs.offer
+        });
+        
+        const globalSol = await gemini.generateGlobalSolution(vpTables);
+
+        newOutputs.valuePropTables = vpTables;
+        newOutputs.globalSolution = globalSol;
       } else if (step === 4) {
-        const prompt = await gemini.generateWebsitePrompt(inputs.brandName, inputs.brandColor, inputs.inspirationUrl, newOutputs.valueProp);
+        const prompt = await gemini.generateWebsitePrompt(
+          inputs.brandName, 
+          inputs.primaryColor, 
+          inputs.secondaryColor, 
+          inputs.inspirationImage, 
+          newOutputs.valueProp,
+          newOutputs.icpSummary
+        );
         newOutputs.websitePrompt = prompt;
       } else if (step === 5) {
-        const report = await gemini.generateGTMStrategy(inputs.industry, newOutputs.icpSummary, newOutputs.valueProp);
-        newOutputs.gtmReport = report;
+        const industryStr = inputs.industry.includes('Other') 
+          ? [...inputs.industry.filter(i => i !== 'Other'), inputs.industryOther].join(', ')
+          : inputs.industry.join(', ');
+        const strategy = await gemini.generateDetailedGTM({
+          icps: newOutputs.icps,
+          offer: inputs.offer,
+          valuePropTables: newOutputs.valuePropTables,
+          industry: industryStr
+        });
+        newOutputs.gtmStrategy = strategy;
       } else if (step === 6) {
-        const flow = await gemini.generateCampaignFlow(inputs.campaignType, inputs.tone, inputs.cta, newOutputs.icpSummary, newOutputs.valueProp);
-        newOutputs.campaignFlow = flow;
+        const industryStr = inputs.industry.includes('Other') 
+          ? [...inputs.industry.filter(i => i !== 'Other'), inputs.industryOther].join(', ')
+          : inputs.industry.join(', ');
+        
+        const toneStr = inputs.tone.includes('Other')
+          ? [...inputs.tone.filter(t => t !== 'Other'), inputs.toneOther].join(', ')
+          : inputs.tone.join(', ');
+          
+        const ctaStr = inputs.cta.includes('Other')
+          ? [...inputs.cta.filter(c => c !== 'Other'), inputs.ctaOther].join(', ')
+          : inputs.cta.join(', ');
+
+        const painPointsStr = inputs.painPoints.includes('Other')
+          ? [...inputs.painPoints.filter(p => p !== 'Other'), inputs.painPointsOther].join(', ')
+          : inputs.painPoints.join(', ');
+
+        const narrativeAnglesStr = inputs.narrativeAngles.includes('Other')
+          ? [...inputs.narrativeAngles.filter(a => a !== 'Other'), inputs.narrativeAnglesOther]
+          : inputs.narrativeAngles;
+
+        const numFollowUpsVal = inputs.numFollowUps === 'Other' 
+          ? parseInt(inputs.numFollowUpsOther) || 3 
+          : parseInt(inputs.numFollowUps) || 3;
+          
+        const freeOfferTypeStr = inputs.freeOfferType === 'Other'
+          ? inputs.freeOfferTypeOther
+          : inputs.freeOfferType;
+
+        const campaign = await gemini.generateOutreachCampaign({
+          clientName: inputs.fullName,
+          companyName: inputs.companyName,
+          whatTheySell: inputs.offer,
+          targetIndustry: industryStr,
+          primaryProblem: painPointsStr,
+          narrativeAngles: narrativeAnglesStr,
+          tonePreference: toneStr,
+          icpJobTitles: newOutputs.icps.map(i => i.name).join(', '),
+          icpIndustry: newOutputs.icps.map(i => i.whoTheyAre).join(', '),
+          icpPainPoints: newOutputs.icps.flatMap(i => i.painPoints),
+          numFollowUps: numFollowUpsVal,
+          freeOfferType: freeOfferTypeStr,
+          toolName: inputs.toolName,
+          toolDescription: inputs.toolDescription,
+          ctaStyle: ctaStr,
+          strategicNotes: inputs.strategicNotes
+        });
+
+        newOutputs.outreachCampaign = campaign;
+        newOutputs.campaignFlow = [
+          "Connection Request",
+          ...Array.from({ length: inputs.numFollowUps }, (_, i) => `Follow-up ${i + 1}`)
+        ];
       } else if (step === 7) {
-        const dms = await gemini.generateDMAngles(inputs.industry, newOutputs.icpSummary, newOutputs.valueProp);
+        const industryStr = inputs.industry.includes('Other') 
+          ? [...inputs.industry.filter(i => i !== 'Other'), inputs.industryOther].join(', ')
+          : inputs.industry.join(', ');
+        
+        const angleStr = inputs.dmAngle.includes('Other')
+          ? [...inputs.dmAngle.filter(a => a !== 'Other'), inputs.dmAngleOther].join(', ')
+          : inputs.dmAngle.join(', ');
+          
+        const toneStr = inputs.dmTone.includes('Other')
+          ? [...inputs.dmTone.filter(t => t !== 'Other'), inputs.dmToneOther].join(', ')
+          : inputs.dmTone.join(', ');
+
+        const dms = await gemini.generateDMAngles(industryStr, newOutputs.icpSummary, newOutputs.valueProp);
         newOutputs.dmMessages = dms;
       }
 
@@ -1331,14 +2459,14 @@ export default function App() {
 
   if (state.currentStep === 0) {
     return (
-      <WorkshopContext.Provider value={{ state, setStep, updateInput, completeStep, generateOutput, setSubmissionId }}>
+      <WorkshopContext.Provider value={{ state, setStep, updateInput, completeStep, generateOutput, updateOutput, setSubmissionId }}>
         <Step0LeadCapture />
       </WorkshopContext.Provider>
     );
   }
 
   return (
-    <WorkshopContext.Provider value={{ state, setStep, updateInput, completeStep, generateOutput, setSubmissionId }}>
+    <WorkshopContext.Provider value={{ state, setStep, updateInput, completeStep, generateOutput, updateOutput, setSubmissionId }}>
       <div className="flex min-h-screen bg-bg">
         {/* Sidebar */}
         <aside className="w-72 border-r border-border fixed h-full bg-bg z-20 hidden lg:block">
