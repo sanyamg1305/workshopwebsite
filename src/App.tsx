@@ -51,6 +51,7 @@ interface WorkshopState {
     companyName: string;
     leadRole: string[];
     leadRoleOther: string;
+    linkedinUrl: string;
     linkedinHeadline: string;
     linkedinAbout: string;
     role: string[];
@@ -179,7 +180,8 @@ const MultiSelectDropdown = ({
   showOther = true,
   otherValue = "",
   onOtherChange = () => {},
-  singleSelect = false
+  singleSelect = false,
+  showErrors = false
 }: {
   label: string;
   options: string[];
@@ -191,6 +193,7 @@ const MultiSelectDropdown = ({
   otherValue?: string;
   onOtherChange?: (val: string) => void;
   singleSelect?: boolean;
+  showErrors?: boolean;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -306,6 +309,9 @@ const MultiSelectDropdown = ({
         </AnimatePresence>
       </div>
 
+      {showErrors && selected.length === 0 && (
+        <p className="text-red-500 text-[10px] mt-1 font-medium">This field is required</p>
+      )}
       <AnimatePresence>
         {showOther && isOtherSelected && (
           <motion.div 
@@ -466,7 +472,7 @@ const Step0LeadCapture = () => {
           </div>
 
           <div className="space-y-2">
-            <MultiSelectDropdown
+            <MultiSelectDropdown showErrors={showErrors}
               label="Role (Optional)"
               options={['Founder', 'Marketer', 'Sales', 'Freelancer']}
               selected={state.inputs.leadRole}
@@ -565,6 +571,7 @@ const OutputCard = ({ title, children, highlight = false, copyText, icon: Icon }
 // --- Steps ---
 
 const Step1ProfileCheck = () => {
+  const [showErrors, setShowErrors] = useState(false);
   const { state, updateInput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -574,16 +581,28 @@ const Step1ProfileCheck = () => {
   const tones = ['Bold', 'Professional', 'Casual', 'Witty', 'Direct', 'Empathetic', 'Data-driven'];
 
   const handleOptimize = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      await generateOutput(1);
-    } catch (err) {
-      setError("Failed to optimize profile. Please check your API key.");
-      console.error(err);
-    } finally {
+    setShowErrors(true);
+    setTimeout(async () => {
+      const errors = document.evaluate("//p[contains(text(), 'This field is required')]", document, null, XPathResult.ANY_TYPE, null);
+      if (errors.iterateNext()) return;
+      
+      setLoading(true);
+      if (typeof setError !== 'undefined') setError(null);
+      let success = false;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          await generateOutput(1);
+          success = true;
+          break;
+        } catch (err) {
+          if (attempt === 2) {
+            if (typeof setError !== 'undefined') setError("Something went wrong. Please try again.");
+            else alert("Something went wrong. Please try again.");
+          }
+        }
+      }
       setLoading(false);
-    }
+    }, 100);
   };
 
   return (
@@ -595,7 +614,18 @@ const Step1ProfileCheck = () => {
 
       <div className="bg-section p-6 rounded-2xl border border-border space-y-6">
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase text-text-secondary">LinkedIn Headline</label>
+          <label className="text-xs font-bold uppercase text-text-secondary">LinkedIn Profile URL *</label>
+          <input
+            type="url"
+            placeholder="https://linkedin.com/in/..."
+            className={`w-full px-4 py-3 rounded-xl border ${showErrors && (!state.inputs.linkedinUrl || String(state.inputs.linkedinUrl).trim() === "") ? "border-red-500" : "border-border"} focus:ring-2 focus:ring-primary/50 outline-none bg-bg`}
+            value={state.inputs.linkedinUrl}
+            onChange={(e) => updateInput("linkedinUrl", e.target.value)}
+          />
+          
+        </div>
+        <div className="space-y-2">
+          <label className="text-xs font-bold uppercase text-text-secondary">LinkedIn Headline *</label>
           <input
             type="text"
             placeholder="e.g. Founder @ XYZ | Helping..."
@@ -628,7 +658,7 @@ const Step1ProfileCheck = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <MultiSelectDropdown
+          <MultiSelectDropdown showErrors={showErrors}
             label="Your Role"
             options={roles}
             selected={state.inputs.role}
@@ -637,7 +667,7 @@ const Step1ProfileCheck = () => {
             onOtherChange={(val) => updateInput('roleOther', val)}
             placeholder="Select Role(s)"
           />
-          <MultiSelectDropdown
+          <MultiSelectDropdown showErrors={showErrors}
             label="Target ICP"
             options={icps}
             selected={state.inputs.targetIcp}
@@ -648,7 +678,7 @@ const Step1ProfileCheck = () => {
           />
         </div>
 
-        <MultiSelectDropdown
+        <MultiSelectDropdown showErrors={showErrors}
           label="Tone Preference"
           options={tones}
           selected={state.inputs.tonePreference}
@@ -765,17 +795,34 @@ const Step1ProfileCheck = () => {
 };
 
 const Step2ICPBuilder = () => {
+  const [showErrors, setShowErrors] = useState(false);
   const { state, updateInput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
   const [activeIcp, setActiveIcp] = useState<1 | 2 | 3>(1);
 
   const handleGenerate = async () => {
-    setLoading(true);
-    try {
-      await generateOutput(2);
-    } finally {
+    setShowErrors(true);
+    setTimeout(async () => {
+      const errors = document.evaluate("//p[contains(text(), 'This field is required')]", document, null, XPathResult.ANY_TYPE, null);
+      if (errors.iterateNext()) return;
+      
+      setLoading(true);
+      if (typeof setError !== 'undefined') setError(null);
+      let success = false;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          await generateOutput(2);
+          success = true;
+          break;
+        } catch (err) {
+          if (attempt === 2) {
+            if (typeof setError !== 'undefined') setError("Something went wrong. Please try again.");
+            else alert("Something went wrong. Please try again.");
+          }
+        }
+      }
       setLoading(false);
-    }
+    }, 100);
   };
 
   const roles = [
@@ -811,7 +858,7 @@ const Step2ICPBuilder = () => {
           <h3 className="text-xl font-bold">Define ICP {num}</h3>
         </div>
 
-        <MultiSelectDropdown
+        <MultiSelectDropdown showErrors={showErrors}
           label="Designation / Role"
           options={roles}
           selected={state.inputs[`icp${num}_roles` as keyof WorkshopState['inputs']] as string[]}
@@ -820,7 +867,7 @@ const Step2ICPBuilder = () => {
           onOtherChange={(val) => updateInput(`icp${num}_rolesOther` as any, val)}
         />
 
-        <MultiSelectDropdown
+        <MultiSelectDropdown showErrors={showErrors}
           label="Company Size"
           options={sizes}
           selected={state.inputs[`icp${num}_sizes` as keyof WorkshopState['inputs']] as string[]}
@@ -829,7 +876,7 @@ const Step2ICPBuilder = () => {
           onOtherChange={(val) => updateInput(`icp${num}_sizesOther` as any, val)}
         />
 
-        <MultiSelectDropdown
+        <MultiSelectDropdown showErrors={showErrors}
           label="Industry"
           options={industries}
           selected={state.inputs[`icp${num}_industries` as keyof WorkshopState['inputs']] as string[]}
@@ -955,16 +1002,33 @@ const Step2ICPBuilder = () => {
 };
 
 const Step3ValueProp = () => {
+  const [showErrors, setShowErrors] = useState(false);
   const { state, setStep, updateOutput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
 
   const handleGenerate = async () => {
-    setLoading(true);
-    try {
-      await generateOutput(3);
-    } finally {
+    setShowErrors(true);
+    setTimeout(async () => {
+      const errors = document.evaluate("//p[contains(text(), 'This field is required')]", document, null, XPathResult.ANY_TYPE, null);
+      if (errors.iterateNext()) return;
+      
+      setLoading(true);
+      if (typeof setError !== 'undefined') setError(null);
+      let success = false;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          await generateOutput(3);
+          success = true;
+          break;
+        } catch (err) {
+          if (attempt === 2) {
+            if (typeof setError !== 'undefined') setError("Something went wrong. Please try again.");
+            else alert("Something went wrong. Please try again.");
+          }
+        }
+      }
       setLoading(false);
-    }
+    }, 100);
   };
 
   return (
@@ -1053,16 +1117,33 @@ const Step3ValueProp = () => {
 };
 
 const Step4WebsiteBuilder = () => {
+  const [showErrors, setShowErrors] = useState(false);
   const { state, updateInput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
 
   const handleGenerate = async () => {
-    setLoading(true);
-    try {
-      await generateOutput(4);
-    } finally {
+    setShowErrors(true);
+    setTimeout(async () => {
+      const errors = document.evaluate("//p[contains(text(), 'This field is required')]", document, null, XPathResult.ANY_TYPE, null);
+      if (errors.iterateNext()) return;
+      
+      setLoading(true);
+      if (typeof setError !== 'undefined') setError(null);
+      let success = false;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          await generateOutput(4);
+          success = true;
+          break;
+        } catch (err) {
+          if (attempt === 2) {
+            if (typeof setError !== 'undefined') setError("Something went wrong. Please try again.");
+            else alert("Something went wrong. Please try again.");
+          }
+        }
+      }
       setLoading(false);
-    }
+    }, 100);
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1195,6 +1276,77 @@ const Step4WebsiteBuilder = () => {
             <Zap size={14} className="text-primary" />
             <span>Pro tip: Copy this prompt and use it in AI Studio to build your site instantly.</span>
           </div>
+
+          {/* AI STUDIO ENHANCEMENT PROMPTS */}
+          <div className="mt-12 space-y-4">
+            <div className="mb-6">
+              <h3 className="text-xl font-bold flex items-center gap-2"><Zap size={20} className="text-primary" /> ⚡ Improve Your Website Output</h3>
+              <p className="text-sm text-text-secondary mt-1">Use these prompts inside AI Studio to refine and enhance your generated website.</p>
+              <p className="text-[10px] font-bold uppercase text-primary tracking-widest mt-2 flex items-center gap-1"><ChevronRight size={12}/> Not happy with your output? Try these refinements</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                { title: "Conversion Optimization", desc: "Make the hero and CTAs more aggressive to maximize conversions.", prompt: "Optimize this website for maximum conversion. Make the hero section more compelling and ensure CTAs are clear, aggressive, and strategically placed." },
+                { title: "Visual Hierarchy", desc: "Improve the flow and scannability of the page.", prompt: "Improve the visual hierarchy of this page. Structure the sections so the user's eye naturally flows from the problem to the solution, using clear typography differences." },
+                { title: "Modern UI Upgrade", desc: "Give the site a premium, 2024 tech aesthetic.", prompt: "Upgrade the UI aesthetic to feel like a premium, modern tech startup from 2024. Use subtle gradients, bento-box layouts, and glassmorphism where appropriate." },
+                { title: "Mobile Optimization", desc: "Ensure perfect formatting for mobile users.", prompt: "Optimize this entire prompt for a mobile-first layout. Ensure font sizes, spacing, and stack orders are explicitly defined for mobile viewports." },
+                { title: "Branding Consistency", desc: "Align tone and visuals strictly with the brand.", prompt: "Review and rewrite the copy to perfectly match a bold, authoritative, yet approachable B2B tone. Ensure colors and CSS match the brand identity." },
+                { title: "High-Trust Website", desc: "Add social proof and credibility elements.", prompt: "Enhance the trust-building elements of this site. Integrate realistic placeholders for social proof, logos, testimonials, and data-backed claims." },
+                { title: "Speed & Performance", desc: "Optimize for fast loading times and lean code.", prompt: "Rewrite the generated HTML/CSS to be extremely lightweight and performant. Remove unnecessary wrappers and optimize for Core Web Vitals." }
+              ].map((p, i) => (
+                <div key={i} className="p-5 bg-section border border-border rounded-xl flex flex-col gap-3 group hover:border-primary transition-all">
+                  <div>
+                    <h4 className="font-bold text-sm text-white">{p.title}</h4>
+                    <p className="text-xs text-text-secondary mt-1">{p.desc}</p>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(p.prompt);
+                      alert('Prompt copied!');
+                    }}
+                    className="w-full py-2 bg-bg text-xs font-bold uppercase tracking-widest text-text-secondary border border-border rounded-lg hover:border-primary hover:text-primary transition-all flex items-center justify-center gap-2"
+                  >
+                    <Copy size={12} /> Copy Prompt
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* AI STUDIO FAQ */}
+          <div className="mt-12 space-y-4">
+            <div className="mb-6">
+              <h3 className="text-xl font-bold flex items-center gap-2"><MessageSquare size={20} className="text-primary" /> ❓ AI Studio FAQ</h3>
+              <p className="text-sm text-text-secondary mt-1">Common issues and solutions when building websites using AI Studio.</p>
+              <p className="text-[10px] font-bold uppercase text-primary tracking-widest mt-2 flex items-center gap-1"><ChevronRight size={12}/> Facing issues? Check quick fixes below</p>
+            </div>
+            
+            <div className="space-y-2">
+              {[
+                { q: "How do I deploy my generated website?", a: "Copy the HTML/CSS from AI Studio, paste it into a local folder, push to GitHub, and connect the repository to Vercel." },
+                { q: "The AI output stops mid-generation. What do I do?", a: "Hit the 'Continue' button in AI Studio, or type 'continue exactly from where you left off' to resume the code generation." },
+                { q: "Why is the UI inconsistent across sections?", a: "AI sometimes shifts styles. Copy the 'Branding Consistency' enhancement prompt above and run it in the same chat." },
+                { q: "How do I regenerate a single section?", a: "Highlight the specific section in AI Studio and ask it to 'Rewrite only this section focusing on [specific need]'." },
+                { q: "The design is broken on mobile.", a: "Run the 'Mobile Optimization' enhancement prompt to force the AI to add proper responsive flex or grid classes." },
+                { q: "The copy feels too generic.", a: "Provide specific customer quotes or data points to the AI and ask it to replace the generic copy with your concrete facts." },
+                { q: "Can I customize the colors later?", a: "Yes. The AI typically uses CSS variables at the top of the generated code. Just edit the HEX values there." },
+                { q: "What is the best way to structure the prompt?", a: "The Prompt Generator handles this for you. Just paste what we gave you. Make sure the '8 sections' constraint remains intact." },
+                { q: "The AI ignored my inspiration image.", a: "Sometimes the AI prioritizes text over image. Add an explicit command in AI Studio: 'Strictly match the layout and block structure of the attached image'." },
+                { q: "How do I make the site load faster?", a: "Use the 'Speed & Performance' prompt to force the AI to write lean code without heavy external dependencies." }
+              ].map((faq, i) => (
+                <details key={i} className="group p-4 bg-section border border-border rounded-xl open:border-primary transition-all cursor-pointer">
+                  <summary className="font-bold text-sm text-white flex justify-between items-center group-open:text-primary list-none">
+                    {faq.q}
+                    <ChevronDown size={16} className="text-text-secondary group-open:text-primary group-open:rotate-180 transition-transform" />
+                  </summary>
+                  <p className="text-xs text-text-secondary mt-4 leading-relaxed border-t border-border pt-3">
+                    {faq.a}
+                  </p>
+                </details>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -1202,17 +1354,34 @@ const Step4WebsiteBuilder = () => {
 };
 
 const Step5GTMStrategy = () => {
+  const [showErrors, setShowErrors] = useState(false);
   const { state, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'leadGen' | 'partner' | 'event' | 'magnets'>('leadGen');
 
   const handleGenerate = async () => {
-    setLoading(true);
-    try {
-      await generateOutput(5);
-    } finally {
+    setShowErrors(true);
+    setTimeout(async () => {
+      const errors = document.evaluate("//p[contains(text(), 'This field is required')]", document, null, XPathResult.ANY_TYPE, null);
+      if (errors.iterateNext()) return;
+      
+      setLoading(true);
+      if (typeof setError !== 'undefined') setError(null);
+      let success = false;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          await generateOutput(5);
+          success = true;
+          break;
+        } catch (err) {
+          if (attempt === 2) {
+            if (typeof setError !== 'undefined') setError("Something went wrong. Please try again.");
+            else alert("Something went wrong. Please try again.");
+          }
+        }
+      }
       setLoading(false);
-    }
+    }, 100);
   };
 
   const strategy = state.outputs.gtmStrategy;
@@ -1563,16 +1732,33 @@ const Step5GTMStrategy = () => {
 };
 
 const Step6OutreachCampaign = () => {
+  const [showErrors, setShowErrors] = useState(false);
   const { state, updateInput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
 
   const handleGenerate = async () => {
-    setLoading(true);
-    try {
-      await generateOutput(6);
-    } finally {
+    setShowErrors(true);
+    setTimeout(async () => {
+      const errors = document.evaluate("//p[contains(text(), 'This field is required')]", document, null, XPathResult.ANY_TYPE, null);
+      if (errors.iterateNext()) return;
+      
+      setLoading(true);
+      if (typeof setError !== 'undefined') setError(null);
+      let success = false;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          await generateOutput(6);
+          success = true;
+          break;
+        } catch (err) {
+          if (attempt === 2) {
+            if (typeof setError !== 'undefined') setError("Something went wrong. Please try again.");
+            else alert("Something went wrong. Please try again.");
+          }
+        }
+      }
       setLoading(false);
-    }
+    }, 100);
   };
 
   const types = ['LinkedIn', 'Email', 'Hybrid', 'Twitter/X', 'Cold Call Script'];
@@ -1590,7 +1776,7 @@ const Step6OutreachCampaign = () => {
 
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <MultiSelectDropdown
+          <MultiSelectDropdown showErrors={showErrors}
             label="Campaign Type"
             options={types}
             selected={state.inputs.campaignType}
@@ -1600,7 +1786,7 @@ const Step6OutreachCampaign = () => {
             placeholder="Select Type(s)"
           />
 
-          <MultiSelectDropdown
+          <MultiSelectDropdown showErrors={showErrors}
             label="Tone of Voice"
             options={tones}
             selected={state.inputs.tone}
@@ -1612,7 +1798,7 @@ const Step6OutreachCampaign = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <MultiSelectDropdown
+          <MultiSelectDropdown showErrors={showErrors}
             label="Call to Action"
             options={ctas}
             selected={state.inputs.cta}
@@ -1622,7 +1808,7 @@ const Step6OutreachCampaign = () => {
             placeholder="Select CTA(s)"
           />
 
-          <MultiSelectDropdown
+          <MultiSelectDropdown showErrors={showErrors}
             label="Narrative Angles"
             options={angles}
             selected={state.inputs.narrativeAngles}
@@ -1634,7 +1820,7 @@ const Step6OutreachCampaign = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <MultiSelectDropdown
+          <MultiSelectDropdown showErrors={showErrors}
             label="Number of Follow-ups"
             options={['1', '2', '3', '4', '5', '6', '7']}
             selected={[state.inputs.numFollowUps]}
@@ -1646,7 +1832,7 @@ const Step6OutreachCampaign = () => {
             onOtherChange={(val) => updateInput('numFollowUpsOther', val)}
           />
 
-          <MultiSelectDropdown
+          <MultiSelectDropdown showErrors={showErrors}
             label="Free Offer Type"
             options={offers}
             selected={[state.inputs.freeOfferType]}
@@ -1661,7 +1847,7 @@ const Step6OutreachCampaign = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase text-text-secondary tracking-wider">Tool Name (Optional)</label>
+            <label className="text-xs font-bold uppercase text-text-secondary tracking-wider">Tool Name *</label>
             <input
               type="text"
               placeholder="e.g. ROI Calculator"
@@ -1671,7 +1857,7 @@ const Step6OutreachCampaign = () => {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase text-text-secondary tracking-wider">Tool Description (Optional)</label>
+            <label className="text-xs font-bold uppercase text-text-secondary tracking-wider">Tool Description *</label>
             <input
               type="text"
               placeholder="e.g. Helps calculate potential savings..."
@@ -1783,16 +1969,33 @@ const Step6OutreachCampaign = () => {
 };
 
 const Step7DMGenerator = () => {
+  const [showErrors, setShowErrors] = useState(false);
   const { state, updateInput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
 
   const handleGenerate = async () => {
-    setLoading(true);
-    try {
-      await generateOutput(7);
-    } finally {
+    setShowErrors(true);
+    setTimeout(async () => {
+      const errors = document.evaluate("//p[contains(text(), 'This field is required')]", document, null, XPathResult.ANY_TYPE, null);
+      if (errors.iterateNext()) return;
+      
+      setLoading(true);
+      if (typeof setError !== 'undefined') setError(null);
+      let success = false;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          await generateOutput(7);
+          success = true;
+          break;
+        } catch (err) {
+          if (attempt === 2) {
+            if (typeof setError !== 'undefined') setError("Something went wrong. Please try again.");
+            else alert("Something went wrong. Please try again.");
+          }
+        }
+      }
       setLoading(false);
-    }
+    }, 100);
   };
 
   const angles = ['Pain', 'Curiosity', 'Insight', 'Trend', 'Case Study', 'Mutual Connection', 'Recent News', 'Compliment'];
@@ -1806,7 +2009,7 @@ const Step7DMGenerator = () => {
       </div>
 
       <div className="space-y-6">
-        <MultiSelectDropdown
+        <MultiSelectDropdown showErrors={showErrors}
           label="Message Angle"
           options={angles}
           selected={state.inputs.dmAngle}
@@ -1816,7 +2019,7 @@ const Step7DMGenerator = () => {
           placeholder="Select Angle(s)"
         />
 
-        <MultiSelectDropdown
+        <MultiSelectDropdown showErrors={showErrors}
           label="Message Tone"
           options={tones}
           selected={state.inputs.dmTone}
@@ -1855,6 +2058,7 @@ const Step7DMGenerator = () => {
 };
 
 const Step8Summary = () => {
+  const [showErrors, setShowErrors] = useState(false);
   const { state } = useWorkshop();
 
   const handleDownload = () => {
@@ -1967,6 +2171,7 @@ export default function App() {
       companyName: '',
       leadRole: [],
       leadRoleOther: '',
+      linkedinUrl: '',
       linkedinHeadline: '',
       linkedinAbout: '',
       role: [],
