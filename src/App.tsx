@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { StrategyDocument } from './components/StrategyDocument';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -580,11 +581,13 @@ const Step1ProfileCheck = () => {
   const icps = ['SaaS Founders', 'Talent Leaders', 'Marketing Managers', 'Sales Directors', 'E-commerce Owners', 'Tech Recruiters', 'Operations Heads'];
   const tones = ['Bold', 'Professional', 'Casual', 'Witty', 'Direct', 'Empathetic', 'Data-driven'];
 
-  const handleOptimize = async () => {
-    setShowErrors(true);
+  const handleOptimize = async () => {    setShowErrors(true);
     setTimeout(async () => {
-      const errors = document.evaluate("//p[contains(text(), 'This field is required')]", document, null, XPathResult.ANY_TYPE, null);
-      if (errors.iterateNext()) return;
+      const firstError = document.querySelector(".border-red-500, .border-red-500\\/50");
+      if (firstError) {
+        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
       
       setLoading(true);
       if (typeof setError !== 'undefined') setError(null);
@@ -690,7 +693,7 @@ const Step1ProfileCheck = () => {
 
         <button
           onClick={handleOptimize}
-          disabled={loading || !state.inputs.linkedinHeadline || !state.inputs.linkedinAbout || state.inputs.role.length === 0 || state.inputs.targetIcp.length === 0 || state.inputs.tonePreference.length === 0 || !state.inputs.offer}
+          disabled={loading || !state.inputs.linkedinHeadline || !state.inputs.linkedinAbout || state.inputs.targetIcp.length === 0 || state.inputs.tonePreference.length === 0 || !state.inputs.offer}
           className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
         >
           {loading ? (
@@ -798,13 +801,16 @@ const Step2ICPBuilder = () => {
   const [showErrors, setShowErrors] = useState(false);
   const { state, updateInput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [activeIcp, setActiveIcp] = useState<1 | 2 | 3>(1);
 
-  const handleGenerate = async () => {
-    setShowErrors(true);
+  const handleGenerate = async () => {    setShowErrors(true);
     setTimeout(async () => {
-      const errors = document.evaluate("//p[contains(text(), 'This field is required')]", document, null, XPathResult.ANY_TYPE, null);
-      if (errors.iterateNext()) return;
+      const firstError = document.querySelector(".border-red-500, .border-red-500\\/50");
+      if (firstError) {
+        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
       
       setLoading(true);
       if (typeof setError !== 'undefined') setError(null);
@@ -909,6 +915,16 @@ const Step2ICPBuilder = () => {
 
       {renderIcpForm(activeIcp)}
 
+            {error && (
+        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-sm flex items-start gap-3 shadow-sm mb-4">
+          <Zap size={20} className="text-red-500 mt-1 shrink-0" />
+          <div className="flex-1">
+            <p className="font-bold">Generation Failed</p>
+            <p className="mt-1">{error}</p>
+          </div>
+          <button onClick={() => setError(null)} className="px-3 py-1.5 bg-red-500/20 rounded-lg font-bold hover:bg-red-500/30 transition-colors text-xs">Dismiss</button>
+        </div>
+      )}
       <button
         onClick={handleGenerate}
         disabled={loading}
@@ -1005,12 +1021,15 @@ const Step3ValueProp = () => {
   const [showErrors, setShowErrors] = useState(false);
   const { state, setStep, updateOutput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleGenerate = async () => {
-    setShowErrors(true);
+  const handleGenerate = async () => {    setShowErrors(true);
     setTimeout(async () => {
-      const errors = document.evaluate("//p[contains(text(), 'This field is required')]", document, null, XPathResult.ANY_TYPE, null);
-      if (errors.iterateNext()) return;
+      const firstError = document.querySelector(".border-red-500, .border-red-500\\/50");
+      if (firstError) {
+        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
       
       setLoading(true);
       if (typeof setError !== 'undefined') setError(null);
@@ -1059,22 +1078,22 @@ const Step3ValueProp = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-section-alt border-b border-border">
-                  <th className="p-4 text-xs font-black uppercase text-text-secondary tracking-widest whitespace-nowrap">ICP</th>
-                  <th className="p-4 text-xs font-black uppercase text-text-secondary tracking-widest whitespace-nowrap">Desired Outcome</th>
-                  <th className="p-4 text-xs font-black uppercase text-text-secondary tracking-widest min-w-[200px]">Current Problem</th>
-                  <th className="p-4 text-xs font-black uppercase text-text-secondary tracking-widest min-w-[200px]">Your Method</th>
-                  <th className="p-4 text-xs font-black uppercase text-text-secondary tracking-widest min-w-[150px]">What You Replace</th>
-                  <th className="p-4 text-xs font-black uppercase text-text-secondary tracking-widest whitespace-nowrap">Core Angle</th>
+                                    <th className="p-4 text-xs font-black uppercase text-text-secondary tracking-widest max-w-[100px]">ICP</th>
+                  <th className="p-4 text-xs font-black uppercase text-text-secondary tracking-widest max-w-[150px]">Desired Outcome</th>
+                  <th className="p-4 text-xs font-black uppercase text-text-secondary tracking-widest max-w-[200px]">Current Problem</th>
+                  <th className="p-4 text-xs font-black uppercase text-text-secondary tracking-widest max-w-[200px]">Your Method</th>
+                  <th className="p-4 text-xs font-black uppercase text-text-secondary tracking-widest max-w-[150px]">What You Replace</th>
+                  <th className="p-4 text-xs font-black uppercase text-text-secondary tracking-widest max-w-[100px]">Core Angle</th>
                 </tr>
               </thead>
               <tbody className="bg-section divide-y divide-border">
                 {state.outputs.valuePropTables.map((row: any, i: number) => (
                   <tr key={i} className="hover:bg-primary/5 transition-colors">
                     <td className="p-4 text-sm font-bold text-white align-top">{row.icp}</td>
-                    <td className="p-4 text-sm text-text-secondary align-top">{row.desiredOutcome}</td>
-                    <td className="p-4 text-sm text-text-secondary align-top">{row.currentProblem}</td>
-                    <td className="p-4 text-sm text-text-secondary align-top">{row.method}</td>
-                    <td className="p-4 text-sm text-text-secondary align-top">{row.replacement}</td>
+                    <td className="p-4 text-sm text-text-secondary align-top whitespace-normal break-words line-clamp-2">{row.desiredOutcome}</td>
+                    <td className="p-4 text-sm text-text-secondary align-top whitespace-normal break-words line-clamp-2">{row.currentProblem}</td>
+                    <td className="p-4 text-sm text-text-secondary align-top whitespace-normal break-words line-clamp-2">{row.method}</td>
+                    <td className="p-4 text-sm text-text-secondary align-top whitespace-normal break-words line-clamp-2">{row.replacement}</td>
                     <td className="p-4 text-sm text-text-secondary align-top font-medium text-primary">{row.coreAngle}</td>
                   </tr>
                 ))}
@@ -1120,12 +1139,15 @@ const Step4WebsiteBuilder = () => {
   const [showErrors, setShowErrors] = useState(false);
   const { state, updateInput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleGenerate = async () => {
-    setShowErrors(true);
+  const handleGenerate = async () => {    setShowErrors(true);
     setTimeout(async () => {
-      const errors = document.evaluate("//p[contains(text(), 'This field is required')]", document, null, XPathResult.ANY_TYPE, null);
-      if (errors.iterateNext()) return;
+      const firstError = document.querySelector(".border-red-500, .border-red-500\\/50");
+      if (firstError) {
+        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
       
       setLoading(true);
       if (typeof setError !== 'undefined') setError(null);
@@ -1256,6 +1278,16 @@ const Step4WebsiteBuilder = () => {
         </div>
       </div>
 
+            {error && (
+        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-sm flex items-start gap-3 shadow-sm mb-4">
+          <Zap size={20} className="text-red-500 mt-1 shrink-0" />
+          <div className="flex-1">
+            <p className="font-bold">Generation Failed</p>
+            <p className="mt-1">{error}</p>
+          </div>
+          <button onClick={() => setError(null)} className="px-3 py-1.5 bg-red-500/20 rounded-lg font-bold hover:bg-red-500/30 transition-colors text-xs">Dismiss</button>
+        </div>
+      )}
       <button
         onClick={handleGenerate}
         disabled={loading}
@@ -1357,13 +1389,16 @@ const Step5GTMStrategy = () => {
   const [showErrors, setShowErrors] = useState(false);
   const { state, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'leadGen' | 'partner' | 'event' | 'magnets'>('leadGen');
 
-  const handleGenerate = async () => {
-    setShowErrors(true);
+  const handleGenerate = async () => {    setShowErrors(true);
     setTimeout(async () => {
-      const errors = document.evaluate("//p[contains(text(), 'This field is required')]", document, null, XPathResult.ANY_TYPE, null);
-      if (errors.iterateNext()) return;
+      const firstError = document.querySelector(".border-red-500, .border-red-500\\/50");
+      if (firstError) {
+        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
       
       setLoading(true);
       if (typeof setError !== 'undefined') setError(null);
@@ -1393,6 +1428,16 @@ const Step5GTMStrategy = () => {
         <p className="text-text-secondary">Generate a highly detailed, actionable Go-To-Market strategy for your business.</p>
       </div>
 
+            {error && (
+        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-sm flex items-start gap-3 shadow-sm mb-4">
+          <Zap size={20} className="text-red-500 mt-1 shrink-0" />
+          <div className="flex-1">
+            <p className="font-bold">Generation Failed</p>
+            <p className="mt-1">{error}</p>
+          </div>
+          <button onClick={() => setError(null)} className="px-3 py-1.5 bg-red-500/20 rounded-lg font-bold hover:bg-red-500/30 transition-colors text-xs">Dismiss</button>
+        </div>
+      )}
       <button
         onClick={handleGenerate}
         disabled={loading}
@@ -1686,42 +1731,46 @@ const Step5GTMStrategy = () => {
             )}
 
             {activeTab === 'magnets' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {strategy.leadMagnets.map((lm, i) => (
-                  <div key={i} className="p-8 bg-section border border-border rounded-3xl space-y-6 relative overflow-hidden group hover:border-primary transition-colors">
-                    <div className="absolute top-0 right-0 p-4 bg-primary/10 rounded-bl-3xl">
-                      <Sparkles size={24} className="text-primary" />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="text-xs font-black uppercase text-primary tracking-widest">{lm.targetIcp}</div>
-                      <h3 className="text-2xl font-black">{lm.name}</h3>
-                      <p className="text-sm text-text-secondary leading-relaxed">{lm.description}</p>
-                    </div>
+              <div className="space-y-8 animate-in fade-in duration-500">
+                <div className="space-y-2 mb-8 border-b border-border pb-6">
+                  <h3 className="text-2xl font-black flex items-center gap-2">
+                    <span className="text-3xl">🎁</span> Free Tools & Resources You Can Use as Lead Magnets
+                  </h3>
+                  <p className="text-sm text-text-secondary font-medium italic mt-2">Use these as high-value hooks in your outreach instead of generic pitches.</p>
+                  <p className="text-[10px] font-bold uppercase text-primary tracking-widest flex items-center gap-1 mt-1">People don't respond to messages. They respond to value.</p>
+                </div>
 
-                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
-                      <div className="space-y-1">
-                        <div className="text-[10px] font-black uppercase text-text-secondary">Problem Solved</div>
-                        <div className="text-xs font-bold">{lm.problemSolved}</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {strategy.leadMagnets.map((lm: any, i: number) => (
+                    <div key={i} className="p-8 bg-section border border-border rounded-3xl space-y-6 relative overflow-hidden group hover:border-primary transition-colors hover:shadow-lg hover:-translate-y-1">
+                      <div className="absolute top-0 right-0 p-4 bg-primary/10 rounded-bl-3xl">
+                        <Sparkles size={24} className="text-primary" />
                       </div>
-                      <div className="space-y-1">
-                        <div className="text-[10px] font-black uppercase text-text-secondary">Connection</div>
-                        <div className="text-xs font-bold">{lm.connectionToOffer}</div>
+                      <div className="space-y-2">
+                        <h3 className="text-2xl font-black pr-8">{lm.name}</h3>
                       </div>
-                    </div>
 
-                    <div className="space-y-4">
-                      <h4 className="text-xs font-black uppercase tracking-widest text-text-secondary">Outreach Integration</h4>
-                      <div className="space-y-3">
-                        {lm.outreachSamples.map((sample, j) => (
-                          <div key={j} className="p-4 bg-section-alt rounded-2xl border border-border text-xs leading-relaxed italic relative group/msg">
-                            {sample}
-                            <button onClick={() => navigator.clipboard.writeText(sample)} className="absolute top-2 right-2 p-1 opacity-0 group-hover/msg:opacity-100 transition-opacity hover:text-primary"><Copy size={12}/></button>
-                          </div>
-                        ))}
+                      <div className="space-y-4">
+                        <div className="space-y-1">
+                          <div className="text-[10px] font-black uppercase text-text-secondary flex items-center gap-1">What it does:</div>
+                          <div className="text-sm font-medium leading-relaxed">{lm.whatItDoes}</div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-[10px] font-black uppercase text-text-secondary flex items-center gap-1">Why it works:</div>
+                          <div className="text-sm text-text-secondary leading-relaxed">{lm.whyItWorks}</div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-[10px] font-black uppercase text-text-secondary flex items-center gap-1">How to use in outreach:</div>
+                          <div className="text-sm text-text-secondary leading-relaxed italic border-l-2 border-primary/50 pl-3">"{lm.howToUse}"</div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-[10px] font-black uppercase text-text-secondary flex items-center gap-1">CTA:</div>
+                          <div className="inline-block px-3 py-1 bg-primary/10 border border-primary/20 rounded-full text-xs font-bold uppercase tracking-widest text-primary">{lm.cta}</div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -1735,12 +1784,15 @@ const Step6OutreachCampaign = () => {
   const [showErrors, setShowErrors] = useState(false);
   const { state, updateInput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleGenerate = async () => {
-    setShowErrors(true);
+  const handleGenerate = async () => {    setShowErrors(true);
     setTimeout(async () => {
-      const errors = document.evaluate("//p[contains(text(), 'This field is required')]", document, null, XPathResult.ANY_TYPE, null);
-      if (errors.iterateNext()) return;
+      const firstError = document.querySelector(".border-red-500, .border-red-500\\/50");
+      if (firstError) {
+        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
       
       setLoading(true);
       if (typeof setError !== 'undefined') setError(null);
@@ -1879,6 +1931,16 @@ const Step6OutreachCampaign = () => {
         </div>
       </div>
 
+            {error && (
+        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-sm flex items-start gap-3 shadow-sm mb-4">
+          <Zap size={20} className="text-red-500 mt-1 shrink-0" />
+          <div className="flex-1">
+            <p className="font-bold">Generation Failed</p>
+            <p className="mt-1">{error}</p>
+          </div>
+          <button onClick={() => setError(null)} className="px-3 py-1.5 bg-red-500/20 rounded-lg font-bold hover:bg-red-500/30 transition-colors text-xs">Dismiss</button>
+        </div>
+      )}
       <button
         onClick={handleGenerate}
         disabled={loading || state.inputs.campaignType.length === 0 || state.inputs.tone.length === 0 || state.inputs.cta.length === 0}
@@ -1972,12 +2034,15 @@ const Step7DMGenerator = () => {
   const [showErrors, setShowErrors] = useState(false);
   const { state, updateInput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleGenerate = async () => {
-    setShowErrors(true);
+  const handleGenerate = async () => {    setShowErrors(true);
     setTimeout(async () => {
-      const errors = document.evaluate("//p[contains(text(), 'This field is required')]", document, null, XPathResult.ANY_TYPE, null);
-      if (errors.iterateNext()) return;
+      const firstError = document.querySelector(".border-red-500, .border-red-500\\/50");
+      if (firstError) {
+        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
       
       setLoading(true);
       if (typeof setError !== 'undefined') setError(null);
@@ -2030,6 +2095,16 @@ const Step7DMGenerator = () => {
         />
       </div>
 
+            {error && (
+        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-sm flex items-start gap-3 shadow-sm mb-4">
+          <Zap size={20} className="text-red-500 mt-1 shrink-0" />
+          <div className="flex-1">
+            <p className="font-bold">Generation Failed</p>
+            <p className="mt-1">{error}</p>
+          </div>
+          <button onClick={() => setError(null)} className="px-3 py-1.5 bg-red-500/20 rounded-lg font-bold hover:bg-red-500/30 transition-colors text-xs">Dismiss</button>
+        </div>
+      )}
       <button
         onClick={handleGenerate}
         disabled={loading || state.inputs.dmAngle.length === 0 || state.inputs.dmTone.length === 0}
@@ -2062,20 +2137,7 @@ const Step8Summary = () => {
   const { state } = useWorkshop();
 
   const handleDownload = () => {
-    const content = `
-B2B LEAD GENERATION WORKSHOP SUMMARY
--------------------------
-ICP: ${state.outputs.icpSummary}
-VALUE PROP: ${state.outputs.valueProp}
-GTM STRATEGY: ${state.outputs.gtmStrategy?.leadGen.channels.map(c => c.channel).join(', ') || 'N/A'}
-    `.trim();
-    
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'workshop-summary.txt';
-    a.click();
+    window.print();
   };
 
   return (
@@ -2152,7 +2214,7 @@ GTM STRATEGY: ${state.outputs.gtmStrategy?.leadGen.channels.map(c => c.channel).
           className="flex-1 py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
         >
           <Send size={20} />
-          Download Summary
+          Download Strategy PDF
         </button>
       </div>
     </div>
@@ -2174,8 +2236,6 @@ export default function App() {
       linkedinUrl: '',
       linkedinHeadline: '',
       linkedinAbout: '',
-      role: [],
-      roleOther: '',
       targetIcp: [],
       targetIcpOther: '',
       tonePreference: [],
@@ -2369,9 +2429,7 @@ export default function App() {
 
     try {
       if (step === 1) {
-        const roleStr = inputs.leadRole.includes('Other') 
-          ? [...inputs.leadRole.filter(r => r !== 'Other'), inputs.leadRoleOther].join(', ')
-          : inputs.leadRole.join(', ');
+        
         const targetIcpStr = inputs.targetIcp.includes('Other')
           ? [...inputs.targetIcp.filter(i => i !== 'Other'), inputs.targetIcpOther].join(', ')
           : inputs.targetIcp.join(', ');
@@ -2382,7 +2440,7 @@ export default function App() {
         const result = await gemini.optimizeLinkedInProfile({
           headline: inputs.linkedinHeadline,
           about: inputs.linkedinAbout,
-          role: roleStr,
+          
           targetIcp: targetIcpStr,
           tone: toneStr,
           offer: inputs.offer
@@ -2395,30 +2453,32 @@ export default function App() {
         newOutputs.positioningAngles = result.positioningAngles;
         newOutputs.keywordScore = result.keywordScore;
       } else if (step === 2) {
-        const icp1 = {
-          roles: inputs.icp1_roles.includes('Other') ? [...inputs.icp1_roles.filter(r => r !== 'Other'), inputs.icp1_rolesOther] : inputs.icp1_roles,
-          sizes: inputs.icp1_sizes.includes('Other') ? [...inputs.icp1_sizes.filter(s => s !== 'Other'), inputs.icp1_sizesOther] : inputs.icp1_sizes,
-          industries: inputs.icp1_industries.includes('Other') ? [...inputs.icp1_industries.filter(i => i !== 'Other'), inputs.icp1_industriesOther] : inputs.icp1_industries,
-        };
-        const icp2 = {
-          roles: inputs.icp2_roles.includes('Other') ? [...inputs.icp2_roles.filter(r => r !== 'Other'), inputs.icp2_rolesOther] : inputs.icp2_roles,
-          sizes: inputs.icp2_sizes.includes('Other') ? [...inputs.icp2_sizes.filter(s => s !== 'Other'), inputs.icp2_sizesOther] : inputs.icp2_sizes,
-          industries: inputs.icp2_industries.includes('Other') ? [...inputs.icp2_industries.filter(i => i !== 'Other'), inputs.icp2_industriesOther] : inputs.icp2_industries,
-        };
-        const icp3 = {
-          roles: inputs.icp3_roles.includes('Other') ? [...inputs.icp3_roles.filter(r => r !== 'Other'), inputs.icp3_rolesOther] : inputs.icp3_roles,
-          sizes: inputs.icp3_sizes.includes('Other') ? [...inputs.icp3_sizes.filter(s => s !== 'Other'), inputs.icp3_sizesOther] : inputs.icp3_sizes,
-          industries: inputs.icp3_industries.includes('Other') ? [...inputs.icp3_industries.filter(i => i !== 'Other'), inputs.icp3_industriesOther] : inputs.icp3_industries,
+        const buildIcp = (num: number) => {
+          const roles = inputs[`icp${num}_roles` as keyof typeof inputs] as string[];
+          const sizes = inputs[`icp${num}_sizes` as keyof typeof inputs] as string[];
+          const inds = inputs[`icp${num}_industries` as keyof typeof inputs] as string[];
+          
+          if (!roles || roles.length === 0 || !sizes || sizes.length === 0 || !inds || inds.length === 0) return null;
+          
+          return {
+            roles: roles.includes('Other') ? [...roles.filter(r => r !== 'Other'), inputs[`icp${num}_rolesOther` as keyof typeof inputs]] : roles,
+            sizes: sizes.includes('Other') ? [...sizes.filter(s => s !== 'Other'), inputs[`icp${num}_sizesOther` as keyof typeof inputs]] : sizes,
+            industries: inds.includes('Other') ? [...inds.filter(i => i !== 'Other'), inputs[`icp${num}_industriesOther` as keyof typeof inputs]] : inds,
+          };
         };
 
+        const validIcps = [buildIcp(1), buildIcp(2), buildIcp(3)].filter(Boolean);
+        if (validIcps.length === 0) {
+            if (typeof setError !== 'undefined') setError("Please fill out at least 1 ICP completely before generating.");
+            return;
+        }
+
         const result = await gemini.generateDetailedICPs({
-          icp1,
-          icp2,
-          icp3,
+          icps: validIcps,
           offer: inputs.offer
         });
         newOutputs.icps = result;
-        newOutputs.icpSummary = `Generated 3 detailed strategic ICPs: ${result.map(r => r.name).join(', ')}`;
+        newOutputs.icpSummary = `Generated ${validIcps.length} detailed strategic ICP(s): ${result.map((r: any) => r.name).join(', ')}`;
       } else if (step === 3) {
         const vpTables = await gemini.generateValuePropTables({
           icps: newOutputs.icps,
@@ -2558,7 +2618,7 @@ export default function App() {
 
   return (
     <WorkshopContext.Provider value={{ state, setStep, updateInput, completeStep, generateOutput, updateOutput, setSubmissionId }}>
-      <div className="flex min-h-screen bg-bg">
+      <div className="print:hidden flex min-h-screen bg-bg">
         {/* Sidebar */}
         <aside className="w-72 border-r border-border fixed h-full bg-bg z-20 hidden lg:block">
           <div className="p-8">
@@ -2652,6 +2712,9 @@ export default function App() {
             </div>
           </div>
         </main>
+      </div>
+      <div className="hidden print:block bg-white text-black min-h-screen w-full">
+        <StrategyDocument state={state} />
       </div>
     </WorkshopContext.Provider>
   );

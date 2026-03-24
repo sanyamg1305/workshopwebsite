@@ -41,14 +41,14 @@ export const optimizeLinkedInProfile = async (inputs: {
        - Option 2: Authority-driven ([Role] @ [Company] | [Specific Achievement])
        - Option 3: Benefit-driven (Helping [ICP] save [Time/Money] or gain [Benefit])
        - Incorporate the Core Offer: ${inputs.offer} into the headlines.
+       - CRITICAL HEADLINE RULES: NO full stops. NO periods. Use the pipe character " | " to structure.
 
     2. About Section: Write a compelling, first-person narrative in a "Founder-style" tone.
-       - Format: 2-3 short, punchy paragraphs with clean spacing.
-       - Structure:
-         - Paragraph 1: Who you help + the specific outcome you deliver.
-         - Paragraph 2: Your unique experience, insight, or "why you do what you do".
-         - Paragraph 3: What you do now (your current focus/offer) + a clear CTA.
-       - DO NOT return one long block of text.
+       - The About section MUST be EXACTLY/MINIMUM 3 paragraphs.
+       - Paragraph 1: Who you are + what you do + who you help.
+       - Paragraph 2: Pain points + how you solve them + credibility.
+       - Paragraph 3: Outcome + positioning + CTA.
+       - DO NOT write 1 paragraph. DO NOT write generic fluff. DO NOT repeat sentences. Make it very specific, strategic, and high-value.
 
     3. Positioning Angles: A one-sentence power statement that clearly defines the user's market position.
 
@@ -202,7 +202,7 @@ export const generateValuePropTables = async (inputs: {
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: `${GLOBAL_WRITING_RULES}\nYou are an expert Value Proposition Engine and B2B Strategic Advisor.
-    Your task is to infer and auto-generate a structured Value Proposition Table for EXACTLY 3 ICPs.
+    Your task is to infer and auto-generate a structured Value Proposition Table for EXACTLY ${inputs.icps.length} ICP(s).
     
     INPUTS:
     - Core Offer / Client Details: ${inputs.offer}
@@ -219,7 +219,7 @@ export const generateValuePropTables = async (inputs: {
     4. Format strictly like: Line 1: Outcome/Idea\nLine 2: Method/Qualifier
     OR Line 1: Problem\nLine 2: Impact. Use actual line breaks (\n).
 \n    INFERENCE ENGINE RULES:
-    For EACH of the 3 ICPs, infer and generate:
+    For EACH of the ${inputs.icps.length} ICPs, infer and generate:
     1. Desired Outcome: Specific, tangible, not generic (e.g., NOT "increase growth").
     2. Current Problem: Pain-led, contextually realistic to this specific ICP.
     3. Your Method: How the solution actively solves this (must feel distinct per ICP).
@@ -230,9 +230,9 @@ export const generateValuePropTables = async (inputs: {
     - Never use vague phrases.
     - Do not repeat the same method across rows.
     - Sound strategic, sharp, and specific.
-    - Provide exactly 3 ICP rows.
+    - Provide exactly ${inputs.icps.length} ICP row(s).
     
-    Return a JSON array of EXACTLY 3 objects.`,
+    Return a JSON array of EXACTLY ${inputs.icps.length} objects.`,
     config: {
       responseMimeType: "application/json",
       responseSchema: {
@@ -352,12 +352,10 @@ export interface GTMStrategy {
   };
   leadMagnets: {
     name: string;
-    description: string;
-    targetIcp: string;
-    problemSolved: string;
-    connectionToOffer: string;
+    whatItDoes: string;
+    whyItWorks: string;
     howToUse: string;
-    outreachSamples: string[];
+    cta: string;
   }[];
 }
 
@@ -381,7 +379,12 @@ export const generateDetailedGTM = async (inputs: {
     1. B2B Lead Generation (Targeting, Channels, Outreach Strategy with DMs/Emails, Funnel Design)
     2. Partner-Led Growth (Ideal Partners, Models, Outreach Pitch, Scale Strategy)
     3. Event-Led Growth (Event Types, Specific Ideas per ICP, Funnel, Conversion Strategy)
-    4. Lead Magnet Ideas (Calculators, Checklists, etc. with specific outreach integration)
+    4. Lead Magnet Ideas: Generate 5-8 highly specific lead magnets. 
+       Rules:
+       - DO NOT generate generic ideas like 'ebook'. Use specific titles like 'ROI Calculator', 'Positioning Scorecard'.
+       - Must include 2 tools, 2 frameworks/checklists, 1 calculator/estimator, 1 diagnostic/audit.
+       - Each idea must map to a DIFFERENT pain point.
+       - For each, provide: name, whatItDoes (1-2 lines outcome focused), whyItWorks (ICP pain alignment), howToUse (practical usage in outreach), cta (soft/direct/offer-first).
     
     QUALITY RULES:
     - EVERYTHING MUST BE CONTEXTUAL to the ICPs and Pain Points.
@@ -504,14 +507,12 @@ export const generateDetailedGTM = async (inputs: {
               type: Type.OBJECT,
               properties: {
                 name: { type: Type.STRING },
-                description: { type: Type.STRING },
-                targetIcp: { type: Type.STRING },
-                problemSolved: { type: Type.STRING },
-                connectionToOffer: { type: Type.STRING },
+                whatItDoes: { type: Type.STRING },
+                whyItWorks: { type: Type.STRING },
                 howToUse: { type: Type.STRING },
-                outreachSamples: { type: Type.ARRAY, items: { type: Type.STRING } }
+                cta: { type: Type.STRING }
               },
-              required: ["name", "description", "targetIcp", "problemSolved", "connectionToOffer", "howToUse", "outreachSamples"]
+              required: ["name", "whatItDoes", "whyItWorks", "howToUse", "cta"]
             }
           }
         },
