@@ -2296,7 +2296,7 @@ export default function App() {
           currentStep: 1,
           completedSteps: [0],
           submissionId: parsed.submissionId || null,
-          leadFormFilled: false,
+          leadFormFilled: !!parsed.submissionId,
           isCheckingStatus: false,
           inputs: { ...initialInputs, ...parsed },
           outputs: {
