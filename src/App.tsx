@@ -935,12 +935,12 @@ const Step2ICPBuilder = () => {
       )}
       <div className="pt-4 space-y-4">
         {state.outputs.icps.length === 0 ? (
-          <ActionButton
-            onClick={handleGenerate}
-            loading={loading}
-            label="Analyze Market Segments"
-            microtext="Identify your high-value targets"
-            disabled={state.inputs.icps.filter(i => i.designation || i.companySize || i.industry).length === 0}
+            disabled={loading || ([1, 2, 3].some(num => {
+              const roles = state.inputs[`icp${num}_roles` as keyof typeof state.inputs];
+              const sizes = state.inputs[`icp${num}_sizes` as keyof typeof state.inputs];
+              const inds = state.inputs[`icp${num}_industries` as keyof typeof state.inputs];
+              return (roles && roles.length > 0) || (sizes && sizes.length > 0) || (inds && inds.length > 0);
+            }) === false)}
           />
         ) : (
           <div className="space-y-6">
@@ -1325,16 +1325,26 @@ const Step4WebsiteBuilder = () => {
         </div>
 
         <div className="md:col-span-2 space-y-2">
-          <label className="text-xs font-bold uppercase text-text-secondary">Design Inspiration (Screenshot)</label>
+          <div className="flex justify-between items-end">
+            <label className="text-xs font-bold uppercase text-text-secondary">Design Inspiration (Screenshot)</label>
+            <a 
+              href="https://pinterest.com" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-[10px] font-black uppercase text-primary hover:underline flex items-center gap-1"
+            >
+              Get inspiration on Pinterest ↗
+            </a>
+          </div>
           <div className="flex items-center gap-4">
             <label className="flex-1 flex flex-col items-center justify-center h-32 border-2 border-dashed border-border rounded-2xl hover:border-primary hover:bg-primary/5 transition-all cursor-pointer group">
-              <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                <Upload className="w-8 h-8 text-text-secondary group-hover:text-primary mb-2" />
-                <p className="text-xs text-text-secondary group-hover:text-primary">
-                  {state.inputs.inspirationImage ? 'Change Screenshot' : 'Upload UI Inspiration'}
-                </p>
-              </div>
               <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+              <div className="flex flex-col items-center text-text-secondary group-hover:text-primary">
+                <Upload size={24} className="mb-2" />
+                <span className="text-sm font-bold">
+                  {state.inputs.inspirationImage ? 'Change Screenshot' : 'Upload UI Inspiration'}
+                </span>
+              </div>
             </label>
             {state.inputs.inspirationImage && (
               <div className="w-32 h-32 rounded-2xl border border-border overflow-hidden relative group">
