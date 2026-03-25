@@ -132,13 +132,12 @@ export interface WorkshopState {
   };
 }
 
-// --- Context ---
-
 const WorkshopContext = createContext<{
   state: WorkshopState;
   setStep: (step: StepId) => void;
   updateInput: (key: keyof WorkshopState['inputs'], value: any) => void;
   completeStep: (step: StepId) => void;
+  completeAndGoToStep: (current: StepId, next: StepId) => void;
   generateOutput: (step: StepId) => Promise<void>;
   updateOutput: (key: keyof WorkshopState['outputs'], value: any) => void;
   setSubmissionId: (id: string) => void;
@@ -323,7 +322,7 @@ const MultiSelectDropdown = ({
 };
 
 const Step0LeadCapture = () => {
-  const { state, updateInput, setStep, completeStep, setSubmissionId } = useWorkshop();
+  const { state, updateInput, setStep, completeStep, completeAndGoToStep, setSubmissionId } = useWorkshop();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
@@ -555,7 +554,7 @@ const OutputCard = ({ title, children, highlight = false, copyText, icon: Icon }
 
 const Step1ProfileCheck = () => {
   const [showErrors, setShowErrors] = useState(false);
-  const { state, setStep, completeStep, updateInput, generateOutput } = useWorkshop();
+  const { state, setStep, completeStep, completeAndGoToStep, updateInput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -788,7 +787,7 @@ const Step1ProfileCheck = () => {
 
 const Step2ICPBuilder = () => {
   const [showErrors, setShowErrors] = useState(false);
-  const { state, setStep, completeStep, updateInput, generateOutput } = useWorkshop();
+  const { state, setStep, completeStep, completeAndGoToStep, updateInput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeIcp, setActiveIcp] = useState<1 | 2 | 3>(1);
@@ -1059,7 +1058,7 @@ const Step2ICPBuilder = () => {
 
 const Step3ValueProp = () => {
   const [showErrors, setShowErrors] = useState(false);
-  const { state, setStep, updateOutput, generateOutput } = useWorkshop();
+  const { state, setStep, completeAndGoToStep, updateOutput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -1184,10 +1183,7 @@ const Step3ValueProp = () => {
 
           <div className="flex flex-col md:flex-row items-center gap-4 mt-8">
             <ActionButton
-              onClick={() => {
-                completeStep(3);
-                setTimeout(() => setStep(4), 10);
-              }}
+              onClick={() => completeAndGoToStep(3, 4)}
               label="Build Website Messaging"
               microtext="Convert positioning into copy"
               className="flex-1"
@@ -1216,7 +1212,7 @@ const Step3ValueProp = () => {
 
 const Step4WebsiteBuilder = () => {
   const [showErrors, setShowErrors] = useState(false);
-  const { state, setStep, completeStep, updateInput, generateOutput } = useWorkshop();
+  const { state, setStep, completeStep, completeAndGoToStep, updateInput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -1503,7 +1499,7 @@ const Step4WebsiteBuilder = () => {
 
 const Step5GTMStrategy = () => {
   const [showErrors, setShowErrors] = useState(false);
-  const { state, setStep, completeStep, generateOutput } = useWorkshop();
+  const { state, setStep, completeStep, completeAndGoToStep, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'leadGen' | 'partner' | 'event' | 'magnets'>('leadGen');
@@ -1925,7 +1921,7 @@ const Step5GTMStrategy = () => {
 
 const Step6OutreachEngine = () => {
   const [showErrors, setShowErrors] = useState(false);
-  const { state, setStep, completeStep, updateInput, generateOutput } = useWorkshop();
+  const { state, setStep, completeStep, completeAndGoToStep, updateInput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -2360,6 +2356,16 @@ export default function App() {
     }));
   };
 
+  const completeAndGoToStep = (current: StepId, next: StepId) => {
+    setState(prev => ({
+      ...prev,
+      completedSteps: prev.completedSteps.includes(current)
+        ? prev.completedSteps
+        : [...prev.completedSteps, current],
+      currentStep: next
+    }));
+  };
+
   const updateOutput = (key: keyof WorkshopState['outputs'], value: any) => {
     setState(prev => ({
       ...prev,
@@ -2504,6 +2510,11 @@ export default function App() {
         newOutputs.gtmStrategy = strategy;
       } else if (step === 6) {
         const ind = Array.isArray(inputs.industry) ? inputs.industry : [];
+        // CRITICAL: Pass the outreach part of GTM if it exists as an object
+        const gtmContext = newOutputs.gtmStrategy?.leadGen?.outreach
+          ? JSON.stringify(newOutputs.gtmStrategy.leadGen.outreach).substring(0, 1500)
+          : "Standard GTM";
+          
         const outreach = await gemini.generateOutreachEngine({
           clientName: inputs.fullName,
           companyName: inputs.companyName,
@@ -2512,7 +2523,7 @@ export default function App() {
           primaryProblem: newOutputs.icps[0]?.painPoints[0] || "",
           valueProp: newOutputs.globalSolution || newOutputs.valueProp || "Strategic B2B Positioning",
           icpSummary: newOutputs.icpSummary,
-          gtmStrategy: JSON.stringify(newOutputs.gtmStrategy),
+          gtmStrategy: gtmContext,
           angle: inputs.outreachAngle || 'Authority',
           channel: inputs.outreachChannel || 'Both'
         });
@@ -2547,7 +2558,7 @@ export default function App() {
   }
 
   return (
-    <WorkshopContext.Provider value={{ state, setStep, updateInput, completeStep, generateOutput, updateOutput, setSubmissionId }}>
+    <WorkshopContext.Provider value={{ state, setStep, updateInput, completeStep, completeAndGoToStep, generateOutput, updateOutput, setSubmissionId }}>
       <div className="print:hidden flex min-h-screen bg-bg">
         {/* Sidebar */}
         <aside className="w-72 border-r border-border fixed h-full bg-bg z-20 hidden lg:block">

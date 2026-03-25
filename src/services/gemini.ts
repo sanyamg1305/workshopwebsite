@@ -709,7 +709,11 @@ export const generateOutreachEngine = async (inputs: {
       }
     }
     
-    ONLY include the "linkedIn" or "email" keys if they are selected in the target channel "${inputs.channel}" (or both if "Both" is selected).
+    CRITICAL: 
+    - If channel is "LinkedIn", you MUST include the "linkedIn" key.
+    - If channel is "Email", you MUST include the "email" key.
+    - If channel is "Both", you MUST include BOTH "linkedIn" and "email" keys.
+    - DO NOT skip requested channels.
   `;
 
   const response = await ai.models.generateContent({
