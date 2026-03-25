@@ -52,6 +52,8 @@ export interface WorkshopState {
   currentStep: StepId;
   completedSteps: StepId[];
   submissionId: string | null;
+  leadFormFilled: boolean;
+  isCheckingStatus: boolean;
   inputs: {
     fullName: string;
     workEmail: string;
@@ -357,185 +359,7 @@ const MultiSelectDropdown = ({
   );
 };
 
-const Step0LeadCapture = () => {
-  const { state, updateInput, setStep, completeStep, completeAndGoToStep, setSubmissionId } = useWorkshop();
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showErrors, setShowErrors] = useState(false);
 
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-      
-      updateInput('fullName', user.displayName || '');
-      updateInput('workEmail', user.email || '');
-      
-      // Auto-submit if other fields are filled, or let them review
-    } catch (err: any) {
-      console.error("Google Login Error:", err);
-      setError("Google Login failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (error) setError('');
-  }, [state.inputs.fullName, state.inputs.workEmail, state.inputs.phone, state.inputs.companyName, state.inputs.leadRole]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const { fullName, workEmail, phone, companyName, leadRole } = state.inputs;
-    
-    if (!fullName || !workEmail || !phone || !companyName) {
-      setError('Please fill in all required fields.');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-
-    try {
-      // Save to Supabase (Optional - don't block the workshop if it fails)
-      try {
-        const { data, error: sbError } = await supabase
-          .from('workshop_submissions')
-          .insert({
-            full_name: fullName,
-            work_email: workEmail,
-            phone: phone,
-            company_name: companyName,
-            lead_role: leadRole,
-            current_step: 0,
-            workshop_inputs: state.inputs,
-            workshop_outputs: state.outputs
-          })
-          .select()
-          .single();
-
-        if (sbError) {
-          console.warn("Supabase Insert Error (Non-blocking):", sbError);
-        } else if (data) {
-          setSubmissionId(data.id);
-          // Save submission ID to localStorage for recovery
-          const leadData = { fullName, workEmail, phone, companyName, leadRole, submissionId: data.id };
-          localStorage.setItem('userLeadData', JSON.stringify(leadData));
-        }
-      } catch (sbCatchError) {
-        console.warn("Supabase Catch Error (Non-blocking):", sbCatchError);
-      }
-
-      // Always save to localStorage as a fallback
-      if (!localStorage.getItem('userLeadData')) {
-        const leadData = { fullName, workEmail, phone, companyName, leadRole };
-        localStorage.setItem('userLeadData', JSON.stringify(leadData));
-      }
-      
-      completeStep(0);
-      setStep(1);
-    } catch (err: any) {
-      console.error("Workshop Start Error:", err);
-      setError('Failed to start workshop. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-[100] bg-bg flex items-center justify-center p-4 overflow-y-auto">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="max-w-xl w-full bg-section border border-border rounded-3xl p-8 md:p-12 shadow-2xl"
-      >
-        <div className="text-center mb-10">
-          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center font-black text-2xl text-black mx-auto mb-6 shadow-lg shadow-primary/20">M</div>
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-text-primary mb-4">
-            Start Your B2B Growth Workshop
-          </h1>
-          <p className="text-text-secondary text-lg">
-            Enter your details to generate your personalized growth system.
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase text-text-secondary">Full Name *</label>
-              <input
-                type="text"
-                required
-                className="w-full px-4 py-4 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg text-lg"
-                value={state.inputs.fullName}
-                onChange={(e) => updateInput('fullName', e.target.value)}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase text-text-secondary">Work Email *</label>
-              <input
-                type="email"
-                required
-                className="w-full px-4 py-4 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg text-lg"
-                value={state.inputs.workEmail}
-                onChange={(e) => updateInput('workEmail', e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase text-text-secondary">Phone Number *</label>
-              <input
-                type="tel"
-                required
-                className="w-full px-4 py-4 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg text-lg"
-                value={state.inputs.phone}
-                onChange={(e) => updateInput('phone', e.target.value)}
-              />
-            </div>
-          </div>
-
-
-          {error && <p className="text-red-500 text-sm font-medium text-center">{error}</p>}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-primary/30 flex items-center justify-center gap-3 mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="animate-spin" size={24} />
-                Starting...
-              </>
-            ) : (
-              <>
-                Start Workshop
-                <ArrowRight size={24} />
-              </>
-            )}
-          </button>
-
-          <div className="relative my-8">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border"></div></div>
-            <div className="relative flex justify-center text-xs uppercase"><span className="bg-section px-4 text-text-secondary font-bold">Or continue with</span></div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            disabled={loading}
-            className="w-full py-4 bg-white text-black rounded-2xl font-bold text-lg hover:bg-gray-100 transition-all flex items-center justify-center gap-3 border border-gray-200"
-          >
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
-            Continue with Google
-          </button>
-        </form>
-      </motion.div>
-    </div>
-  );
-};
 
 const SidebarItem = ({ id, label, icon: Icon, active, completed, onClick }: any) => (
   <button
@@ -2472,6 +2296,8 @@ export default function App() {
           currentStep: 1,
           completedSteps: [0],
           submissionId: parsed.submissionId || null,
+          leadFormFilled: false,
+          isCheckingStatus: false,
           inputs: { ...initialInputs, ...parsed },
           outputs: {
             profileClarityScore: 0,
@@ -2500,6 +2326,8 @@ export default function App() {
       currentStep: 0,
       completedSteps: [],
       submissionId: null,
+      leadFormFilled: false,
+      isCheckingStatus: false,
       inputs: initialInputs,
       outputs: {
         profileClarityScore: 0,
@@ -2525,10 +2353,39 @@ export default function App() {
   const [savedStep, setSavedStep] = useState<number | null>(null);
   const [showSaveIndicator, setShowSaveIndicator] = useState(false);
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
+      
+      if (firebaseUser) {
+        setState(prev => ({ ...prev, isCheckingStatus: true }));
+        try {
+          const { data, error } = await supabase
+            .from('workshop_submissions')
+            .select('id, workshop_inputs')
+            .eq('user_uid', firebaseUser.uid)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+          if (data) {
+            setState(prev => ({ 
+              ...prev, 
+              leadFormFilled: true,
+              submissionId: data.id,
+              // Optionally restore inputs if not already in state
+              inputs: { ...prev.inputs, ...(data.workshop_inputs || {}) }
+            }));
+          }
+        } catch (err) {
+          console.warn("No existing submission found for user", err);
+        } finally {
+          setState(prev => ({ ...prev, isCheckingStatus: false }));
+        }
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -2566,18 +2423,195 @@ export default function App() {
     }
   }, [state.currentStep]);
 
-  const handleResume = () => {
-    if (savedStep !== null) {
-      setStep(savedStep as StepId);
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      setUser(result.user);
+    } catch (err: any) {
+      console.error("Google Login Error:", err);
+      setError("Google Login failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    setShowResumeModal(false);
   };
 
-  const handleStartOver = () => {
-    localStorage.removeItem('workshop_progress_step');
-    localStorage.removeItem('userLeadData');
-    // Reload to reset the entire initialization logic
-    window.location.reload();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const { fullName, workEmail, phone, companyName, leadRole } = state.inputs;
+    
+    if (!fullName || !workEmail || !phone || !companyName) {
+      setError('Please fill in all required fields.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      // Save to Supabase
+      const { data, error: sbError } = await supabase
+        .from('workshop_submissions')
+        .insert({
+          user_uid: user?.uid,
+          user_email: user?.email,
+          full_name: fullName,
+          work_email: workEmail,
+          phone: phone,
+          company_name: companyName,
+          lead_role: leadRole,
+          current_step: 0,
+          workshop_inputs: state.inputs,
+          workshop_outputs: state.outputs
+        })
+        .select()
+        .single();
+
+      if (sbError) {
+        console.warn("Supabase Insert Error (Non-blocking):", sbError);
+      } else if (data) {
+        setSubmissionId(data.id);
+        const leadData = { fullName, workEmail, phone, companyName, leadRole, submissionId: data.id };
+        localStorage.setItem('userLeadData', JSON.stringify(leadData));
+      }
+
+      setState(prev => ({ ...prev, leadFormFilled: true }));
+      completeStep(0);
+      setStep(1);
+    } catch (err: any) {
+      console.error("Workshop Start Error:", err);
+      setError('Failed to start workshop. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const Step0LeadCapture = () => {
+    return (
+      <div className="fixed inset-0 z-[100] bg-bg flex items-center justify-center p-4 overflow-y-auto">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-xl w-full bg-section border border-border rounded-3xl p-8 md:p-12 shadow-2xl"
+        >
+          <div className="text-center mb-10">
+            <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center font-black text-2xl text-black mx-auto mb-6 shadow-lg shadow-primary/20">M</div>
+            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-text-primary mb-4">
+              {user ? "Complete Your Profile" : "Start Your B2B Growth Workshop"}
+            </h1>
+            <p className="text-text-secondary text-lg">
+              {user 
+                ? "Just a few more details to personalize your experience." 
+                : "Login with Google to begin your personalized growth system."}
+            </p>
+          </div>
+
+          {!user ? (
+            <div className="space-y-6">
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                disabled={loading}
+                className="w-full py-5 bg-white text-black rounded-2xl font-black text-xl hover:bg-gray-100 transition-all flex items-center justify-center gap-4 border-2 border-gray-100 shadow-xl shadow-black/5"
+              >
+                {loading ? (
+                  <Loader2 className="animate-spin" size={24} />
+                ) : (
+                  <>
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-6 h-6" />
+                    Continue with Google
+                  </>
+                )}
+              </button>
+              <p className="text-center text-xs text-text-secondary font-medium">
+                Secure, 1-click entry. No password required.
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-text-secondary tracking-widest">Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    className="w-full px-4 py-4 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg text-lg transition-all"
+                    value={state.inputs.fullName}
+                    onChange={(e) => updateInput('fullName', e.target.value)}
+                    placeholder="e.g. John Doe"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-text-secondary tracking-widest">Work Email *</label>
+                  <input
+                    type="email"
+                    required
+                    readOnly={!!user?.email}
+                    className={`w-full px-4 py-4 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg text-lg transition-all ${user?.email ? 'opacity-70 cursor-not-allowed' : ''}`}
+                    value={state.inputs.workEmail}
+                    onChange={(e) => updateInput('workEmail', e.target.value)}
+                    placeholder="john@company.com"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-text-secondary tracking-widest">Phone Number *</label>
+                  <input
+                    type="tel"
+                    required
+                    className="w-full px-4 py-4 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg text-lg transition-all"
+                    value={state.inputs.phone}
+                    onChange={(e) => updateInput('phone', e.target.value)}
+                    placeholder="+1 (555) 000-0000"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-text-secondary tracking-widest">Company Name *</label>
+                  <input
+                    type="text"
+                    required
+                    className="w-full px-4 py-4 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg text-lg transition-all"
+                    value={state.inputs.companyName}
+                    onChange={(e) => updateInput('companyName', e.target.value)}
+                    placeholder="Your Company Inc."
+                  />
+                </div>
+              </div>
+
+              {error && <p className="text-red-500 text-sm font-bold text-center bg-red-500/10 py-3 rounded-xl">{error}</p>}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-primary/30 flex items-center justify-center gap-3 disabled:opacity-50"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="animate-spin" size={24} />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    Enter Workshop
+                    <ArrowRight size={24} />
+                  </>
+                )}
+              </button>
+              <button 
+                type="button"
+                onClick={handleLogout}
+                className="w-full text-center text-sm text-text-secondary hover:text-red-500 transition-colors font-bold uppercase tracking-widest"
+              >
+                Cancel & Sign Out
+              </button>
+            </form>
+          )}
+        </motion.div>
+      </div>
+    );
   };
 
   const setStep = (step: StepId) => setState(prev => ({ ...prev, currentStep: step }));
@@ -2796,10 +2830,20 @@ export default function App() {
 
   const currentStepData = steps.find(s => s.id === state.currentStep);
 
-  if (state.currentStep === 0) {
+  if (!user || !state.leadFormFilled || state.isCheckingStatus) {
     return (
       <WorkshopContext.Provider value={{ state, setStep, updateInput, completeStep, completeAndGoToStep, generateOutput, updateOutput, setSubmissionId }}>
-        <Step0LeadCapture />
+        {state.isCheckingStatus ? (
+          <div className="fixed inset-0 bg-bg flex flex-col items-center justify-center gap-6">
+            <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center font-black text-2xl text-black shadow-lg shadow-primary/20 animate-bounce">M</div>
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 className="animate-spin text-primary" size={32} />
+              <p className="text-text-secondary font-bold uppercase tracking-widest text-xs">Verifying Access...</p>
+            </div>
+          </div>
+        ) : (
+          <Step0LeadCapture />
+        )}
       </WorkshopContext.Provider>
     );
   }
