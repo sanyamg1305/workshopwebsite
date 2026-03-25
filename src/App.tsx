@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { ActionButton } from './components/ActionButton';
 import { StrategyReport } from './components/StrategyReport';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -573,7 +574,7 @@ const OutputCard = ({ title, children, highlight = false, copyText, icon: Icon }
 
 const Step1ProfileCheck = () => {
   const [showErrors, setShowErrors] = useState(false);
-  const { state, updateInput, generateOutput } = useWorkshop();
+  const { state, setStep, completeStep, updateInput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -682,23 +683,39 @@ const Step1ProfileCheck = () => {
           placeholder="Select Tone(s)"
         />
 
-        <button
-          onClick={handleOptimize}
-          disabled={loading || !state.inputs.linkedinHeadline || !state.inputs.linkedinAbout || state.inputs.targetIcp.length === 0 || state.inputs.tonePreference.length === 0 || !state.inputs.offer}
-          className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="animate-spin" size={24} />
-              Optimizing Profile...
-            </>
-          ) : (
-            <>
-              Optimize My Profile
-              <Zap size={24} />
-            </>
-          )}
-        </button>
+        {state.outputs.profileClarityScore === 0 ? (
+          <ActionButton
+            onClick={handleOptimize}
+            loading={loading}
+            label="Optimize My Profile"
+            microtext="Build authority & clarity"
+            disabled={!state.inputs.linkedinHeadline || !state.inputs.linkedinAbout || state.inputs.targetIcp.length === 0 || state.inputs.tonePreference.length === 0 || !state.inputs.offer}
+          />
+        ) : (
+          <div className="space-y-6">
+            <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
+              <p className="text-emerald-500 font-bold text-sm">✓ Profile Optimization Complete</p>
+            </div>
+            <div className="flex gap-4">
+              <button
+                onClick={handleOptimize}
+                disabled={loading}
+                className="flex-1 py-4 bg-section text-white border border-border rounded-xl font-bold hover:bg-section-alt transition-all disabled:opacity-50"
+              >
+                {loading ? "Optimizing..." : "Regenerate Profile"}
+              </button>
+              <ActionButton
+                onClick={() => {
+                  completeStep(1);
+                  setStep(2);
+                }}
+                label="Define Your Target ICPs"
+                microtext="Identify who you should be targeting"
+                className="flex-[2]"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {error && (
@@ -790,7 +807,7 @@ const Step1ProfileCheck = () => {
 
 const Step2ICPBuilder = () => {
   const [showErrors, setShowErrors] = useState(false);
-  const { state, updateInput, generateOutput } = useWorkshop();
+  const { state, setStep, completeStep, updateInput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeIcp, setActiveIcp] = useState<1 | 2 | 3>(1);
@@ -935,14 +952,41 @@ const Step2ICPBuilder = () => {
           <button onClick={() => setError(null)} className="px-3 py-1.5 bg-red-500/20 rounded-lg font-bold hover:bg-red-500/30 transition-colors text-xs">Dismiss</button>
         </div>
       )}
-      <button
-        onClick={handleGenerate}
-        disabled={loading}
-        className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
-      >
-        {loading && <Loader2 className="animate-spin" size={24} />}
-        {loading ? 'Generating Strategic ICPs...' : 'Generate Top 3 ICP Profiles'}
-      </button>
+      <div className="pt-4 space-y-4">
+        {state.outputs.icps.length === 0 ? (
+          <ActionButton
+            onClick={handleGenerate}
+            loading={loading}
+            label="Analyze Market Segments"
+            microtext="Identify your high-value targets"
+            disabled={state.inputs.icps.filter(i => i.designation || i.companySize || i.industry).length === 0}
+          />
+        ) : (
+          <div className="space-y-6">
+            <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
+              <p className="text-emerald-500 font-bold text-sm">✓ Targeted ICPs Identified</p>
+            </div>
+            <div className="flex gap-4">
+              <button
+                onClick={handleGenerate}
+                disabled={loading}
+                className="flex-1 py-4 bg-section text-white border border-border rounded-xl font-bold hover:bg-section-alt transition-all disabled:opacity-50"
+              >
+                {loading ? "Analyzing..." : "Regenerate ICPs"}
+              </button>
+              <ActionButton
+                onClick={() => {
+                  completeStep(2);
+                  setStep(3);
+                }}
+                label="Generate Positioning Strategy"
+                microtext="Turn ICPs into clear value propositions"
+                className="flex-[2]"
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
       {state.outputs.icps && state.outputs.icps.length > 0 && (
         <div className="space-y-8">
@@ -1068,19 +1112,18 @@ const Step3ValueProp = () => {
       </div>
 
       {state.outputs.valuePropTables.length === 0 ? (
-        <button
+        <ActionButton
           onClick={handleGenerate}
+          loading={loading}
+          label="Infer Strategic Positioning"
+          microtext="Identify specific value per ICP"
           disabled={loading}
-          className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
-        >
-          {loading && <Loader2 className="animate-spin" size={24} />}
-          {loading ? 'Inferring Strategy...' : 'Generate Positioning Strategy'}
-        </button>
+        />
       ) : (
         <div className="space-y-8 animate-in fade-in duration-500">
           <div className="p-6 bg-primary/10 border border-primary/20 rounded-2xl text-center">
             <h3 className="text-lg font-bold text-primary">
-              Based on your inputs, here’s how your positioning looks across your top ICPs.
+              ✓ Positioning Strategy Inferred Successfully
             </h3>
           </div>
 
@@ -1154,17 +1197,15 @@ const Step3ValueProp = () => {
           </div>
 
           <div className="flex flex-col md:flex-row items-center gap-4 mt-8">
-            <button
+            <ActionButton
               onClick={() => {
-                const completeStep = (state as any).completeStep || (() => {});
                 completeStep(3);
                 setStep(4);
               }}
-              className="w-full md:flex-1 py-4 bg-primary text-black rounded-xl font-bold text-lg hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
-            >
-              Confirm & Generate Strategy
-              <ArrowRight size={20} />
-            </button>
+              label="Build Website Messaging"
+              microtext="Convert positioning into high-converting copy"
+              className="flex-1"
+            />
             
             <button
               onClick={handleGenerate}
@@ -1189,7 +1230,7 @@ const Step3ValueProp = () => {
 
 const Step4WebsiteBuilder = () => {
   const [showErrors, setShowErrors] = useState(false);
-  const { state, updateInput, generateOutput } = useWorkshop();
+  const { state, setStep, completeStep, updateInput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -1340,14 +1381,41 @@ const Step4WebsiteBuilder = () => {
           <button onClick={() => setError(null)} className="px-3 py-1.5 bg-red-500/20 rounded-lg font-bold hover:bg-red-500/30 transition-colors text-xs">Dismiss</button>
         </div>
       )}
-      <button
-        onClick={handleGenerate}
-        disabled={loading}
-        className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
-      >
-        {loading && <Loader2 className="animate-spin" size={24} />}
-        {loading ? 'Generating Prompt...' : 'Generate Website Prompt'}
-      </button>
+      <div className="space-y-4">
+        {!state.outputs.websitePrompt ? (
+          <ActionButton
+            onClick={handleGenerate}
+            loading={loading}
+            label="Generate Website Assets"
+            microtext="Create high-converting landing page copy"
+            disabled={loading}
+          />
+        ) : (
+          <div className="space-y-6">
+            <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
+              <p className="text-emerald-500 font-bold text-sm">✓ Website Prompt Engineered Successfully</p>
+            </div>
+            <div className="flex gap-4">
+              <button
+                onClick={handleGenerate}
+                disabled={loading}
+                className="flex-1 py-4 bg-section text-white border border-border rounded-xl font-bold hover:bg-section-alt transition-all disabled:opacity-50"
+              >
+                {loading ? "Regenerating..." : "Regenerate Assets"}
+              </button>
+              <ActionButton
+                onClick={() => {
+                  completeStep(4);
+                  setStep(5);
+                }}
+                label="Create Go-To-Market Plan"
+                microtext="Turn your website into a distribution system"
+                className="flex-[2]"
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
       {state.outputs.websitePrompt && (
         <div className="space-y-4">
@@ -1439,7 +1507,7 @@ const Step4WebsiteBuilder = () => {
 
 const Step5GTMStrategy = () => {
   const [showErrors, setShowErrors] = useState(false);
-  const { state, generateOutput } = useWorkshop();
+  const { state, setStep, completeStep, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'leadGen' | 'partner' | 'event' | 'magnets'>('leadGen');
@@ -1490,14 +1558,41 @@ const Step5GTMStrategy = () => {
           <button onClick={() => setError(null)} className="px-3 py-1.5 bg-red-500/20 rounded-lg font-bold hover:bg-red-500/30 transition-colors text-xs">Dismiss</button>
         </div>
       )}
-      <button
-        onClick={handleGenerate}
-        disabled={loading}
-        className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
-      >
-        {loading && <Loader2 className="animate-spin" size={24} />}
-        {loading ? 'Generating Strategy...' : 'Generate GTM Strategy'}
-      </button>
+      <div className="pt-4 space-y-4">
+        {!strategy ? (
+          <ActionButton
+            onClick={handleGenerate}
+            loading={loading}
+            label="Build GTM Strategy"
+            microtext="Map out your distribution roadmap"
+            disabled={loading}
+          />
+        ) : (
+          <div className="space-y-6">
+            <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
+              <p className="text-emerald-500 font-bold text-sm">✓ GTM Roadmap Synchronized</p>
+            </div>
+            <div className="flex gap-4">
+              <button
+                onClick={handleGenerate}
+                disabled={loading}
+                className="flex-1 py-4 bg-section text-white border border-border rounded-xl font-bold hover:bg-section-alt transition-all disabled:opacity-50"
+              >
+                {loading ? "Regenerating..." : "Regenerate Strategy"}
+              </button>
+              <ActionButton
+                onClick={() => {
+                  completeStep(5);
+                  setStep(6);
+                }}
+                label="Build Outreach Campaign"
+                microtext="Create a structured outbound system"
+                className="flex-[2]"
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
       {strategy && (
         <div className="space-y-8">
@@ -1834,7 +1929,7 @@ const Step5GTMStrategy = () => {
 
 const Step6OutreachCampaign = () => {
   const [showErrors, setShowErrors] = useState(false);
-  const { state, updateInput, generateOutput } = useWorkshop();
+  const { state, setStep, completeStep, updateInput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -2003,14 +2098,41 @@ const Step6OutreachCampaign = () => {
           <button onClick={() => setError(null)} className="px-3 py-1.5 bg-red-500/20 rounded-lg font-bold hover:bg-red-500/30 transition-colors text-xs">Dismiss</button>
         </div>
       )}
-      <button
-        onClick={handleGenerate}
-        disabled={loading || state.inputs.campaignType.length === 0 || state.inputs.tone.length === 0 || state.inputs.cta.length === 0}
-        className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
-      >
-        {loading && <Loader2 className="animate-spin" size={24} />}
-        {loading ? 'Generating Campaign...' : 'Generate Outreach Campaign'}
-      </button>
+      <div className="pt-8 border-t border-border space-y-4">
+        {!state.outputs.outreachCampaign ? (
+          <ActionButton
+            onClick={handleGenerate}
+            loading={loading}
+            label="Build Outreach Sequence"
+            microtext="Automate your top-of-funnel outbound"
+            disabled={loading || state.inputs.campaignType.length === 0 || state.inputs.tone.length === 0 || state.inputs.cta.length === 0}
+          />
+        ) : (
+          <div className="space-y-6">
+            <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
+              <p className="text-emerald-500 font-bold text-sm">✓ Outreach Campaigns Built Successfully</p>
+            </div>
+            <div className="flex gap-4">
+              <button
+                onClick={handleGenerate}
+                disabled={loading}
+                className="flex-1 py-4 bg-section text-white border border-border rounded-xl font-bold hover:bg-section-alt transition-all disabled:opacity-50"
+              >
+                {loading ? "Regenerating..." : "Regenerate Campaigns"}
+              </button>
+              <ActionButton
+                onClick={() => {
+                  completeStep(6);
+                  setStep(7);
+                }}
+                label="Generate DMs & Emails"
+                microtext="Create ready-to-send conversations"
+                className="flex-[2]"
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
       {state.outputs.outreachCampaign && (
         <div className="space-y-12">
@@ -2094,7 +2216,7 @@ const Step6OutreachCampaign = () => {
 
 const Step7DMGenerator = () => {
   const [showErrors, setShowErrors] = useState(false);
-  const { state, updateInput, generateOutput } = useWorkshop();
+  const { state, setStep, completeStep, updateInput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -2175,14 +2297,41 @@ const Step7DMGenerator = () => {
           <button onClick={() => setError(null)} className="px-3 py-1.5 bg-red-500/20 rounded-lg font-bold hover:bg-red-500/30 transition-colors text-xs">Dismiss</button>
         </div>
       )}
-      <button
-        onClick={handleGenerate}
-        disabled={loading || state.inputs.dmAngle.length === 0 || state.inputs.dmTone.length === 0}
-        className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
-      >
-        {loading && <Loader2 className="animate-spin" size={24} />}
-        {loading ? 'Generating Messages...' : 'Generate Messages'}
-      </button>
+      <div className="pt-8 border-t border-border space-y-4">
+        {state.outputs.dmMessages.length === 0 ? (
+          <ActionButton
+            onClick={handleGenerate}
+            loading={loading}
+            label="Generate Personal DMs"
+            microtext="Start ready-to-send conversations"
+            disabled={loading || state.inputs.dmAngle.length === 0 || state.inputs.dmTone.length === 0}
+          />
+        ) : (
+          <div className="space-y-6">
+            <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
+              <p className="text-emerald-500 font-bold text-sm">✓ Direct Messages & Conversion Scripts Ready</p>
+            </div>
+            <div className="flex gap-4">
+              <button
+                onClick={handleGenerate}
+                disabled={loading}
+                className="flex-1 py-4 bg-section text-white border border-border rounded-xl font-bold hover:bg-section-alt transition-all disabled:opacity-50"
+              >
+                {loading ? "Regenerating..." : "Regenerate DMs"}
+              </button>
+              <ActionButton
+                onClick={() => {
+                  completeStep(7);
+                  setStep(8);
+                }}
+                label="Export Full Strategy Report"
+                microtext="Download your complete playbook"
+                className="flex-[2]"
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="space-y-4">
         {state.outputs.dmMessages.map((msg, i) => (
@@ -2771,7 +2920,7 @@ export default function App() {
                 </motion.div>
               </AnimatePresence>
 
-              {/* Navigation Footer */}
+               {/* Navigation Footer */}
               <div className="mt-20 pt-8 border-t border-border flex items-center justify-between">
                 <button
                   onClick={() => setStep(Math.max(1, state.currentStep - 1) as StepId)}
@@ -2781,13 +2930,26 @@ export default function App() {
                   Back
                 </button>
                 {state.currentStep < 8 && (
-                  <button
-                    onClick={() => setStep(Math.min(8, state.currentStep + 1) as StepId)}
-                    className="px-8 py-3 bg-primary text-black rounded-xl font-bold hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 shadow-lg shadow-primary/20"
-                  >
-                    Next Step
-                    <ArrowRight size={18} />
-                  </button>
+                  <div className="relative group">
+                    <button
+                      onClick={() => {
+                        if (state.completedSteps.includes(state.currentStep as StepId)) {
+                          setStep(Math.min(8, state.currentStep + 1) as StepId);
+                        }
+                      }}
+                      disabled={!state.completedSteps.includes(state.currentStep as StepId)}
+                      className={`
+                        px-8 py-3 rounded-xl font-bold transition-all flex items-center gap-2
+                        ${state.completedSteps.includes(state.currentStep as StepId)
+                          ? 'bg-primary text-black hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-primary/20'
+                          : 'bg-section text-text-secondary opacity-50 cursor-not-allowed grayscale'
+                        }
+                      `}
+                    >
+                      {state.currentStep === 1 ? 'Define Your Target ICPs' : 'Next Step'}
+                      <ArrowRight size={18} />
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
