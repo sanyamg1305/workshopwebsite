@@ -2199,6 +2199,176 @@ const ResumeModal = ({ onResume, onStartOver }: { onResume: () => void, onStartO
   </div>
 );
 
+const Step0LeadCapture = React.memo(({ 
+  user, 
+  loading, 
+  error, 
+  initialInputs, 
+  onGoogleLogin, 
+  onLogout, 
+  onSubmit 
+}: { 
+  user: FirebaseUser | null, 
+  loading: boolean, 
+  error: string | null, 
+  initialInputs: any,
+  onGoogleLogin: () => void, 
+  onLogout: () => void, 
+  onSubmit: (data: any) => void 
+}) => {
+  const [localInputs, setLocalInputs] = useState({
+    fullName: initialInputs.fullName || '',
+    workEmail: initialInputs.workEmail || '',
+    phone: initialInputs.phone || '',
+    companyName: initialInputs.companyName || ''
+  });
+
+  // Sync initial inputs if user changes (e.g. login)
+  useEffect(() => {
+    if (user) {
+      setLocalInputs(prev => ({
+        ...prev,
+        fullName: prev.fullName || user.displayName || '',
+        workEmail: prev.workEmail || user.email || ''
+      }));
+    }
+  }, [user]);
+
+  const handleChange = (field: string, value: string) => {
+    setLocalInputs(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleLocalSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(localInputs);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-bg flex items-center justify-center p-4 overflow-y-auto">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="max-w-xl w-full bg-section border border-border rounded-3xl p-8 md:p-12 shadow-2xl"
+      >
+        <div className="text-center mb-10">
+          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center font-black text-2xl text-black mx-auto mb-6 shadow-lg shadow-primary/20">M</div>
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-text-primary mb-4">
+            {user ? "Complete Your Profile" : "Start Your B2B Growth Workshop"}
+          </h1>
+          <p className="text-text-secondary text-lg">
+            {user 
+              ? "Just a few more details to personalize your experience." 
+              : "Login with Google to begin your personalized growth system."}
+          </p>
+        </div>
+
+        {!user ? (
+          <div className="space-y-6">
+            <button
+              type="button"
+              onClick={onGoogleLogin}
+              disabled={loading}
+              className="w-full py-5 bg-white text-black rounded-2xl font-black text-xl hover:bg-gray-100 transition-all flex items-center justify-center gap-4 border-2 border-gray-100 shadow-xl shadow-black/5"
+            >
+              {loading ? (
+                <Loader2 className="animate-spin" size={24} />
+              ) : (
+                <>
+                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-6 h-6" />
+                  Continue with Google
+                </>
+              )}
+            </button>
+            <p className="text-center text-xs text-text-secondary font-medium">
+              Secure, 1-click entry. No password required.
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={handleLocalSubmit} className="space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase text-text-secondary tracking-widest">Full Name *</label>
+                <input
+                  type="text"
+                  required
+                  className="w-full px-4 py-4 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg text-lg transition-all"
+                  value={localInputs.fullName}
+                  onChange={(e) => handleChange('fullName', e.target.value)}
+                  placeholder="e.g. John Doe"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase text-text-secondary tracking-widest">Work Email *</label>
+                <input
+                  type="email"
+                  required
+                  readOnly={!!user?.email}
+                  className={`w-full px-4 py-4 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg text-lg transition-all ${user?.email ? 'opacity-70 cursor-not-allowed' : ''}`}
+                  value={localInputs.workEmail}
+                  onChange={(e) => handleChange('workEmail', e.target.value)}
+                  placeholder="john@company.com"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase text-text-secondary tracking-widest">Phone Number *</label>
+                <input
+                  type="tel"
+                  required
+                  className="w-full px-4 py-4 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg text-lg transition-all"
+                  value={localInputs.phone}
+                  onChange={(e) => handleChange('phone', e.target.value)}
+                  placeholder="+1 (555) 000-0000"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase text-text-secondary tracking-widest">Company Name *</label>
+                <input
+                  type="text"
+                  required
+                  className="w-full px-4 py-4 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg text-lg transition-all"
+                  value={localInputs.companyName}
+                  onChange={(e) => handleChange('companyName', e.target.value)}
+                  placeholder="Your Company Inc."
+                />
+              </div>
+            </div>
+
+            {error && <p className="text-red-500 text-sm font-bold text-center bg-red-500/10 py-3 rounded-xl">{error}</p>}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-primary/30 flex items-center justify-center gap-3 disabled:opacity-50"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="animate-spin" size={24} />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  Enter Workshop
+                  <ArrowRight size={24} />
+                </>
+              )}
+            </button>
+            <button 
+              type="button"
+              onClick={onLogout}
+              className="w-full text-center text-sm text-text-secondary hover:text-red-500 transition-colors font-bold uppercase tracking-widest"
+            >
+              Cancel & Sign Out
+            </button>
+          </form>
+        )}
+      </motion.div>
+    </div>
+  );
+});
+
 // --- Main App ---
 
 export default function App() {
@@ -2450,14 +2620,21 @@ export default function App() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const { fullName, workEmail, phone, companyName, leadRole } = state.inputs;
+  const handleSubmit = async (formData: any) => {
+    const { fullName, workEmail, phone, companyName } = formData;
     
-    if (!fullName || !workEmail || !phone || !companyName) {
-      setError('Please fill in all required fields.');
-      return;
-    }
+    // Update global state first so handleSubmit can use it if needed, 
+    // though here we use the formData directly for the Supabase call
+    setState(prev => ({
+      ...prev,
+      inputs: {
+        ...prev.inputs,
+        fullName,
+        workEmail,
+        phone,
+        companyName
+      }
+    }));
 
     setLoading(true);
     setError('');
@@ -2473,9 +2650,9 @@ export default function App() {
           work_email: workEmail,
           phone: phone,
           company_name: companyName,
-          lead_role: leadRole,
+          lead_role: state.inputs.leadRole, // keep existing roles
           current_step: 0,
-          workshop_inputs: state.inputs,
+          workshop_inputs: { ...state.inputs, fullName, workEmail, phone, companyName },
           workshop_outputs: state.outputs
         })
         .select()
@@ -2485,7 +2662,7 @@ export default function App() {
         console.warn("Supabase Insert Error (Non-blocking):", sbError);
       } else if (data) {
         setSubmissionId(data.id);
-        const leadData = { fullName, workEmail, phone, companyName, leadRole, submissionId: data.id };
+        const leadData = { fullName, workEmail, phone, companyName, leadRole: state.inputs.leadRole, submissionId: data.id };
         localStorage.setItem('userLeadData', JSON.stringify(leadData));
       }
 
@@ -2500,132 +2677,6 @@ export default function App() {
     }
   };
 
-  const Step0LeadCapture = () => {
-    return (
-      <div className="fixed inset-0 z-[100] bg-bg flex items-center justify-center p-4 overflow-y-auto">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="max-w-xl w-full bg-section border border-border rounded-3xl p-8 md:p-12 shadow-2xl"
-        >
-          <div className="text-center mb-10">
-            <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center font-black text-2xl text-black mx-auto mb-6 shadow-lg shadow-primary/20">M</div>
-            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-text-primary mb-4">
-              {user ? "Complete Your Profile" : "Start Your B2B Growth Workshop"}
-            </h1>
-            <p className="text-text-secondary text-lg">
-              {user 
-                ? "Just a few more details to personalize your experience." 
-                : "Login with Google to begin your personalized growth system."}
-            </p>
-          </div>
-
-          {!user ? (
-            <div className="space-y-6">
-              <button
-                type="button"
-                onClick={handleGoogleLogin}
-                disabled={loading}
-                className="w-full py-5 bg-white text-black rounded-2xl font-black text-xl hover:bg-gray-100 transition-all flex items-center justify-center gap-4 border-2 border-gray-100 shadow-xl shadow-black/5"
-              >
-                {loading ? (
-                  <Loader2 className="animate-spin" size={24} />
-                ) : (
-                  <>
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-6 h-6" />
-                    Continue with Google
-                  </>
-                )}
-              </button>
-              <p className="text-center text-xs text-text-secondary font-medium">
-                Secure, 1-click entry. No password required.
-              </p>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase text-text-secondary tracking-widest">Full Name *</label>
-                  <input
-                    type="text"
-                    required
-                    className="w-full px-4 py-4 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg text-lg transition-all"
-                    value={state.inputs.fullName}
-                    onChange={(e) => updateInput('fullName', e.target.value)}
-                    placeholder="e.g. John Doe"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase text-text-secondary tracking-widest">Work Email *</label>
-                  <input
-                    type="email"
-                    required
-                    readOnly={!!user?.email}
-                    className={`w-full px-4 py-4 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg text-lg transition-all ${user?.email ? 'opacity-70 cursor-not-allowed' : ''}`}
-                    value={state.inputs.workEmail}
-                    onChange={(e) => updateInput('workEmail', e.target.value)}
-                    placeholder="john@company.com"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase text-text-secondary tracking-widest">Phone Number *</label>
-                  <input
-                    type="tel"
-                    required
-                    className="w-full px-4 py-4 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg text-lg transition-all"
-                    value={state.inputs.phone}
-                    onChange={(e) => updateInput('phone', e.target.value)}
-                    placeholder="+1 (555) 000-0000"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase text-text-secondary tracking-widest">Company Name *</label>
-                  <input
-                    type="text"
-                    required
-                    className="w-full px-4 py-4 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg text-lg transition-all"
-                    value={state.inputs.companyName}
-                    onChange={(e) => updateInput('companyName', e.target.value)}
-                    placeholder="Your Company Inc."
-                  />
-                </div>
-              </div>
-
-              {error && <p className="text-red-500 text-sm font-bold text-center bg-red-500/10 py-3 rounded-xl">{error}</p>}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-primary/30 flex items-center justify-center gap-3 disabled:opacity-50"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="animate-spin" size={24} />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    Enter Workshop
-                    <ArrowRight size={24} />
-                  </>
-                )}
-              </button>
-              <button 
-                type="button"
-                onClick={handleLogout}
-                className="w-full text-center text-sm text-text-secondary hover:text-red-500 transition-colors font-bold uppercase tracking-widest"
-              >
-                Cancel & Sign Out
-              </button>
-            </form>
-          )}
-        </motion.div>
-      </div>
-    );
-  };
 
   const setStep = (step: StepId) => setState(prev => ({ ...prev, currentStep: step }));
 
@@ -2855,7 +2906,15 @@ export default function App() {
             </div>
           </div>
         ) : (
-          <Step0LeadCapture />
+          <Step0LeadCapture 
+            user={user}
+            loading={loading}
+            error={error}
+            initialInputs={state.inputs}
+            onGoogleLogin={handleGoogleLogin}
+            onLogout={handleLogout}
+            onSubmit={handleSubmit}
+          />
         )}
       </WorkshopContext.Provider>
     );
