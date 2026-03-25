@@ -2423,6 +2423,19 @@ export default function App() {
     }
   }, [state.currentStep]);
 
+  const handleResume = () => {
+    if (savedStep !== null) {
+      setStep(savedStep as StepId);
+    }
+    setShowResumeModal(false);
+  };
+
+  const handleStartOver = () => {
+    localStorage.removeItem('workshop_progress_step');
+    localStorage.removeItem('userLeadData');
+    window.location.reload();
+  };
+
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError(null);
