@@ -55,8 +55,6 @@ interface WorkshopState {
     linkedinUrl: string;
     linkedinHeadline: string;
     linkedinAbout: string;
-    role: string[];
-    roleOther: string;
     targetIcp: string[];
     targetIcpOther: string;
     tonePreference: string[];
@@ -345,6 +343,7 @@ const Step0LeadCapture = () => {
   const { state, updateInput, setStep, completeStep, setSubmissionId } = useWorkshop();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
 
   useEffect(() => {
     if (error) setError('');
@@ -661,15 +660,6 @@ const Step1ProfileCheck = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <MultiSelectDropdown showErrors={showErrors}
-            label="Your Role"
-            options={roles}
-            selected={state.inputs.role}
-            onChange={(val) => updateInput('role', val)}
-            otherValue={state.inputs.roleOther}
-            onOtherChange={(val) => updateInput('roleOther', val)}
-            placeholder="Select Role(s)"
-          />
           <MultiSelectDropdown showErrors={showErrors}
             label="Target ICP"
             options={icps}
@@ -2443,7 +2433,8 @@ export default function App() {
           
           targetIcp: targetIcpStr,
           tone: toneStr,
-          offer: inputs.offer
+          offer: inputs.offer,
+          role: inputs.leadRole.join(', ')
         });
         newOutputs.profileClarityScore = result.clarityScore;
         newOutputs.scoreMeaning = result.scoreMeaning;
@@ -2469,8 +2460,7 @@ export default function App() {
 
         const validIcps = [buildIcp(1), buildIcp(2), buildIcp(3)].filter(Boolean);
         if (validIcps.length === 0) {
-            if (typeof setError !== 'undefined') setError("Please fill out at least 1 ICP completely before generating.");
-            return;
+            throw new Error("Please fill out at least 1 ICP completely before generating.");
         }
 
         const result = await gemini.generateDetailedICPs({
@@ -2482,7 +2472,13 @@ export default function App() {
       } else if (step === 3) {
         const vpTables = await gemini.generateValuePropTables({
           icps: newOutputs.icps,
-          offer: inputs.offer
+          offer: inputs.offer,
+          narrativeAngles: inputs.narrativeAngles.includes('Other') 
+            ? [...inputs.narrativeAngles.filter(a => a !== 'Other'), inputs.narrativeAnglesOther] 
+            : inputs.narrativeAngles,
+          tonePreference: inputs.tonePreference.includes('Other')
+            ? [...inputs.tonePreference.filter(t => t !== 'Other'), inputs.tonePreferenceOther]
+            : inputs.tonePreference
         });
         
         const globalSol = await gemini.generateGlobalSolution(vpTables);
@@ -2568,7 +2564,7 @@ export default function App() {
         newOutputs.outreachCampaign = campaign;
         newOutputs.campaignFlow = [
           "Connection Request",
-          ...Array.from({ length: inputs.numFollowUps }, (_, i) => `Follow-up ${i + 1}`)
+          ...Array.from({ length: numFollowUpsVal }, (_, i) => `Follow-up ${i + 1}`)
         ];
       } else if (step === 7) {
         const industryStr = inputs.industry.includes('Other') 

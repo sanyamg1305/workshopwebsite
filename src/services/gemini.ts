@@ -94,32 +94,24 @@ export const optimizeLinkedInProfile = async (inputs: {
 };
 
 export const generateDetailedICPs = async (inputs: {
-  icp1: any;
-  icp2: any;
-  icp3: any;
+  icps: any[];
   offer: string;
 }) => {
   const ai = getAI();
+  const icpInputsStr = inputs.icps.map((icp, idx) => `
+    ICP ${idx + 1} Inputs:
+    - Roles: ${icp.roles.join(', ')}
+    - Company Sizes: ${icp.sizes.join(', ')}
+    - Industries: ${icp.industries.join(', ')}
+  `).join('\n');
+
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
-    contents: `${GLOBAL_WRITING_RULES}\nYou are an expert B2B Growth Strategist. Your task is to generate 3 DEEP, STRATEGIC Ideal Customer Profiles (ICPs) based on the following inputs:
+    contents: `${GLOBAL_WRITING_RULES}\nYou are an expert B2B Growth Strategist. Your task is to generate ${inputs.icps.length} DEEP, STRATEGIC Ideal Customer Profiles (ICPs) based on the following inputs:
 
     Core Offer: ${inputs.offer}
 
-    ICP 1 Inputs:
-    - Roles: ${inputs.icp1.roles.join(', ')}
-    - Company Sizes: ${inputs.icp1.sizes.join(', ')}
-    - Industries: ${inputs.icp1.industries.join(', ')}
-
-    ICP 2 Inputs:
-    - Roles: ${inputs.icp2.roles.join(', ')}
-    - Company Sizes: ${inputs.icp2.sizes.join(', ')}
-    - Industries: ${inputs.icp2.industries.join(', ')}
-
-    ICP 3 Inputs:
-    - Roles: ${inputs.icp3.roles.join(', ')}
-    - Company Sizes: ${inputs.icp3.sizes.join(', ')}
-    - Industries: ${inputs.icp3.industries.join(', ')}
+${icpInputsStr}
 
     For EACH ICP, generate a highly detailed profile with these sections:
     1. ICP Name: A catchy, descriptive name (e.g., "Scaling SaaS Growth Leader").
@@ -619,11 +611,11 @@ export const generateWebsitePrompt = async (inputs: {
     }
   ];
 
-  if (inspirationImage) {
+  if (inputs.inspirationImage) {
     parts.push({
       inlineData: {
         mimeType: "image/jpeg",
-        data: inspirationImage.split(',')[1] // Assuming base64 data URL
+        data: inputs.inspirationImage.split(',')[1] // Assuming base64 data URL
       }
     });
   }
