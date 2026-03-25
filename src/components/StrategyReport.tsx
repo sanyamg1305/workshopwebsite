@@ -241,7 +241,7 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
                       <span className="block text-[8px] uppercase font-black text-gray-400 mb-1">Initial DM</span>
                       {outputs.outreachEngineOutput.linkedIn.initialDM}
                     </div>
-                    {outputs.outreachEngineOutput.linkedIn.followUps.map((f, i) => (
+                    {outputs.outreachEngineOutput.linkedIn.followUps?.map((f, i) => (
                       <div key={i} className="p-4 bg-gray-50 border border-gray-100 text-[11px] leading-relaxed italic">
                         <span className="block text-[8px] uppercase font-black text-gray-300 mb-1">Follow-up {i + 1}</span>
                         {f}
@@ -263,7 +263,7 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
                         {outputs.outreachEngineOutput.email.body}
                       </div>
                     </div>
-                    {outputs.outreachEngineOutput.email.followUps.map((f, i) => (
+                    {outputs.outreachEngineOutput.email.followUps?.map((f, i) => (
                       <div key={i} className="p-4 bg-primary/5 border-l-2 border-primary text-[11px] leading-relaxed">
                         <span className="block text-[8px] uppercase font-black text-primary/50 mb-1 text-right">Email Follow-up {i + 1}</span>
                         {f}

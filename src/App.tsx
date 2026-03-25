@@ -1931,13 +1931,33 @@ const Step6OutreachEngine = () => {
   const [error, setError] = useState<string | null>(null);
 
   const handleGenerate = async () => {
+    // 1. Validate Inputs
+    const icpData = state.outputs.icps;
+    const valuePropData = state.outputs.valuePropTables;
+    const selectedAngle = state.inputs.outreachAngle;
+    const tone = state.inputs.tonePreference;
+
+    console.log("Step 6 Input Validation:", { icpData, valuePropData, selectedAngle, tone });
+
+    if (!icpData || icpData.length === 0 || !valuePropData || valuePropData.length === 0) {
+      setError("Complete previous steps (ICP Mapping & Value Prop) before generating outreach strategy.");
+      return;
+    }
+
+    if (!selectedAngle) {
+      setError("Please select a strategic angle first.");
+      return;
+    }
+
     setShowErrors(true);
     setLoading(true);
     setError(null);
     try {
       await generateOutput(6);
+      console.log("Step 6 Output:", state.outputs.outreachEngineOutput);
     } catch (err) {
-      setError("Something went wrong. Please try again.");
+      console.error("Step 6 Generation Error:", err);
+      setError("Generation failed. Please retry.");
     }
     setLoading(false);
   };
@@ -2114,8 +2134,30 @@ const Step6OutreachEngine = () => {
 
 const Step7Summary = () => {
   const { state } = useWorkshop();
+  const [error, setError] = useState<string | null>(null);
 
-  const handleDownload = () => window.print();
+  const handleDownload = () => {
+    // 1. Validate Required Sections
+    const { profileClarityScore, icps, valuePropTables, gtmStrategy, outreachEngineOutput, globalSolution } = state.outputs;
+    
+    console.log("PDF Data Validation:", { profileClarityScore, icps, valuePropTables, gtmStrategy, outreachEngineOutput, globalSolution });
+
+    const missing = [];
+    if (!profileClarityScore) missing.push("Profile Optimization");
+    if (!icps || icps.length === 0) missing.push("ICP Breakdown");
+    if (!valuePropTables || valuePropTables.length === 0) missing.push("Value Proposition");
+    if (!gtmStrategy) missing.push("GTM Strategy");
+    if (!outreachEngineOutput) missing.push("Outreach Strategy");
+
+    if (missing.length > 0) {
+      setError(`Some sections are missing: ${missing.join(', ')}. Please complete all steps before exporting.`);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    setError(null);
+    window.print();
+  };
 
   return (
     <div className="space-y-8">
@@ -2129,6 +2171,16 @@ const Step7Summary = () => {
         </motion.div>
         <h2 className="text-4xl font-black mb-2">Workshop Complete!</h2>
         <p className="text-text-secondary text-lg">You've built a complete B2B lead generation engine.</p>
+        
+        {error && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-sm font-bold max-w-lg mx-auto"
+          >
+            {error}
+          </motion.div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
