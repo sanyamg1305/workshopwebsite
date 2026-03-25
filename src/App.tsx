@@ -935,12 +935,17 @@ const Step2ICPBuilder = () => {
       )}
       <div className="pt-4 space-y-4">
         {state.outputs.icps.length === 0 ? (
-            disabled={loading || ([1, 2, 3].some(num => {
+          <ActionButton
+            onClick={handleGenerate}
+            loading={loading}
+            disabled={loading || ([1, 2, 3].every(num => {
               const roles = state.inputs[`icp${num}_roles` as keyof typeof state.inputs];
               const sizes = state.inputs[`icp${num}_sizes` as keyof typeof state.inputs];
               const inds = state.inputs[`icp${num}_industries` as keyof typeof state.inputs];
-              return (roles && roles.length > 0) || (sizes && sizes.length > 0) || (inds && inds.length > 0);
-            }) === false)}
+              return !(roles && roles.length > 0) && !(sizes && sizes.length > 0) && !(inds && inds.length > 0);
+            }))}
+            label={loading ? "Analyzing Business..." : "Define Your Target ICPs →"}
+            microtext="Identify who you should be targeting"
           />
         ) : (
           <div className="space-y-6">
