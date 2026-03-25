@@ -305,7 +305,7 @@ export interface GTMStrategy {
       angles: string[];
       hooks: string[];
       dms: string[];
-      emails: string[];
+      emails: { subject: string; body: string }[];
     }[];
     funnel: { step: string; description: string }[];
   };
@@ -348,8 +348,7 @@ export const generateDetailedGTM = async (inputs: {
     
     The strategy must cover:
     1. B2B Lead Generation (Targeting, Channels, Outreach Strategy with DMs/Emails, Funnel Design)
-       - Cold Emails: Each email MUST begin with "Subject: [Subject Line Here]" on a separate line.
-       - Emails must be at least 150-200 words, structured, and strategic.
+        - Cold Emails: For each email, provide a catchy SUBJECT and a strategic BODY (150-200 words).
     2. Partner-Led Growth (Ideal Partners, Models, Outreach Pitch, Scale Strategy)
     3. Event-Led Growth (Event Types, Specific Ideas per ICP, Funnel, Conversion Strategy)
     4. Lead Magnet Ideas: Generate 5-8 highly specific lead magnets. 
@@ -408,7 +407,17 @@ export const generateDetailedGTM = async (inputs: {
                     angles: { type: Type.ARRAY, items: { type: Type.STRING } },
                     hooks: { type: Type.ARRAY, items: { type: Type.STRING } },
                     dms: { type: Type.ARRAY, items: { type: Type.STRING } },
-                    emails: { type: Type.ARRAY, items: { type: Type.STRING } }
+                    emails: { 
+                      type: Type.ARRAY, 
+                      items: { 
+                        type: Type.OBJECT,
+                        properties: {
+                          subject: { type: Type.STRING },
+                          body: { type: Type.STRING }
+                        },
+                        required: ["subject", "body"]
+                      } 
+                    }
                   },
                   required: ["icp", "angles", "hooks", "dms", "emails"]
                 }
@@ -754,7 +763,7 @@ export const generateOutreachEngine = async (inputs: {
             }
           }
         },
-        required: ["strategySummary"]
+        required: ["strategySummary", "linkedIn", "email"]
       }
     }
   });

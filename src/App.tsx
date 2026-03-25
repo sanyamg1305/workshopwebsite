@@ -1701,10 +1701,13 @@ const Step5GTMStrategy = () => {
                               </div>
                               <div className="space-y-2">
                                 <div className="text-[10px] font-bold uppercase text-text-secondary">Cold Emails</div>
-                                {o.emails.map((em, j) => (
-                                  <div key={j} className="text-xs p-4 bg-section-alt rounded-xl border border-border leading-relaxed relative group">
-                                    {em}
-                                    <button onClick={() => navigator.clipboard.writeText(em)} className="absolute top-2 right-2 p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary"><Copy size={12}/></button>
+                                {o.emails.map((em: any, j: number) => (
+                                  <div key={j} className="space-y-2">
+                                    <div className="text-[10px] font-bold uppercase text-primary/70">Subject: {em.subject}</div>
+                                    <div className="text-xs p-4 bg-section-alt rounded-xl border border-border leading-relaxed relative group">
+                                      {em.body}
+                                      <button onClick={() => navigator.clipboard.writeText(`Subject: ${em.subject}\n\n${em.body}`)} className="absolute top-2 right-2 p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary"><Copy size={12}/></button>
+                                    </div>
                                   </div>
                                 ))}
                               </div>
@@ -2058,18 +2061,18 @@ const Step6OutreachEngine = () => {
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <OutputCard title="Connection Request" icon={User} copyText={out.linkedIn.connectionRequest}>
-                  <p className="text-sm leading-relaxed">{out.linkedIn.connectionRequest}</p>
+                <OutputCard title="Connection Request" icon={User} copyText={out.linkedIn?.connectionRequest}>
+                  <p className="text-sm leading-relaxed">{out.linkedIn?.connectionRequest}</p>
                 </OutputCard>
-                <OutputCard title="Initial Message" icon={MessageSquare} copyText={out.linkedIn.initialDM}>
-                  <p className="text-sm leading-relaxed">{out.linkedIn.initialDM}</p>
+                <OutputCard title="Initial Message" icon={MessageSquare} copyText={out.linkedIn?.initialDM}>
+                  <p className="text-sm leading-relaxed">{out.linkedIn?.initialDM}</p>
                 </OutputCard>
               </div>
 
               <div className="space-y-4">
                 <h4 className="text-[10px] font-black uppercase text-text-secondary tracking-widest px-1">Follow-up Sequence</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {out.linkedIn.followUps.map((msg, i) => (
+                  {out.linkedIn?.followUps?.map((msg: string, i: number) => (
                     <OutputCard key={i} title={`Follow-up ${i + 1}`} icon={Send} copyText={msg}>
                       <p className="text-xs leading-relaxed italic">"{msg}"</p>
                     </OutputCard>
@@ -2094,7 +2097,7 @@ const Step6OutreachEngine = () => {
               <div className="space-y-4">
                 <h4 className="text-[10px] font-black uppercase text-text-secondary tracking-widest px-1">Email Follow-ups</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {out.email.followUps.map((msg, i) => (
+                  {out.email?.followUps?.map((msg: string, i: number) => (
                     <OutputCard key={i} title={`Email Follow-up ${i + 1}`} icon={Send} copyText={msg}>
                       <p className="text-xs leading-relaxed">{msg}</p>
                     </OutputCard>
