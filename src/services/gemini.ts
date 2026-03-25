@@ -18,6 +18,7 @@ export const optimizeLinkedInProfile = async (inputs: {
   headline: string;
   about: string;
   role: string;
+  company: string;
   targetIcp: string;
   tone: string;
   offer: string;
@@ -29,15 +30,24 @@ export const optimizeLinkedInProfile = async (inputs: {
     Your task is to optimize a LinkedIn profile based on the following user inputs:
     - Current Headline: ${inputs.headline}
     - Current About Section: ${inputs.about}
-    - User Role: ${inputs.role}
+    - User Role: ${inputs.role} (e.g. Founder, CEO, Sales Head)
+    - Company: ${inputs.company}
     - Target ICP: ${inputs.targetIcp}
     - Preferred Tone: ${inputs.tone}
-    - Core Offer: ${inputs.offer}
+    - Core Offer/Outcome: ${inputs.offer}
+
+    PERSONALIZATION RULES (NON-NEGOTIABLE):
+    1. ROLE CONTEXT: The output MUST reflect the user's seniority and responsibilities.
+       - If Founder/CEO: Focus on vision, growth, leadership, and the "why" behind the business.
+       - If Sales/Revenue Head: Focus on pipeline, efficiency, scale, and concrete results.
+       - If Freelancer/Consultant: Focus on specialized expertise, speed, and direct impact.
+    2. COMPANY ALIGNMENT: Mention or reflect the scale and nature of ${inputs.company} in the positioning.
+    3. POSITIONING: Make the profile feel like it belongs to a high-level executive in ${inputs.company}.
 
     STRATEGIC GUIDELINES:
     1. Headlines: Provide 3 distinct options using different frameworks:
        - Option 1: Outcome-driven (I help [ICP] achieve [Outcome])
-       - Option 2: Authority-driven ([Role] @ [Company] | [Specific Achievement])
+       - Option 2: Authority-driven ([Role] @ ${inputs.company} | [Specific Achievement])
        - Option 3: Benefit-driven (Helping [ICP] save [Time/Money] or gain [Benefit])
        - Incorporate the Core Offer: ${inputs.offer} into the headlines.
        - CRITICAL HEADLINE RULES: NO full stops. NO periods. Use the pipe character " | " to structure.
@@ -304,8 +314,7 @@ export interface GTMStrategy {
       icp: string;
       angles: string[];
       hooks: string[];
-      dms: string[];
-      emails: { subject: string; body: string }[];
+      channelTips: { channel: string; tips: string[] }[];
     }[];
     funnel: { step: string; description: string }[];
   };
@@ -346,16 +355,21 @@ export const generateDetailedGTM = async (inputs: {
     ICPs: ${JSON.stringify(inputs.icps)}
     Value Proposition Tables: ${JSON.stringify(inputs.valuePropTables)}
     
+    The strategy must be written in PLAIN ENGLISH using SHORT SENTENCES.
+    Use a scannable format:
+    - "What should you do"
+    - "Where should you do it"
+    - "How should you do it"
+
     The strategy must cover:
-    1. B2B Lead Generation (Targeting, Channels, Outreach Strategy with DMs/Emails, Funnel Design)
-        - Cold Emails: For each email, provide a catchy SUBJECT and a strategic BODY (150-200 words).
+    1. B2B Lead Generation (Targeting, Channels, Outreach Strategy with Tips, Funnel Design)
+        - Outreach Strategy: For each ICP, provide channel-specific tips and best practices (What to personalize, when to send, follow-up timing, subject line style, etc.). DO NOT provide message scripts here.
     2. Partner-Led Growth (Ideal Partners, Models, Outreach Pitch, Scale Strategy)
     3. Event-Led Growth (Event Types, Specific Ideas per ICP, Funnel, Conversion Strategy)
-    4. Lead Magnet Ideas: Generate 5-8 highly specific lead magnets. 
+    4. Lead Magnet Ideas: Generate ONLY 1 highly specific lead magnet for EACH ICP.
        Rules:
-       - DO NOT generate generic ideas like 'ebook'. Use specific titles like 'ROI Calculator', 'Positioning Scorecard'.
-       - Must include 2 tools, 2 frameworks/checklists, 1 calculator/estimator, 1 diagnostic/audit.
-       - Each idea must map to a DIFFERENT pain point.
+       - Must be directly tied to the ICP's pain point and immediately useful.
+       - DO NOT generate generic ebooks/guides. Use specific titles like 'Outbound message audit' or 'Hiring scorecard'.
        - For each, provide: name, whatItDoes (1-2 lines outcome focused), whyItWorks (ICP pain alignment), howToUse (practical usage in outreach), cta (soft/direct/offer-first).
     
     QUALITY RULES:
@@ -406,20 +420,19 @@ export const generateDetailedGTM = async (inputs: {
                     icp: { type: Type.STRING },
                     angles: { type: Type.ARRAY, items: { type: Type.STRING } },
                     hooks: { type: Type.ARRAY, items: { type: Type.STRING } },
-                    dms: { type: Type.ARRAY, items: { type: Type.STRING } },
-                    emails: { 
-                      type: Type.ARRAY, 
-                      items: { 
+                    channelTips: {
+                      type: Type.ARRAY,
+                      items: {
                         type: Type.OBJECT,
                         properties: {
-                          subject: { type: Type.STRING },
-                          body: { type: Type.STRING }
+                          channel: { type: Type.STRING },
+                          tips: { type: Type.ARRAY, items: { type: Type.STRING } }
                         },
-                        required: ["subject", "body"]
-                      } 
+                        required: ["channel", "tips"]
+                      }
                     }
                   },
-                  required: ["icp", "angles", "hooks", "dms", "emails"]
+                  required: ["icp", "angles", "hooks", "channelTips"]
                 }
               },
               funnel: {
@@ -596,8 +609,15 @@ export const generateWebsitePrompt = async (inputs: {
       - Focus on true objection-handling. No fluff.
 
       If an inspiration image is provided, infer the layout style and structure from it (do not copy, adapt to the content).
+
+      DESIGN & AESTHETIC CONSTRAINTS (PREMIUM ONLY):
+      - Use Rich Aesthetics: Deep blacks, vibrant ${inputs.primaryColor}, and sophisticated ${inputs.secondaryColor}.
+      - Visual Excellence: Implement glassmorphism, smooth gradients, and micro-animations.
+      - Typography: Suggest modern, premium fonts (e.g., Inter, Outfit, or Playfair Display).
+      - Dynamic Design: Ensure the UI feels alive with hover states and interactive elements.
+      - NO PLACEHOLDERS: All copy must be final and strategic.
       
-      Output a detailed prompt that a user can paste into a website builder or Google AI Studio to generate the full site.`
+      Output a detailed prompt that a user can paste into a website builder or Google AI Studio to generate the full site. Include specific CSS variables for --primary (${inputs.primaryColor}) and --secondary (${inputs.secondaryColor}).`
     }
   ];
 
@@ -645,8 +665,7 @@ export const generateCampaignFlow = async (type: string, tone: string, cta: stri
 export interface OutreachEngineOutput {
   linkedIn?: {
     connectionRequest: string;
-    initialDM: string;
-    followUps: string[];
+    followUps: string[]; // Exactly 3
   };
   email?: {
     subjectLine: string;
@@ -701,15 +720,16 @@ export const generateOutreachEngine = async (inputs: {
     
     CHANNEL SPECIFICATIONS:
     1. LINKEDIN:
-       - Connection Request: < 300 chars, no CTA, personal/curious.
-       - Initial DM: Conversational, short, single-intent.
-       - 2-3 Follow-ups: Brief, context-aware, low-friction CTAs.
+       - Connection Request: < 300 chars, personalized, no fluff.
+       - 3 Follow-ups: Short, natural tone, each with a CLEAR INTENT. No robot-speak.
     2. EMAIL:
        - Subject Line: MUST be clearly separated from the body. Sharp, curious, no clickbait.
        - Body: Structured, professional yet human, at least 150-200 words.
-       - 3-5 Follow-ups: Progressive value-add, clear CTAs.
+       - 3 Follow-ups: Progressive value-add, clear CTAs.
     
     GLOBAL WRITING RULES:
+    - Use SIMPLE, HUMAN language. 
+    - Avoid jargon, complexity, and fluff.
     - No em dashes (—). Use periods or line breaks.
     - No corporate buzzwords or "help". Use "support", "strengthen", "guide".
     - Placeholders: {firstname}, {company}.
@@ -750,7 +770,6 @@ export const generateOutreachEngine = async (inputs: {
             type: Type.OBJECT,
             properties: {
               connectionRequest: { type: Type.STRING },
-              initialDM: { type: Type.STRING },
               followUps: { type: Type.ARRAY, items: { type: Type.STRING } }
             }
           },

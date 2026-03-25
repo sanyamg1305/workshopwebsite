@@ -157,13 +157,21 @@ export const StrategyDocument = ({ state }: { state: any }) => {
               <div>
                 <h3 className="text-2xl font-bold uppercase mb-6 bg-black text-white inline-block px-4 py-2">Outbound Channels</h3>
                 <div className="grid grid-cols-2 gap-6">
-                  {outputs.gtmStrategy.leadGen?.channels?.map((c: any, i: number) => (
-                    <div key={i} className="p-6 border border-black">
-                      <h4 className="font-bold text-xl mb-2">{c.channel}</h4>
-                      <p className="text-sm mb-4"><strong>Why:</strong> {c.why}</p>
-                      <p className="text-sm"><strong>Approach:</strong> {c.approach}</p>
-                    </div>
-                  ))}
+                    {outputs.gtmStrategy.leadGen?.outreach?.map((o: any, i: number) => (
+                      <div key={i} className="p-6 border border-black space-y-4">
+                        <h4 className="font-bold text-xl mb-2 text-primary">{o.icp}</h4>
+                        {o.channelTips.map((ct: any, j: number) => (
+                          <div key={j} className="space-y-2">
+                            <p className="text-[10px] font-bold uppercase text-gray-400">{ct.channel} Tips</p>
+                            <ul className="list-disc pl-5 space-y-1">
+                              {ct.tips.map((tip: string, k: number) => (
+                                <li key={k} className="text-sm leading-relaxed">{tip}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
                 </div>
               </div>
 
@@ -224,16 +232,14 @@ export const StrategyDocument = ({ state }: { state: any }) => {
                 <div className="grid grid-cols-2 gap-6">
                   <div className="p-6 border border-black bg-gray-50">
                     <h4 className="font-bold mb-4 uppercase text-sm">Connection Note</h4>
-                    <pre className="whitespace-pre-wrap font-serif text-sm">{outputs.outreachCampaign.connectionNotes?.version1 || "N/A"}</pre>
+                    <pre className="whitespace-pre-wrap font-serif text-sm">{outputs.outreachCampaign?.linkedIn?.connectionRequest || "N/A"}</pre>
                   </div>
-                  <div className="p-6 border border-black bg-gray-50">
-                    <h4 className="font-bold mb-4 uppercase text-sm">Follow-up 1</h4>
-                    <pre className="whitespace-pre-wrap font-serif text-sm">{outputs.outreachCampaign.followUp1?.version1 || "N/A"}</pre>
-                  </div>
-                  <div className="p-6 border border-black bg-gray-50">
-                    <h4 className="font-bold mb-4 uppercase text-sm">Follow-up 2</h4>
-                    <pre className="whitespace-pre-wrap font-serif text-sm">{outputs.outreachCampaign.followUp2?.version1 || "N/A"}</pre>
-                  </div>
+                  {outputs.outreachCampaign?.linkedIn?.followUps?.map((f: string, i: number) => (
+                    <div key={i} className="p-6 border border-black bg-gray-50">
+                      <h4 className="font-bold mb-4 uppercase text-sm">Follow-up {i + 1}</h4>
+                      <pre className="whitespace-pre-wrap font-serif text-sm">{f || "N/A"}</pre>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

@@ -36,10 +36,13 @@ import {
   X,
   Upload,
   RotateCcw,
-  History
+  History,
+  Mail
 } from 'lucide-react';
 import * as gemini from './services/gemini';
 import { supabase } from './services/supabase';
+import { auth, googleProvider } from './services/firebase';
+import { onAuthStateChanged, signInWithPopup, signOut, User as FirebaseUser } from 'firebase/auth';
 
 // --- Types ---
 
@@ -112,6 +115,25 @@ export interface WorkshopState {
     secondaryColor: string;
     inspirationImage: string | null;
     outreachChannel: 'LinkedIn' | 'Email' | 'Both';
+    freeOfferType: 'Lead Magnet' | 'Interactive Tool' | 'Resource' | 'Insight-based Asset';
+    freeOfferTypeOther: string;
+    toolName: string;
+    toolDescription: string;
+    strategicNotes: string;
+    narrativeAngles: string[];
+    narrativeAnglesOther: string;
+    dmAngle: string[];
+    dmAngleOther: string;
+    dmTone: string[];
+    dmToneOther: string;
+    campaignType: string[];
+    campaignTypeOther: string;
+    tone: string[];
+    toneOther: string;
+    cta: string[];
+    ctaOther: string;
+    numFollowUps: string;
+    numFollowUpsOther: string;
     outreachAngle: 'Authority' | 'ROI' | 'Pain-led' | 'Contrarian' | 'Curiosity' | 'Offer-led';
   };
   outputs: {
@@ -181,6 +203,7 @@ const MultiSelectDropdown = ({
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const dropdownRef = React.useRef<HTMLDivElement>(null);
+  const otherInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -220,6 +243,13 @@ const MultiSelectDropdown = ({
   };
 
   const isOtherSelected = selected.includes('Other');
+
+  useEffect(() => {
+    if (isOtherSelected && otherInputRef.current) {
+      otherInputRef.current.focus();
+      otherInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [isOtherSelected]);
 
   return (
     <div className="space-y-2" ref={dropdownRef}>
@@ -303,17 +333,21 @@ const MultiSelectDropdown = ({
             exit={{ opacity: 0, height: 0 }}
             className="mt-3 space-y-2 overflow-hidden"
           >
-            <label className="text-[10px] font-bold uppercase text-primary tracking-widest">Please specify *</label>
+            <div className="flex justify-between items-center">
+              <label className="text-[10px] font-bold uppercase text-primary tracking-widest">Please specify *</label>
+              <span className="text-[9px] text-text-secondary italic">Tip: You can add multiple entries using commas</span>
+            </div>
             <input
+              ref={otherInputRef}
               type="text"
               required
-              placeholder="Type your answer..."
+              placeholder="Enter values (separate with commas)"
               style={{ backgroundColor: '#000000', color: '#FFFFFF' }}
-              className={`w-full px-4 py-3 rounded-xl border ${!otherValue ? 'border-red-500/50' : 'border-border'} focus:border-[#FFC947] focus:ring-1 focus:ring-[#FFC947] outline-none text-sm transition-all`}
+              className={`w-full px-4 py-3 rounded-xl border ${!otherValue.trim() ? 'border-red-500/50' : 'border-border'} focus:border-primary focus:ring-1 focus:ring-primary outline-none text-sm transition-all`}
               value={otherValue}
               onChange={(e) => onOtherChange(e.target.value)}
             />
-            {!otherValue && (
+            {!otherValue.trim() && (
               <p className="text-[10px] text-red-500 font-medium">Please specify your selection</p>
             )}
           </motion.div>
@@ -328,6 +362,24 @@ const Step0LeadCapture = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      
+      updateInput('fullName', user.displayName || '');
+      updateInput('workEmail', user.email || '');
+      
+      // Auto-submit if other fields are filled, or let them review
+    } catch (err: any) {
+      console.error("Google Login Error:", err);
+      setError("Google Login failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (error) setError('');
@@ -409,7 +461,7 @@ const Step0LeadCapture = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase text-text-secondary">Full Name *</label>
               <input
@@ -420,6 +472,7 @@ const Step0LeadCapture = () => {
                 onChange={(e) => updateInput('fullName', e.target.value)}
               />
             </div>
+            
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase text-text-secondary">Work Email *</label>
               <input
@@ -430,9 +483,7 @@ const Step0LeadCapture = () => {
                 onChange={(e) => updateInput('workEmail', e.target.value)}
               />
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase text-text-secondary">Phone Number *</label>
               <input
@@ -443,29 +494,8 @@ const Step0LeadCapture = () => {
                 onChange={(e) => updateInput('phone', e.target.value)}
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase text-text-secondary">Company Name *</label>
-              <input
-                type="text"
-                required
-                className="w-full px-4 py-4 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg text-lg"
-                value={state.inputs.companyName}
-                onChange={(e) => updateInput('companyName', e.target.value)}
-              />
-            </div>
           </div>
 
-          <div className="space-y-2">
-            <MultiSelectDropdown showErrors={showErrors}
-              label="Role (Optional)"
-              options={['Founder', 'Marketer', 'Sales', 'Freelancer']}
-              selected={state.inputs.leadRole}
-              onChange={(val) => updateInput('leadRole', val)}
-              otherValue={state.inputs.leadRoleOther}
-              onOtherChange={(val) => updateInput('leadRoleOther', val)}
-              placeholder="Select Role(s)"
-            />
-          </div>
 
           {error && <p className="text-red-500 text-sm font-medium text-center">{error}</p>}
 
@@ -485,6 +515,21 @@ const Step0LeadCapture = () => {
                 <ArrowRight size={24} />
               </>
             )}
+          </button>
+
+          <div className="relative my-8">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border"></div></div>
+            <div className="relative flex justify-center text-xs uppercase"><span className="bg-section px-4 text-text-secondary font-bold">Or continue with</span></div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={loading}
+            className="w-full py-4 bg-white text-black rounded-2xl font-bold text-lg hover:bg-gray-100 transition-all flex items-center justify-center gap-3 border border-gray-200"
+          >
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+            Continue with Google
           </button>
         </form>
       </motion.div>
@@ -574,6 +619,19 @@ const Step1ProfileCheck = () => {
       
       setLoading(true);
       if (typeof setError !== 'undefined') setError(null);
+
+      // Validation for Role and Company
+      if (!state.inputs.leadRole.length && !state.inputs.leadRoleOther) {
+        setError("Please complete Role and Company to optimize your profile");
+        setLoading(false);
+        return;
+      }
+      if (!state.inputs.companyName) {
+        setError("Please complete Role and Company to optimize your profile");
+        setLoading(false);
+        return;
+      }
+
       let success = false;
       for (let attempt = 1; attempt <= 2; attempt++) {
         try {
@@ -631,12 +689,35 @@ const Step1ProfileCheck = () => {
           />
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase text-text-secondary">Company Name *</label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Myntmore"
+              className={`w-full px-4 py-3 rounded-xl border ${showErrors && !state.inputs.companyName ? "border-red-500" : "border-border"} focus:ring-2 focus:ring-primary/50 outline-none bg-bg`}
+              value={state.inputs.companyName}
+              onChange={(e) => updateInput("companyName", e.target.value)}
+            />
+          </div>
+          <MultiSelectDropdown showErrors={showErrors}
+            label="Your Role *"
+            options={['Founder', 'CEO', 'Marketer', 'Sales Head', 'Freelancer', 'Consultant']}
+            selected={state.inputs.leadRole}
+            onChange={(val) => updateInput('leadRole', val)}
+            otherValue={state.inputs.leadRoleOther}
+            onOtherChange={(val) => updateInput('leadRoleOther', val)}
+            placeholder="Select Role(s)"
+          />
+        </div>
+
         <div className="space-y-2">
           <label className="text-xs font-bold uppercase text-text-secondary">What do you offer?</label>
           <input
             type="text"
             placeholder="e.g. We help [ICP] achieve [outcome] or X → Y for Z"
-            className="w-full px-4 py-3 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg"
+            className={`w-full px-4 py-3 rounded-xl border ${showErrors && !state.inputs.offer ? "border-red-500" : "border-border"} focus:ring-2 focus:ring-primary/50 outline-none bg-bg`}
             value={state.inputs.offer}
             onChange={(e) => updateInput('offer', e.target.value)}
           />
@@ -666,26 +747,21 @@ const Step1ProfileCheck = () => {
         />
 
         {state.outputs.profileClarityScore === 0 ? (
-          <ActionButton
-            onClick={handleOptimize}
-            loading={loading}
-            label="Optimize My Profile"
-            microtext="Build authority & clarity"
-            disabled={!state.inputs.linkedinHeadline || !state.inputs.linkedinAbout || state.inputs.targetIcp.length === 0 || state.inputs.tonePreference.length === 0 || !state.inputs.offer}
-          />
+          <div className="flex justify-center pt-4">
+            <ActionButton
+              onClick={handleOptimize}
+              loading={loading}
+              label="Optimize My Profile"
+              microtext="Build authority & clarity"
+              disabled={!state.inputs.linkedinHeadline || !state.inputs.linkedinAbout || state.inputs.targetIcp.length === 0 || state.inputs.tonePreference.length === 0 || !state.inputs.offer || !state.inputs.companyName || (!state.inputs.leadRole.length && !state.inputs.leadRoleOther)}
+            />
+          </div>
         ) : (
           <div className="space-y-6">
             <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
               <p className="text-emerald-500 font-bold text-sm">✓ Profile Optimization Complete</p>
             </div>
-            <div className="flex gap-4">
-              <button
-                onClick={handleOptimize}
-                disabled={loading}
-                className="flex-1 py-4 bg-section text-white border border-border rounded-xl font-bold hover:bg-section-alt transition-all disabled:opacity-50"
-              >
-                {loading ? "Optimizing..." : "Regenerate Profile"}
-              </button>
+            <div className="flex flex-col items-center gap-4">
               <ActionButton
                 onClick={() => {
                   completeStep(1);
@@ -693,8 +769,14 @@ const Step1ProfileCheck = () => {
                 }}
                 label="Define Your Target ICPs"
                 microtext="Identify who you should be targeting"
-                className="flex-[2]"
               />
+              <button
+                onClick={handleOptimize}
+                disabled={loading}
+                className="text-text-secondary hover:text-primary transition-all text-xs font-bold uppercase tracking-widest"
+              >
+                {loading ? "Optimizing..." : "Regenerate Profile"}
+              </button>
             </div>
           </div>
         )}
@@ -725,11 +807,29 @@ const Step1ProfileCheck = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="p-6 bg-section border border-border rounded-2xl">
-              <h4 className="text-xs font-bold uppercase text-text-secondary mb-3">Score Meaning</h4>
-              <p className="text-sm leading-relaxed">{state.outputs.scoreMeaning}</p>
+              <h4 className="text-xs font-bold uppercase text-text-secondary mb-3">What Your Score Means</h4>
+              <div className="space-y-2">
+                {[
+                  { range: "90–100", label: "Excellent", min: 90 },
+                  { range: "70–89", label: "Strong", min: 70 },
+                  { range: "50–69", label: "Average", min: 50 },
+                  { range: "Below 50", label: "Needs Improvement", min: 0 }
+                ].map((tier) => {
+                  const isCurrent = tier.range === "Below 50" 
+                    ? state.outputs.profileClarityScore < 50 
+                    : (state.outputs.profileClarityScore >= tier.min && (tier.min === 90 ? state.outputs.profileClarityScore <= 100 : state.outputs.profileClarityScore < (tier.min + 20)));
+                  
+                  return (
+                    <div key={tier.label} className={`flex items-center justify-between p-2 rounded-lg border ${isCurrent ? 'bg-primary/20 border-primary text-primary font-bold' : 'border-transparent text-text-secondary opacity-50'}`}>
+                      <span className="text-xs uppercase tracking-wider">{tier.label}</span>
+                      <span className="text-xs">{tier.range}</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
             <div className="p-6 bg-section border border-border rounded-2xl">
-              <h4 className="text-xs font-bold uppercase text-text-secondary mb-3">User Explanation</h4>
+              <h4 className="text-xs font-bold uppercase text-text-secondary mb-3">Score Explanation</h4>
               <p className="text-sm leading-relaxed">{state.outputs.scoreExplanation}</p>
             </div>
           </div>
@@ -936,31 +1036,26 @@ const Step2ICPBuilder = () => {
       )}
       <div className="pt-4 space-y-4">
         {state.outputs.icps.length === 0 ? (
-          <ActionButton
-            onClick={handleGenerate}
-            loading={loading}
-            disabled={loading || ([1, 2, 3].every(num => {
-              const roles = state.inputs[`icp${num}_roles` as keyof typeof state.inputs];
-              const sizes = state.inputs[`icp${num}_sizes` as keyof typeof state.inputs];
-              const inds = state.inputs[`icp${num}_industries` as keyof typeof state.inputs];
-              return !(roles && roles.length > 0) && !(sizes && sizes.length > 0) && !(inds && inds.length > 0);
-            }))}
-            label={loading ? "Analyzing Business..." : "Define Your Target ICPs →"}
-            microtext="Identify who you should be targeting"
-          />
+          <div className="flex justify-center pt-8">
+            <ActionButton
+              onClick={handleGenerate}
+              loading={loading}
+              disabled={loading || ([1, 2, 3].every(num => {
+                const roles = state.inputs[`icp${num}_roles` as keyof typeof state.inputs];
+                const sizes = state.inputs[`icp${num}_sizes` as keyof typeof state.inputs];
+                const inds = state.inputs[`icp${num}_industries` as keyof typeof state.inputs];
+                return !(roles && roles.length > 0) && !(sizes && sizes.length > 0) && !(inds && inds.length > 0);
+              }))}
+              label={loading ? "Analyzing Business..." : "Define Your Target ICPs"}
+              microtext="Identify who you should be targeting"
+            />
+          </div>
         ) : (
           <div className="space-y-6">
             <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
               <p className="text-emerald-500 font-bold text-sm">✓ Targeted ICPs Identified</p>
             </div>
-            <div className="flex gap-4">
-              <button
-                onClick={handleGenerate}
-                disabled={loading}
-                className="flex-1 py-4 bg-section text-white border border-border rounded-xl font-bold hover:bg-section-alt transition-all disabled:opacity-50"
-              >
-                {loading ? "Analyzing..." : "Regenerate ICPs"}
-              </button>
+            <div className="flex flex-col items-center gap-4">
               <ActionButton
                 onClick={() => {
                   completeStep(2);
@@ -968,8 +1063,14 @@ const Step2ICPBuilder = () => {
                 }}
                 label="Generate Positioning Strategy"
                 microtext="Turn ICPs into clear value propositions"
-                className="flex-[2]"
               />
+              <button
+                onClick={handleGenerate}
+                disabled={loading}
+                className="text-text-secondary hover:text-primary transition-all text-xs font-bold uppercase tracking-widest"
+              >
+                {loading ? "Analyzing..." : "Regenerate ICPs"}
+              </button>
             </div>
           </div>
         )}
@@ -1183,28 +1284,29 @@ const Step3ValueProp = () => {
             ))}
           </div>
 
-          <div className="flex flex-col md:flex-row items-center gap-4 mt-8">
+          <div className="flex flex-col items-center gap-6 mt-12 bg-section p-8 rounded-3xl border border-border">
             <ActionButton
               onClick={() => completeAndGoToStep(3, 4)}
               label="Build Website Messaging"
               microtext="Convert positioning into copy"
-              className="flex-1"
             />
             
-            <button
-              onClick={handleGenerate}
-              disabled={loading}
-              className="w-full md:w-auto px-6 py-4 bg-section text-white border border-border rounded-xl font-bold hover:bg-section-alt transition-colors flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-50"
-            >
-              {loading ? <Loader2 className="animate-spin" size={18} /> : null}
-              Regenerate
-            </button>
-            <button
-              onClick={() => setStep(2)}
-              className="w-full md:w-auto px-6 py-4 bg-bg text-text-secondary border border-border rounded-xl font-bold hover:text-white transition-colors flex items-center justify-center whitespace-nowrap"
-            >
-              Edit Inputs
-            </button>
+            <div className="flex gap-4">
+              <button
+                onClick={handleGenerate}
+                disabled={loading}
+                className="text-text-secondary hover:text-primary transition-all text-xs font-bold uppercase tracking-widest flex items-center gap-2"
+              >
+                {loading ? <Loader2 className="animate-spin" size={14} /> : null}
+                Regenerate Strategy
+              </button>
+              <button
+                onClick={() => setStep(2)}
+                className="text-text-secondary hover:text-primary transition-all text-xs font-bold uppercase tracking-widest"
+              >
+                Edit Inputs
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1377,26 +1479,21 @@ const Step4WebsiteBuilder = () => {
       )}
       <div className="space-y-4">
         {!state.outputs.websitePrompt ? (
-          <ActionButton
-            onClick={handleGenerate}
-            loading={loading}
-            label="Generate Website Assets"
-            microtext="Create high-converting landing page copy"
-            disabled={loading}
-          />
+          <div className="flex justify-center pt-8">
+            <ActionButton
+              onClick={handleGenerate}
+              loading={loading}
+              label="Generate Website Assets"
+              microtext="Create high-converting landing page copy"
+              disabled={loading}
+            />
+          </div>
         ) : (
           <div className="space-y-6">
             <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
               <p className="text-emerald-500 font-bold text-sm">✓ Website Prompt Engineered Successfully</p>
             </div>
-            <div className="flex gap-4">
-              <button
-                onClick={handleGenerate}
-                disabled={loading}
-                className="flex-1 py-4 bg-section text-white border border-border rounded-xl font-bold hover:bg-section-alt transition-all disabled:opacity-50"
-              >
-                {loading ? "Regenerating..." : "Regenerate Assets"}
-              </button>
+            <div className="flex flex-col items-center gap-4">
               <ActionButton
                 onClick={() => {
                   completeStep(4);
@@ -1404,8 +1501,14 @@ const Step4WebsiteBuilder = () => {
                 }}
                 label="Create Go-To-Market Plan"
                 microtext="Turn your website into a distribution system"
-                className="flex-[2]"
               />
+              <button
+                onClick={handleGenerate}
+                disabled={loading}
+                className="text-text-secondary hover:text-primary transition-all text-xs font-bold uppercase tracking-widest"
+              >
+                {loading ? "Regenerating..." : "Regenerate Assets"}
+              </button>
             </div>
           </div>
         )}
@@ -1554,26 +1657,21 @@ const Step5GTMStrategy = () => {
       )}
       <div className="pt-4 space-y-4">
         {!strategy ? (
-          <ActionButton
-            onClick={handleGenerate}
-            loading={loading}
-            label="Build GTM Strategy"
-            microtext="Map out your distribution roadmap"
-            disabled={loading}
-          />
+          <div className="flex justify-center pt-8">
+            <ActionButton
+              onClick={handleGenerate}
+              loading={loading}
+              label="Build GTM Strategy"
+              microtext="Map out your distribution roadmap"
+              disabled={loading}
+            />
+          </div>
         ) : (
           <div className="space-y-6">
             <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
               <p className="text-emerald-500 font-bold text-sm">✓ GTM Roadmap Synchronized</p>
             </div>
-            <div className="flex gap-4">
-              <button
-                onClick={handleGenerate}
-                disabled={loading}
-                className="flex-1 py-4 bg-section text-white border border-border rounded-xl font-bold hover:bg-section-alt transition-all disabled:opacity-50"
-              >
-                {loading ? "Regenerating..." : "Regenerate Strategy"}
-              </button>
+            <div className="flex flex-col items-center gap-4">
               <ActionButton
                 onClick={() => {
                   completeStep(5);
@@ -1581,8 +1679,14 @@ const Step5GTMStrategy = () => {
                 }}
                 label="Build Outreach Campaign"
                 microtext="Create a structured outbound system"
-                className="flex-[2]"
               />
+              <button
+                onClick={handleGenerate}
+                disabled={loading}
+                className="text-text-secondary hover:text-primary transition-all text-xs font-bold uppercase tracking-widest"
+              >
+                {loading ? "Regenerating..." : "Regenerate Strategy"}
+              </button>
             </div>
           </div>
         )}
@@ -1688,29 +1792,21 @@ const Step5GTMStrategy = () => {
                           </div>
                           
                           <div className="space-y-4">
-                            <h4 className="text-xs font-black uppercase tracking-widest text-text-secondary">Sample Messages</h4>
+                            <h4 className="text-xs font-black uppercase tracking-widest text-text-secondary">Distribution Tips</h4>
                             <div className="space-y-4">
-                              <div className="space-y-2">
-                                <div className="text-[10px] font-bold uppercase text-text-secondary">LinkedIn DMs</div>
-                                {o.dms.map((dm, j) => (
-                                  <div key={j} className="text-xs p-4 bg-section-alt rounded-xl border border-border leading-relaxed relative group">
-                                    {dm}
-                                    <button onClick={() => navigator.clipboard.writeText(dm)} className="absolute top-2 right-2 p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary"><Copy size={12}/></button>
+                              {o.channelTips.map((ct: any, j: number) => (
+                                <div key={j} className="space-y-2">
+                                  <div className="text-[10px] font-bold uppercase text-primary/70">{ct.channel} Best Practices</div>
+                                  <div className="p-4 bg-section-alt rounded-xl border border-border space-y-2">
+                                    {ct.tips.map((tip: string, k: number) => (
+                                      <div key={k} className="flex items-start gap-2 text-xs leading-relaxed text-text-secondary">
+                                        <div className="w-1 h-1 rounded-full bg-primary mt-1.5 shrink-0" />
+                                        {tip}
+                                      </div>
+                                    ))}
                                   </div>
-                                ))}
-                              </div>
-                              <div className="space-y-2">
-                                <div className="text-[10px] font-bold uppercase text-text-secondary">Cold Emails</div>
-                                {o.emails.map((em: any, j: number) => (
-                                  <div key={j} className="space-y-2">
-                                    <div className="text-[10px] font-bold uppercase text-primary/70">Subject: {em.subject}</div>
-                                    <div className="text-xs p-4 bg-section-alt rounded-xl border border-border leading-relaxed relative group">
-                                      {em.body}
-                                      <button onClick={() => navigator.clipboard.writeText(`Subject: ${em.subject}\n\n${em.body}`)} className="absolute top-2 right-2 p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary"><Copy size={12}/></button>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
+                                </div>
+                              ))}
                             </div>
                           </div>
                         </div>
@@ -2016,26 +2112,21 @@ const Step6OutreachEngine = () => {
         </div>
 
         {!out ? (
-          <ActionButton
-            onClick={handleGenerate}
-            loading={loading}
-            label="Generate Outreach Strategy"
-            microtext={`Create ${state.inputs.outreachAngle}-led messaging`}
-            disabled={loading}
-          />
+          <div className="flex justify-center pt-8">
+            <ActionButton
+              onClick={handleGenerate}
+              loading={loading}
+              label="Generate Outreach Strategy"
+              microtext={`Create ${state.inputs.outreachAngle}-led messaging`}
+              disabled={loading}
+            />
+          </div>
         ) : (
           <div className="space-y-6">
             <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
               <p className="text-emerald-500 font-bold text-sm">✓ {state.inputs.outreachAngle} Campaign Generated</p>
             </div>
-            <div className="flex gap-4">
-              <button
-                onClick={handleGenerate}
-                disabled={loading}
-                className="flex-1 py-4 bg-section text-white border border-border rounded-xl font-bold hover:bg-section-alt transition-all disabled:opacity-50"
-              >
-                {loading ? "Regenerating..." : "Regenerate Single Angle"}
-              </button>
+            <div className="flex flex-col items-center gap-4">
               <ActionButton
                 onClick={() => {
                   completeStep(6);
@@ -2043,8 +2134,14 @@ const Step6OutreachEngine = () => {
                 }}
                 label="Finalize Strategy Report"
                 microtext="Download your complete playbook"
-                className="flex-[2]"
               />
+              <button
+                onClick={handleGenerate}
+                disabled={loading}
+                className="text-text-secondary hover:text-primary transition-all text-xs font-bold uppercase tracking-widest"
+              >
+                {loading ? "Regenerating..." : "Regenerate Single Angle"}
+              </button>
             </div>
           </div>
         )}
@@ -2080,12 +2177,9 @@ const Step6OutreachEngine = () => {
                 <Linkedin size={20} className="text-primary" /> LinkedIn Sequence
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <OutputCard title="Connection Request" icon={User} copyText={out.linkedIn?.connectionRequest}>
+              <div className="grid grid-cols-1 gap-6">
+                <OutputCard title="Connection Request (Max 300 Chars)" icon={User} copyText={out.linkedIn?.connectionRequest}>
                   <p className="text-sm leading-relaxed">{out.linkedIn?.connectionRequest}</p>
-                </OutputCard>
-                <OutputCard title="Initial Message" icon={MessageSquare} copyText={out.linkedIn?.initialDM}>
-                  <p className="text-sm leading-relaxed">{out.linkedIn?.initialDM}</p>
                 </OutputCard>
               </div>
 
@@ -2226,23 +2320,21 @@ const Step7Summary = () => {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 mt-12">
+      <div className="flex flex-col items-center gap-6 mt-12 bg-section p-8 rounded-3xl border border-border">
+        <ActionButton
+          onClick={handleDownload}
+          label="Generate Strategy PDF"
+          microtext="Your complete business playbook"
+        />
         <button
           onClick={() => {
             navigator.clipboard.writeText(JSON.stringify(state.outputs, null, 2));
             alert('Full strategy data copied!');
           }}
-          className="flex-1 py-5 border-2 border-border rounded-2xl font-bold hover:bg-section transition-all flex items-center justify-center gap-3"
+          className="text-text-secondary hover:text-primary transition-all text-xs font-bold uppercase tracking-widest flex items-center gap-2"
         >
-          <Copy size={20} />
-          Copy Results
-        </button>
-        <button
-          onClick={handleDownload}
-          className="flex-1 py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
-        >
-          <Download size={20} />
-          Generate strategy PDF
+          <Copy size={14} />
+          Copy Full Strategy Data
         </button>
       </div>
     </div>
@@ -2358,7 +2450,9 @@ export default function App() {
       ctaOther: '',
       numFollowUps: '3',
       numFollowUpsOther: '',
-      freeOfferType: 'Lead Magnet',
+      outreachChannel: 'Both' as const,
+      outreachAngle: 'Authority' as const,
+      freeOfferType: 'Lead Magnet' as const,
       freeOfferTypeOther: '',
       toolName: '',
       toolDescription: '',
@@ -2390,12 +2484,10 @@ export default function App() {
             icps: [],
             icpSummary: '',
             valueProp: '',
+            valuePropTables: [],
             websitePrompt: '',
             gtmStrategy: null,
-            campaignFlow: [],
-            outreachCampaign: null,
-            dmMessages: [],
-            valuePropTables: [],
+            outreachEngineOutput: null,
             globalSolution: '',
           }
         };
@@ -2432,6 +2524,23 @@ export default function App() {
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [savedStep, setSavedStep] = useState<number | null>(null);
   const [showSaveIndicator, setShowSaveIndicator] = useState(false);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      // Optional: Reset state or redirect
+    } catch (err) {
+      console.error("Logout Error:", err);
+    }
+  };
 
   // Check for saved progress on mount
   useEffect(() => {
@@ -2542,21 +2651,26 @@ export default function App() {
     try {
       if (step === 1) {
         
+        const roleStr = inputs.leadRole.includes('Other')
+          ? [...inputs.leadRole.filter(r => r !== 'Other'), ...(inputs.leadRoleOther as string).split(',').map(s => s.trim()).filter(Boolean)].join(', ')
+          : inputs.leadRole.join(', ');
+
         const targetIcpStr = inputs.targetIcp.includes('Other')
-          ? [...inputs.targetIcp.filter(i => i !== 'Other'), inputs.targetIcpOther].join(', ')
+          ? [...inputs.targetIcp.filter(i => i !== 'Other'), ...(inputs.targetIcpOther as string).split(',').map(s => s.trim()).filter(Boolean)].join(', ')
           : inputs.targetIcp.join(', ');
+
         const toneStr = inputs.tonePreference.includes('Other')
-          ? [...inputs.tonePreference.filter(t => t !== 'Other'), inputs.tonePreferenceOther].join(', ')
+          ? [...inputs.tonePreference.filter(t => t !== 'Other'), ...(inputs.tonePreferenceOther as string).split(',').map(s => s.trim()).filter(Boolean)].join(', ')
           : inputs.tonePreference.join(', ');
 
         const result = await gemini.optimizeLinkedInProfile({
           headline: inputs.linkedinHeadline,
           about: inputs.linkedinAbout,
-          
+          role: roleStr,
+          company: inputs.companyName,
           targetIcp: targetIcpStr,
           tone: toneStr,
-          offer: inputs.offer,
-          role: inputs.leadRole.join(', ')
+          offer: inputs.offer
         });
         newOutputs.profileClarityScore = result.clarityScore;
         newOutputs.scoreMeaning = result.scoreMeaning;
@@ -2579,9 +2693,9 @@ export default function App() {
           if (!hasRoles || !hasSizes || !hasInds) return null;
           
           return {
-            roles: roles.includes('Other') ? [...roles.filter(r => r !== 'Other'), inputs[`icp${num}_rolesOther` as keyof typeof inputs]] : roles,
-            sizes: sizes.includes('Other') ? [...sizes.filter(s => s !== 'Other'), inputs[`icp${num}_sizesOther` as keyof typeof inputs]] : sizes,
-            industries: inds.includes('Other') ? [...inds.filter(i => i !== 'Other'), inputs[`icp${num}_industriesOther` as keyof typeof inputs]] : inds,
+            roles: roles.includes('Other') ? [...roles.filter(r => r !== 'Other'), ...(inputs[`icp${num}_rolesOther` as keyof typeof inputs] as string).split(',').map(s => s.trim()).filter(Boolean)] : roles,
+            sizes: sizes.includes('Other') ? [...sizes.filter(s => s !== 'Other'), ...(inputs[`icp${num}_sizesOther` as keyof typeof inputs] as string).split(',').map(s => s.trim()).filter(Boolean)] : sizes,
+            industries: inds.includes('Other') ? [...inds.filter(i => i !== 'Other'), ...(inputs[`icp${num}_industriesOther` as keyof typeof inputs] as string).split(',').map(s => s.trim()).filter(Boolean)] : inds,
           };
         };
 
@@ -2600,12 +2714,12 @@ export default function App() {
         const vpTables = await gemini.generateValuePropTables({
           icps: newOutputs.icps,
           offer: inputs.offer,
-          narrativeAngles: inputs.narrativeAngles.includes('Other') 
-            ? [...inputs.narrativeAngles.filter(a => a !== 'Other'), inputs.narrativeAnglesOther] 
-            : inputs.narrativeAngles,
-          tonePreference: inputs.tonePreference.includes('Other')
-            ? [...inputs.tonePreference.filter(t => t !== 'Other'), inputs.tonePreferenceOther]
-            : inputs.tonePreference
+          narrativeAngles: (inputs.narrativeAngles || []).includes('Other') 
+            ? [...(inputs.narrativeAngles || []).filter(a => a !== 'Other'), ...(inputs.narrativeAnglesOther as string).split(',').map(s => s.trim()).filter(Boolean)] 
+            : (inputs.narrativeAngles || []),
+          tonePreference: (inputs.tonePreference || []).includes('Other')
+            ? [...(inputs.tonePreference || []).filter(t => t !== 'Other'), ...(inputs.tonePreferenceOther as string).split(',').map(s => s.trim()).filter(Boolean)]
+            : (inputs.tonePreference || [])
         });
         
         const globalSol = await gemini.generateGlobalSolution(vpTables);
@@ -2684,7 +2798,7 @@ export default function App() {
 
   if (state.currentStep === 0) {
     return (
-      <WorkshopContext.Provider value={{ state, setStep, updateInput, completeStep, generateOutput, updateOutput, setSubmissionId }}>
+      <WorkshopContext.Provider value={{ state, setStep, updateInput, completeStep, completeAndGoToStep, generateOutput, updateOutput, setSubmissionId }}>
         <Step0LeadCapture />
       </WorkshopContext.Provider>
     );
@@ -2750,8 +2864,23 @@ export default function App() {
                   </motion.div>
                 )}
               </AnimatePresence>
-              <button className="text-sm font-medium hover:text-primary transition-colors">Save Draft</button>
-              <div className="w-8 h-8 rounded-full bg-section border border-border flex items-center justify-center text-xs font-bold">SC</div>
+              {user ? (
+                <div className="flex items-center gap-4">
+                  <div className="flex flex-col items-end">
+                    <span className="text-xs font-bold text-text-primary">{user.displayName || 'User'}</span>
+                    <button onClick={handleLogout} className="text-[10px] text-text-secondary hover:text-red-500 transition-colors uppercase font-bold tracking-widest">Logout</button>
+                  </div>
+                  {user.photoURL ? (
+                    <img src={user.photoURL} alt="Profile" className="w-8 h-8 rounded-full border border-border" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-section border border-border flex items-center justify-center text-xs font-bold">
+                      {user.displayName?.charAt(0) || user.email?.charAt(0) || 'U'}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-section border border-border flex items-center justify-center text-xs font-bold">?</div>
+              )}
             </div>
           </header>
 

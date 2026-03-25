@@ -184,12 +184,22 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
         <h2 className="text-xs font-black uppercase tracking-[0.3em] mb-12 flex items-center gap-2">
           <div className="w-4 h-4 bg-black"></div> 06 | Go-To-Market Execution
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {outputs.gtmStrategy?.leadGen.channels.map((ch, i) => (
-            <div key={i} className="p-6 bg-gray-50 border border-gray-200">
-              <h4 className="text-xs font-black uppercase mb-2 tracking-widest">{ch.channel}</h4>
-              <p className="text-[10px] text-gray-500 uppercase font-bold mb-3 italic">{ch.why}</p>
-              <p className="text-xs leading-relaxed">{ch.approach}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {outputs.gtmStrategy?.leadGen.outreach.map((o: any, i: number) => (
+            <div key={i} className="p-6 bg-gray-50 border border-gray-200 space-y-4">
+              <h4 className="text-xs font-black uppercase mb-2 tracking-widest text-primary">{o.icp}</h4>
+              {o.channelTips.map((ct: any, j: number) => (
+                <div key={j} className="space-y-2">
+                  <p className="text-[10px] font-bold uppercase text-gray-400">{ct.channel} Tips</p>
+                  <ul className="space-y-1">
+                    {ct.tips.map((tip: string, k: number) => (
+                      <li key={k} className="text-[11px] leading-relaxed flex gap-2">
+                        <span className="font-bold">·</span> {tip}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
             </div>
           ))}
         </div>
@@ -236,10 +246,6 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
                     <div className="p-4 bg-black text-white text-[11px] leading-relaxed">
                       <span className="block text-[8px] uppercase font-black text-primary mb-1">Connection Request</span>
                       {outputs.outreachEngineOutput.linkedIn.connectionRequest}
-                    </div>
-                    <div className="p-4 bg-gray-50 border border-gray-200 text-[11px] leading-relaxed">
-                      <span className="block text-[8px] uppercase font-black text-gray-400 mb-1">Initial DM</span>
-                      {outputs.outreachEngineOutput.linkedIn.initialDM}
                     </div>
                     {outputs.outreachEngineOutput.linkedIn.followUps?.map((f, i) => (
                       <div key={i} className="p-4 bg-gray-50 border border-gray-100 text-[11px] leading-relaxed italic">
