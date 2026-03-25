@@ -1186,10 +1186,10 @@ const Step3ValueProp = () => {
             <ActionButton
               onClick={() => {
                 completeStep(3);
-                setStep(4);
+                setTimeout(() => setStep(4), 10);
               }}
               label="Build Website Messaging"
-              microtext="Convert positioning into high-converting copy"
+              microtext="Convert positioning into copy"
               className="flex-1"
             />
             
@@ -2491,9 +2491,10 @@ export default function App() {
         });
         newOutputs.websitePrompt = prompt;
       } else if (step === 5) {
-        const industryStr = inputs.industry.includes('Other') 
-          ? [...inputs.industry.filter((i: string) => i !== 'Other'), inputs.industryOther].join(', ')
-          : inputs.industry.join(', ');
+        const indList = Array.isArray(inputs.industry) ? inputs.industry : [];
+        const industryStr = indList.includes('Other') 
+          ? [...indList.filter((i: string) => i !== 'Other'), inputs.industryOther].join(', ')
+          : indList.join(', ');
         const strategy = await gemini.generateDetailedGTM({
           icps: newOutputs.icps,
           offer: inputs.offer,
@@ -2502,17 +2503,18 @@ export default function App() {
         });
         newOutputs.gtmStrategy = strategy;
       } else if (step === 6) {
+        const ind = Array.isArray(inputs.industry) ? inputs.industry : [];
         const outreach = await gemini.generateOutreachEngine({
           clientName: inputs.fullName,
           companyName: inputs.companyName,
           whatTheySell: inputs.offer,
-          targetIndustry: inputs.industry.filter((i: string) => i !== 'Other').join(', '),
+          targetIndustry: ind.filter((i: string) => i !== 'Other').join(', '),
           primaryProblem: newOutputs.icps[0]?.painPoints[0] || "",
-          valueProp: newOutputs.valueProp,
+          valueProp: newOutputs.globalSolution || newOutputs.valueProp || "Strategic B2B Positioning",
           icpSummary: newOutputs.icpSummary,
           gtmStrategy: JSON.stringify(newOutputs.gtmStrategy),
-          angle: inputs.outreachAngle,
-          channel: inputs.outreachChannel
+          angle: inputs.outreachAngle || 'Authority',
+          channel: inputs.outreachChannel || 'Both'
         });
         newOutputs.outreachEngineOutput = outreach;
       }

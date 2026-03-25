@@ -336,6 +336,8 @@ export const generateDetailedGTM = async (inputs: {
     
     The strategy must cover:
     1. B2B Lead Generation (Targeting, Channels, Outreach Strategy with DMs/Emails, Funnel Design)
+       - Cold Emails: Each email MUST begin with "Subject: [Subject Line Here]" on a separate line.
+       - Emails must be at least 150-200 words, structured, and strategic.
     2. Partner-Led Growth (Ideal Partners, Models, Outreach Pitch, Scale Strategy)
     3. Event-Led Growth (Event Types, Specific Ideas per ICP, Funnel, Conversion Strategy)
     4. Lead Magnet Ideas: Generate 5-8 highly specific lead magnets. 
@@ -682,8 +684,8 @@ export const generateOutreachEngine = async (inputs: {
        - Initial DM: Conversational, short, single-intent.
        - 2-3 Follow-ups: Brief, context-aware, low-friction CTAs.
     2. EMAIL:
-       - Subject Line: MUST be clearly separated. Sharp, curious, no clickbait.
-       - Body: Structured, professional yet human, slightly more detailed than LinkedIn.
+       - Subject Line: MUST be clearly separated from the body. Sharp, curious, no clickbait.
+       - Body: Structured, professional yet human, at least 150-200 words.
        - 3-5 Follow-ups: Progressive value-add, clear CTAs.
     
     GLOBAL WRITING RULES:
