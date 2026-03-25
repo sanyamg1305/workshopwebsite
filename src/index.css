@@ -26,3 +26,25 @@
   transform: translateY(0);
   transition: opacity 300ms, transform 300ms;
 }
+
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  #root > :not(#strategy-report-container) {
+    display: none !important;
+  }
+  #strategy-report-container {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+}
+
+#strategy-report-container {
+  display: none;
+}
+

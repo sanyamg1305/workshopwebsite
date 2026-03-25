@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { StrategyDocument } from './components/StrategyDocument';
+import { StrategyReport } from './components/StrategyReport';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -23,6 +23,7 @@ import {
   Loader2,
   Sparkles,
   User,
+  Download,
   Briefcase,
   Image,
   Share2,
@@ -41,7 +42,7 @@ import { supabase } from './services/supabase';
 
 type StepId = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
-interface WorkshopState {
+export interface WorkshopState {
   currentStep: StepId;
   completedSteps: StepId[];
   submissionId: string | null;
@@ -796,9 +797,28 @@ const Step2ICPBuilder = () => {
 
   const handleGenerate = async () => {    setShowErrors(true);
     setTimeout(async () => {
+      // 1. Check for basic "This field is required" errors (HTML/CSS indicators)
       const firstError = document.querySelector(".border-red-500, .border-red-500\\/50");
       if (firstError) {
         firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
+      // 2. Strict ICP Validation rule: Role, Size, and Industry must all be filled for an ICP to be valid
+      const buildIcp = (num: number) => {
+        const roles = state.inputs[`icp${num}_roles` as keyof typeof state.inputs] as string[];
+        const sizes = state.inputs[`icp${num}_sizes` as keyof typeof state.inputs] as string[];
+        const inds = state.inputs[`icp${num}_industries` as keyof typeof state.inputs] as string[];
+        
+        if (!roles || roles.length === 0 || !sizes || sizes.length === 0 || !inds || inds.length === 0) return null;
+        
+        return { roles, sizes, inds };
+      };
+
+      const validIcps = [buildIcp(1), buildIcp(2), buildIcp(3)].filter(Boolean);
+      
+      if (validIcps.length === 0) {
+        setError("Please complete all required fields (Role, Size, and Industry) for at least one ICP before generating.");
         return;
       }
       
@@ -1064,31 +1084,73 @@ const Step3ValueProp = () => {
             </h3>
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-border">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-section-alt border-b border-border">
-                                    <th className="p-4 text-xs font-black uppercase text-text-secondary tracking-widest max-w-[100px]">ICP</th>
-                  <th className="p-4 text-xs font-black uppercase text-text-secondary tracking-widest max-w-[150px]">Desired Outcome</th>
-                  <th className="p-4 text-xs font-black uppercase text-text-secondary tracking-widest max-w-[200px]">Current Problem</th>
-                  <th className="p-4 text-xs font-black uppercase text-text-secondary tracking-widest max-w-[200px]">Your Method</th>
-                  <th className="p-4 text-xs font-black uppercase text-text-secondary tracking-widest max-w-[150px]">What You Replace</th>
-                  <th className="p-4 text-xs font-black uppercase text-text-secondary tracking-widest max-w-[100px]">Core Angle</th>
-                </tr>
-              </thead>
-              <tbody className="bg-section divide-y divide-border">
-                {state.outputs.valuePropTables.map((row: any, i: number) => (
-                  <tr key={i} className="hover:bg-primary/5 transition-colors">
-                    <td className="p-4 text-sm font-bold text-white align-top">{row.icp}</td>
-                    <td className="p-4 text-sm text-text-secondary align-top whitespace-normal break-words line-clamp-2">{row.desiredOutcome}</td>
-                    <td className="p-4 text-sm text-text-secondary align-top whitespace-normal break-words line-clamp-2">{row.currentProblem}</td>
-                    <td className="p-4 text-sm text-text-secondary align-top whitespace-normal break-words line-clamp-2">{row.method}</td>
-                    <td className="p-4 text-sm text-text-secondary align-top whitespace-normal break-words line-clamp-2">{row.replacement}</td>
-                    <td className="p-4 text-sm text-text-secondary align-top font-medium text-primary">{row.coreAngle}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="grid grid-cols-1 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {state.outputs.valuePropTables.map((row: any, i: number) => (
+              <div key={i} className="bg-section border border-border rounded-3xl overflow-hidden hover:border-primary transition-all group shadow-2xl relative">
+                {/* ICP Header */}
+                <div className="p-6 bg-section-alt border-b border-border flex items-center justify-between">
+                  <h3 className="text-2xl font-black uppercase tracking-tight flex items-center gap-3">
+                    <div className="w-8 h-8 bg-primary text-black flex items-center justify-center font-black rounded-lg text-sm">
+                      {i + 1}
+                    </div>
+                    {row.icp}
+                  </h3>
+                  <div className="px-4 py-1.5 bg-primary/10 border border-primary/20 rounded-full text-[10px] font-black uppercase tracking-widest text-primary italic">
+                    {row.coreAngle} Strategy
+                  </div>
+                </div>
+
+                {/* Card Content */}
+                <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-12">
+                  <div className="space-y-8">
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-black uppercase text-text-secondary tracking-[0.2em] flex items-center gap-2">
+                        <span className="text-lg">🎯</span> Desired Outcome
+                      </h4>
+                      <p className="text-lg font-bold leading-relaxed pr-4 border-l-2 border-primary/30 pl-4">{row.desiredOutcome}</p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-black uppercase text-text-secondary tracking-[0.2em] flex items-center gap-2">
+                        <span className="text-lg">🔥</span> Current Problem
+                      </h4>
+                      <p className="text-sm text-text-secondary leading-relaxed pl-4">{row.currentProblem}</p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-black uppercase text-text-secondary tracking-[0.2em] flex items-center gap-2">
+                        <span className="text-lg">🔄</span> What They Replace
+                      </h4>
+                      <p className="text-sm font-medium text-red-400/80 line-through decoration-red-500/50 pl-4">{row.replacement}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-8 bg-primary/5 p-8 rounded-3xl border border-primary/10 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                      <Zap size={64} className="text-primary" />
+                    </div>
+                    
+                    <div className="space-y-3 relative z-10">
+                      <h4 className="text-xs font-black uppercase text-primary tracking-[0.2em] flex items-center gap-2">
+                        <span className="text-lg">⚙️</span> Your Method
+                      </h4>
+                      <p className="text-lg font-black leading-tight italic">"{row.method}"</p>
+                    </div>
+
+                    <div className="space-y-3 relative z-10 pt-4 border-t border-primary/20">
+                      <h4 className="text-xs font-black uppercase text-primary tracking-[0.2em] flex items-center gap-2">
+                        <span className="text-lg">💡</span> Why This Wins
+                      </h4>
+                      <p className="text-sm font-medium leading-relaxed italic">{row.whyThisWins || "This mechanism creates a high-authority bridge between latent pain and your specific solution, bypassing generic outreach resistance."}</p>
+                    </div>
+
+                    <div className="pt-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary/60">
+                      <Target size={14} /> Core Positioning Angle: {row.coreAngle}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
 
           <div className="flex flex-col md:flex-row items-center gap-4 mt-8">
@@ -1776,11 +1838,22 @@ const Step6OutreachCampaign = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleGenerate = async () => {    setShowErrors(true);
+  const handleGenerate = async () => {
+    setShowErrors(true);
     setTimeout(async () => {
       const firstError = document.querySelector(".border-red-500, .border-red-500\\/50");
       if (firstError) {
         firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
+      // System Integrity
+      const hasInputs = state.inputs.campaignType.length > 0 && 
+                        state.inputs.tone.length > 0 && 
+                        state.inputs.cta.length > 0;
+      
+      if (!hasInputs) {
+        setError("Please select at least one Campaign Type, Tone, and CTA.");
         return;
       }
       
@@ -1794,8 +1867,7 @@ const Step6OutreachCampaign = () => {
           break;
         } catch (err) {
           if (attempt === 2) {
-            if (typeof setError !== 'undefined') setError("Something went wrong. Please try again.");
-            else alert("Something went wrong. Please try again.");
+            setError("Something went wrong. Please try again.");
           }
         }
       }
@@ -2026,11 +2098,20 @@ const Step7DMGenerator = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleGenerate = async () => {    setShowErrors(true);
+  const handleGenerate = async () => {
+    setShowErrors(true);
     setTimeout(async () => {
       const firstError = document.querySelector(".border-red-500, .border-red-500\\/50");
       if (firstError) {
         firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
+      // System Integrity
+      const hasInputs = state.inputs.dmAngle.length > 0 && state.inputs.dmTone.length > 0;
+      
+      if (!hasInputs) {
+        setError("Please select at least one Message Angle and Tone.");
         return;
       }
       
@@ -2044,8 +2125,7 @@ const Step7DMGenerator = () => {
           break;
         } catch (err) {
           if (attempt === 2) {
-            if (typeof setError !== 'undefined') setError("Something went wrong. Please try again.");
-            else alert("Something went wrong. Please try again.");
+            setError("Something went wrong. Please try again.");
           }
         }
       }
@@ -2203,8 +2283,8 @@ const Step8Summary = () => {
           onClick={handleDownload}
           className="flex-1 py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
         >
-          <Send size={20} />
-          Download Strategy PDF
+          <Download size={20} />
+          Generate Strategy Report [PDF]
         </button>
       </div>
     </div>
@@ -2449,7 +2529,12 @@ export default function App() {
           const sizes = inputs[`icp${num}_sizes` as keyof typeof inputs] as string[];
           const inds = inputs[`icp${num}_industries` as keyof typeof inputs] as string[];
           
-          if (!roles || roles.length === 0 || !sizes || sizes.length === 0 || !inds || inds.length === 0) return null;
+          const hasRoles = roles && roles.length > 0;
+          const hasSizes = sizes && sizes.length > 0;
+          const hasInds = inds && inds.length > 0;
+
+          // STRICT VALIDATION: All 3 core fields must be present
+          if (!hasRoles || !hasSizes || !hasInds) return null;
           
           return {
             roles: roles.includes('Other') ? [...roles.filter(r => r !== 'Other'), inputs[`icp${num}_rolesOther` as keyof typeof inputs]] : roles,
@@ -2460,7 +2545,7 @@ export default function App() {
 
         const validIcps = [buildIcp(1), buildIcp(2), buildIcp(3)].filter(Boolean);
         if (validIcps.length === 0) {
-            throw new Error("Please fill out at least 1 ICP completely before generating.");
+            throw new Error("Please complete all required fields for at least one ICP before generating.");
         }
 
         const result = await gemini.generateDetailedICPs({
@@ -2709,8 +2794,8 @@ export default function App() {
           </div>
         </main>
       </div>
-      <div className="hidden print:block bg-white text-black min-h-screen w-full">
-        <StrategyDocument state={state} />
+      <div id="strategy-report-container">
+        <StrategyReport state={state} />
       </div>
     </WorkshopContext.Provider>
   );

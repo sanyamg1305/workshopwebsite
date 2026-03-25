@@ -42,13 +42,14 @@ export const optimizeLinkedInProfile = async (inputs: {
        - Option 3: Benefit-driven (Helping [ICP] save [Time/Money] or gain [Benefit])
        - Incorporate the Core Offer: ${inputs.offer} into the headlines.
        - CRITICAL HEADLINE RULES: NO full stops. NO periods. Use the pipe character " | " to structure.
+       - FORMAT: MUST follow "Frame | Role | Outcome" or similar sharp structures.
 
-    2. About Section: Write a compelling, first-person narrative in a "Founder-style" tone.
-       - The About section MUST be EXACTLY/MINIMUM 3 paragraphs.
-       - Paragraph 1: Who you are + what you do + who you help.
-       - Paragraph 2: Pain points + how you solve them + credibility.
-       - Paragraph 3: Outcome + positioning + CTA.
-       - DO NOT write 1 paragraph. DO NOT write generic fluff. DO NOT repeat sentences. Make it very specific, strategic, and high-value.
+    2. About Section: Write a compelling, first-person narrative in a professional "Founder-style" tone.
+       - The About section MUST be EXACTLY 3 paragraphs. NO more, NO less.
+       - Paragraph 1 (Who/Problem): Who you are, who you help, and the core problem you solve.
+       - Paragraph 2 (How/Method): How you solve it, your specific method/differentiation, and what you replace.
+       - Paragraph 3 (Results/CTA): The outcomes you deliver, credibility markers, and a clear next-step CTA.
+       - RULES: No fluff. No generic "I help businesses grow." Be specific, sharp, and outcome-oriented.
 
     3. Positioning Angles: A one-sentence power statement that clearly defines the user's market position.
 
@@ -182,6 +183,7 @@ export interface ValuePropTable {
   method: string;
   replacement: string;
   coreAngle: string;
+  whyThisWins: string;
 }
 
 export const generateValuePropTables = async (inputs: {
@@ -193,38 +195,43 @@ export const generateValuePropTables = async (inputs: {
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
-    contents: `${GLOBAL_WRITING_RULES}\nYou are an expert Value Proposition Engine and B2B Strategic Advisor.
-    Your task is to infer and auto-generate a structured Value Proposition Table for EXACTLY ${inputs.icps.length} ICP(s).
-    
-    INPUTS:
-    - Core Offer / Client Details: ${inputs.offer}
-    - ICPs & Pain Points: ${JSON.stringify(inputs.icps)}
-    - Narrative Angles: ${inputs.narrativeAngles.join(', ')}
-    - Tone: ${inputs.tonePreference.join(', ')}
-    
-    
-    TABLE READABILITY FIX (CRITICAL):
-    Each cell in the table MUST:
-    1. Be maximum 2 lines.
-    2. Max 12-14 words per cell.
-    3. Use simple, scannable phrasing. No paragraph-style text.
-    4. Format strictly like: Line 1: Outcome/Idea\nLine 2: Method/Qualifier
-    OR Line 1: Problem\nLine 2: Impact. Use actual line breaks (\n).
-\n    INFERENCE ENGINE RULES:
-    For EACH of the ${inputs.icps.length} ICPs, infer and generate:
-    1. Desired Outcome: Specific, tangible, not generic (e.g., NOT "increase growth").
-    2. Current Problem: Pain-led, contextually realistic to this specific ICP.
-    3. Your Method: How the solution actively solves this (must feel distinct per ICP).
-    4. What You Replace: Specific current alternatives (agencies, SDRs, tools, guesswork).
-    5. Core Angle: Mapped to the chosen narrative array.
-    
-    QUALITY RULES:
-    - Never use vague phrases.
-    - Do not repeat the same method across rows.
-    - Sound strategic, sharp, and specific.
-    - Provide exactly ${inputs.icps.length} ICP row(s).
-    
-    Return a JSON array of EXACTLY ${inputs.icps.length} objects.`,
+    contents: `${GLOBAL_WRITING_RULES}
+You are a senior BUSINESS INTELLIGENCE STRATEGIST and VALUE PROP ENGINE.
+Your job is NOT to generate generic positioning. You must provide HIGH-DETAIL, STRUCTURED strategies that feel like they were written by a human consultant.
+
+-------------------------------------
+🧩 PART 1: BUSINESS UNDERSTANDING (INTERNAL THINKING)
+Before generating, you must deeply analyze:
+- What they ACTUALLY sell (core utility)
+- Real monetization & delivery mechanism
+- Their "Unfair Advantage" in the current market
+- Target audience behavior (Service/Product/SaaS/Brand)
+-------------------------------------
+
+TASK:
+Infer and auto-generate a structured Value Proposition for EACH of the ${inputs.icps.length} validated ICP(s).
+
+INPUTS:
+- Core Offer / Client Details: ${inputs.offer}
+- Target ICPs: ${JSON.stringify(inputs.icps.map(i => ({ name: i.name, pain: i.painPoints })))}
+- Strategic Tone: ${inputs.tonePreference.join(', ')}
+
+STRATEGIC RULES:
+1. DEPTH: Each ICP must feel fundamentally DIFFERENT. Do not repeat methods.
+2. SPECIFICITY: Mention mechanisms like "LinkedIn inbound system", "Authority building", "Content -> Conversation flow", or "Qualification mechanisms".
+3. NO FLUFF: Ban phrases like "increase growth", "improve results", "scale faster". Use measurable, sharp outcomes.
+4. READABILITY: Use clean, structured phrasing.
+
+OUTPUT FORMAT REQUIREMENTS:
+For EACH ICP, provide:
+- Desired Outcome: Specific, measurable goal (2 lines max).
+- Current Problem: The REAL pain they face, not generic (2-3 lines).
+- Your Method: HOW it actually works. The unique mechanism (2-3 lines).
+- What They Replace: Specific alternatives (agencies, manual SDRs, generic tools).
+- Core Angle: One clear positioning angle (Authority / ROI / Speed / Trust).
+- Why This Wins: Explain WHY this mechanism beats the current alternatives (1-2 lines).
+
+Return a JSON array of objects.`,
     config: {
       responseMimeType: "application/json",
       responseSchema: {
@@ -237,9 +244,10 @@ export const generateValuePropTables = async (inputs: {
             currentProblem: { type: Type.STRING },
             method: { type: Type.STRING },
             replacement: { type: Type.STRING },
-            coreAngle: { type: Type.STRING }
+            coreAngle: { type: Type.STRING },
+            whyThisWins: { type: Type.STRING }
           },
-          required: ["icp", "desiredOutcome", "currentProblem", "method", "replacement", "coreAngle"]
+          required: ["icp", "desiredOutcome", "currentProblem", "method", "replacement", "coreAngle", "whyThisWins"]
         }
       }
     }
