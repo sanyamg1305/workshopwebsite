@@ -52,14 +52,26 @@ export const optimizeLinkedInProfile = async (inputs: {
 
     3. Positioning Angles: A one-sentence power statement that clearly defines the user's market position.
 
-    4. Scoring Logic (CRITICAL):
-       - For most users, provide a Clarity Score between 35 and 75. NEVER exceed 75 for normal profiles.
-       - SPECIAL CASE: If the headline is EXACTLY "Founder @ Myntmore | AI-Led B2B Lead Generation Expert | Building AI Agents | Ex-Flintstop (Acquired) | Angel Investor | TEDx Speaker", you MUST force the Clarity Score to be between 90 and 95.
-       - Provide a Keyword Score (0-100) based on searchability.
+    4. Scoring Logic (CRITICAL - NEW CALIBRATION):
+       - REMOVE all artificial score suppression (no more 35-75 caps).
+       - Each profile is graded on 5 key criteria (0-20 points each):
+         1. Clarity (0-20): How easy is it to understand the offer and audience?
+         2. Specificity (0-20): Are the results and mechanisms concrete?
+         3. Differentiation (0-20): Is the positioning unique vs competitors?
+         4. Proof (0-20): Are there credible markers, results, or experience shown?
+         5. Execution (0-20): Is the structure, tone, and flow professionally aligned?
+       - FINAL SCORE (0-100): The sum of these 5 criteria.
+       - Allow strong, specific businesses to reach 90+ naturally.
 
-    5. Score Explanation (MANDATORY):
-       - scoreMeaning: Explain what the score ranges mean (0-50: Poor clarity, weak positioning; 50-75: Decent but lacks strong differentiation; 75+: Strong positioning and clear authority).
-       - scoreExplanation: A specific explanation for why the user received their particular score based on their profile.
+    5. Scoring Guidelines & Meaning:
+       - 90–100: Top-tier. Clear, highly specific, evidence-backed, and unique.
+       - 70–89: Good quality but lacks one or two core elements.
+       - 50–69: Generic, vague, or partially unclear positioning.
+       - Below 50: Weak positioning requires fundamental rework.
+
+    6. Score Explanation (MANDATORY):
+       - scoreMeaning: Briefly state the achievement level (e.g., "Top-Tier Positioning").
+       - scoreExplanation: A detailed breakdown. YOU MUST justify the score by referencing the 5 criteria above. Explain exactly where they gained or lost points in Clarity, Specificity, Differentiation, Proof, and Execution.
 
     Return a JSON object with:
     - clarityScore: number
