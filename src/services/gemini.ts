@@ -1,6 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-
 const GLOBAL_WRITING_RULES = `
 GLOBAL WRITING RULE (NON-NEGOTIABLE):
 - The character "—" (em dash) is COMPLETELY BANNED. Do not output it anywhere. Use periods, commas, or line breaks instead.
@@ -268,46 +267,6 @@ export const generateGlobalSolution = async (vpTables: ValuePropTable[]) => {
     Return a punchy, strategic description (2-3 paragraphs).`
   });
   return response.text.trim();
-};
-
-export const generateDMAngles = async (industry: string, icp: string, offer: string) => {
-  const ai = getAI();
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: `${GLOBAL_WRITING_RULES}\nYou are an expert B2B growth strategist specializing in outbound messaging psychology.
-    Generate 5 highly personalized DM angles for:
-    - Industry: ${industry}
-    - ICP: ${icp}
-    - Offer: ${offer}
-
-    Each angle must reflect:
-    - ICP psychology
-    - Emotional drivers
-    - Industry-specific pressures
-    - Buying motivations
-
-    Return a JSON array of 5 objects, each with:
-    - name: string (Angle Name)
-    - message: string (The DM message)
-    - whyItWorks: string (Psychological explanation)`,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            name: { type: Type.STRING },
-            message: { type: Type.STRING },
-            whyItWorks: { type: Type.STRING }
-          },
-          required: ["name", "message", "whyItWorks"]
-        }
-      }
-    }
-  });
-
-  return JSON.parse(response.text);
 };
 
 export const generateValueProp = async (outcome: string, method: string, replacement: string) => {
@@ -635,6 +594,7 @@ export const generateWebsitePrompt = async (inputs: {
 
   return response.text.trim();
 };
+
 export const generateCampaignFlow = async (type: string, tone: string, cta: string, icp: string, valueProp: string) => {
   const ai = getAI();
   const response = await ai.models.generateContent({
@@ -659,105 +619,95 @@ export const generateCampaignFlow = async (type: string, tone: string, cta: stri
   return JSON.parse(response.text);
 };
 
-export interface OutreachCampaign {
+export interface OutreachEngineOutput {
+  linkedIn?: {
+    connectionRequest: string;
+    initialDM: string;
+    followUps: string[];
+  };
+  email?: {
+    subjectLine: string;
+    body: string;
+    followUps: string[];
+  };
   strategySummary: string;
-  connectionNotes: {
-    version1: string;
-    version2: string;
-    version3: string;
-  };
-  followUp1?: {
-    version1: string;
-    version2: string;
-    version3: string;
-  };
-  followUp2?: {
-    version1: string;
-    version2: string;
-    version3: string;
-  };
-  followUp3?: {
-    version1: string;
-    version2: string;
-    version3: string;
-  };
 }
 
-export const generateOutreachCampaign = async (inputs: {
+export const generateOutreachEngine = async (inputs: {
   clientName: string;
   companyName: string;
   whatTheySell: string;
   targetIndustry: string;
   primaryProblem: string;
-  narrativeAngles: string[];
-  tonePreference: string;
-  icpJobTitles: string;
-  icpIndustry: string;
-  icpPainPoints: string[];
-  numFollowUps: number;
-  freeOfferType: string;
-  toolName?: string;
-  toolDescription?: string;
-  ctaStyle: string;
-  strategicNotes: string;
+  valueProp: string;
+  icpSummary: string;
+  gtmStrategy: string;
+  angle: 'Authority' | 'ROI' | 'Pain-led' | 'Contrarian' | 'Curiosity' | 'Offer-led';
+  channel: 'LinkedIn' | 'Email' | 'Both';
 }) => {
   const ai = getAI();
   
   const prompt = `
-    You are a world-class B2B Outreach Strategist. Generate a high-converting outreach campaign based on the following details:
-
-    CLIENT DETAILS:
+    You are a world-class B2B Outreach Strategist and UX Simplification Layer.
+    Your task is to generate a HIGHLY FOCUSED, ANGLE-DRIVEN outreach sequence for:
+    
+    CLIENT/OFFER:
     - Client: ${inputs.clientName} (${inputs.companyName})
-    - Sells: ${inputs.whatTheySell}
-    - Target Industry: ${inputs.targetIndustry}
-    - Problem Solved: ${inputs.primaryProblem}
-    - Narrative Angles: ${inputs.narrativeAngles.join(', ')}
-    - Tone: ${inputs.tonePreference}
-
-    ICP DETAILS:
-    - Job Titles: ${inputs.icpJobTitles}
-    - Industry: ${inputs.icpIndustry}
-    - Pain Points: ${inputs.icpPainPoints.join(', ')}
-
-    CAMPAIGN STRUCTURE:
-    - Follow-ups: ${inputs.numFollowUps}
-    - Offer: ${inputs.freeOfferType} ${inputs.toolName ? `(${inputs.toolName}: ${inputs.toolDescription})` : ''}
-    - CTA Style: ${inputs.ctaStyle}
-    - Strategic Notes: ${inputs.strategicNotes}
-
-    GLOBAL RULES (MANDATORY):
-    1. Human tone only. No em dashes. No corporate buzzwords. No hype. No salesy tone.
-    2. No long paragraphs. No repetitive openings. Avoid robotic phrasing.
-    3. Allowed placeholders ONLY: {firstname}, {lastname}, {company}.
-    4. BANNED WORD SYSTEM: The word "help" (including helping, helped, helpful) is STRICTLY BANNED. Replace with support, guide, improve, strengthen, clarify, assist, etc.
-    5. Narrative Rotation: If multiple angles selected, rotate framing across versions.
-    6. Pain Point Rotation: Version 1 -> Pain A, Version 2 -> Pain B, Version 3 -> Blend.
-    7. Strategy Engine logic:
-       - Visibility/inbound pain -> start thought provoking
-       - Positioning pain -> start insight-based
-       - Authority -> credibility framing
-       - Contrarian -> unexpected observation
-       - Revenue -> missed opportunity framing
-
-    OUTPUT COMPONENTS:
-    1. Campaign Strategy Summary: 2-4 lines explaining sequence logic, psychological progression, and offer placement.
-    2. Connection Note (3 versions): Under 300 characters each. No CTA. Curiosity-driven. Natural tone.
-    3. Follow-ups (up to ${inputs.numFollowUps}):
-       - Each MUST be min 450 characters.
-       - Include a CTA based on "${inputs.ctaStyle}".
-       - Conversational. Continue context naturally. No "just following up".
-       - FU 1: Validation or compliment + Context awareness.
-       - FU 2: Insight or pattern + Thought provoking.
-       - FU 3: Offer introduction.
-
+    - Offer: ${inputs.whatTheySell}
+    - Value Prop: ${inputs.valueProp}
+    
+    CONTEXT:
+    - Industry: ${inputs.targetIndustry}
+    - ICP/Pain: ${inputs.icpSummary}
+    - GTM Strategy: ${inputs.gtmStrategy}
+    
+    STRATEGIC FOCUS (NON-NEGOTIABLE):
+    - Selected Angle: ${inputs.angle}
+    - Target Channel(s): ${inputs.channel}
+    
+    -------------------------------------
+    ANGLE ENFORCEMENT RULES:
+    Each message must be 100% aligned to the "${inputs.angle}" angle:
+    - Authority: Show deep expertise, unique insights, and pattern recognition.
+    - ROI: Focus on measurable outcomes, numbers, and efficiency gains.
+    - Pain-led: Frame the specific messiness of the current state and the cost of inaction.
+    - Contrarian: Challenge industry assumptions with an unexpected observation.
+    - Curiosity: Start a conversation with a specific, non-obvious question.
+    - Offer-led: Primary focus is on a specific lead magnet or free diagnostic tool.
+    -------------------------------------
+    
+    CHANNEL SPECIFICATIONS:
+    1. LINKEDIN:
+       - Connection Request: < 300 chars, no CTA, personal/curious.
+       - Initial DM: Conversational, short, single-intent.
+       - 2-3 Follow-ups: Brief, context-aware, low-friction CTAs.
+    2. EMAIL:
+       - Subject Line: MUST be clearly separated. Sharp, curious, no clickbait.
+       - Body: Structured, professional yet human, slightly more detailed than LinkedIn.
+       - 3-5 Follow-ups: Progressive value-add, clear CTAs.
+    
+    GLOBAL WRITING RULES:
+    - No em dashes (—). Use periods or line breaks.
+    - No corporate buzzwords or "help". Use "support", "strengthen", "guide".
+    - Placeholders: {firstname}, {company}.
+    - Tone: Human, non-robotic, sharp sentences.
+    
     Return a JSON object matching this schema:
     {
-      "strategySummary": "string",
-      "connectionNotes": { "version1": "string", "version2": "string", "version3": "string" },
-      "followUp1": { "version1": "string", "version2": "string", "version3": "string" },
-      "followUp2": { "version1": "string", "version2": "string", "version3": "string" },
-      "followUp3": { "version1": "string", "version2": "string", "version3": "string" }
+      "strategySummary": "2-3 lines explaining the psychological hook for this specific angle",
+      "linkedIn": {
+        "connectionRequest": "...",
+        "initialDM": "...",
+        "followUps": ["..."]
+      },
+      "email": {
+        "subjectLine": "...",
+        "body": "...",
+        "followUps": ["..."]
+      }
     }
+    
+    ONLY include the "linkedIn" or "email" keys if they are selected in the target channel "${inputs.channel}" (or both if "Both" is selected).
   `;
 
   const response = await ai.models.generateContent({
@@ -769,44 +719,27 @@ export const generateOutreachCampaign = async (inputs: {
         type: Type.OBJECT,
         properties: {
           strategySummary: { type: Type.STRING },
-          connectionNotes: {
+          linkedIn: {
             type: Type.OBJECT,
             properties: {
-              version1: { type: Type.STRING },
-              version2: { type: Type.STRING },
-              version3: { type: Type.STRING }
-            },
-            required: ["version1", "version2", "version3"]
-          },
-          followUp1: {
-            type: Type.OBJECT,
-            properties: {
-              version1: { type: Type.STRING },
-              version2: { type: Type.STRING },
-              version3: { type: Type.STRING }
+              connectionRequest: { type: Type.STRING },
+              initialDM: { type: Type.STRING },
+              followUps: { type: Type.ARRAY, items: { type: Type.STRING } }
             }
           },
-          followUp2: {
+          email: {
             type: Type.OBJECT,
             properties: {
-              version1: { type: Type.STRING },
-              version2: { type: Type.STRING },
-              version3: { type: Type.STRING }
-            }
-          },
-          followUp3: {
-            type: Type.OBJECT,
-            properties: {
-              version1: { type: Type.STRING },
-              version2: { type: Type.STRING },
-              version3: { type: Type.STRING }
+              subjectLine: { type: Type.STRING },
+              body: { type: Type.STRING },
+              followUps: { type: Type.ARRAY, items: { type: Type.STRING } }
             }
           }
         },
-        required: ["strategySummary", "connectionNotes"]
+        required: ["strategySummary"]
       }
     }
   });
 
-  return JSON.parse(response.text) as OutreachCampaign;
+  return JSON.parse(response.text) as OutreachEngineOutput;
 };

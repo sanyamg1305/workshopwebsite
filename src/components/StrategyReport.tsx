@@ -213,38 +213,70 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
         </div>
       </section>
 
-      {/* 9. OUTREACH SYSTEM */}
+      {/* 8. OUTREACH ENGINE */}
       <section className="py-12 border-b border-gray-100 page-break-before-always">
         <h2 className="text-xs font-black uppercase tracking-[0.3em] mb-12 flex items-center gap-2">
-          <div className="w-4 h-4 bg-black"></div> 08 | Multi-Channel Outreach
+          <div className="w-4 h-4 bg-black"></div> 08 | Outreach Strategy Engine
         </h2>
-        {outputs.gtmStrategy?.leadGen.outreach.map((o, i) => (
-          <div key={i} className="mb-12 page-break-inside-avoid">
-            <h3 className="text-xs font-black px-4 py-1 bg-black text-white w-fit mb-6 italic uppercase tracking-widest">{o.icp} | Outreach Sequence</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div>
-                <h4 className="text-[10px] font-black uppercase text-gray-400 mb-4 tracking-[0.2em]">LinkedIn DMs</h4>
-                <div className="space-y-4">
-                  {o.dms.map((dm, j) => (
-                    <div key={j} className="p-4 bg-gray-50 border-l-2 border-black text-xs leading-relaxed">
-                      {dm}
+        
+        {outputs.outreachEngineOutput ? (
+          <div className="space-y-12">
+            <div className="p-8 bg-gray-50 border-l-4 border-black">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 italic">Strategic Hook</h4>
+              <p className="text-xl font-bold leading-relaxed italic">"{outputs.outreachEngineOutput.strategySummary}"</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+              {outputs.outreachEngineOutput.linkedIn && (
+                <div className="space-y-6">
+                  <h3 className="text-sm font-black uppercase tracking-tight flex items-center gap-2">
+                    <MessageSquare size={16} /> LinkedIn Sequence
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="p-4 bg-black text-white text-[11px] leading-relaxed">
+                      <span className="block text-[8px] uppercase font-black text-primary mb-1">Connection Request</span>
+                      {outputs.outreachEngineOutput.linkedIn.connectionRequest}
                     </div>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <h4 className="text-[10px] font-black uppercase text-gray-400 mb-4 tracking-[0.2em]">Email Sequence</h4>
-                <div className="space-y-4">
-                  {o.emails.map((email, j) => (
-                    <div key={j} className="p-4 bg-primary/5 border-l-2 border-primary text-xs leading-relaxed italic">
-                      {email}
+                    <div className="p-4 bg-gray-50 border border-gray-200 text-[11px] leading-relaxed">
+                      <span className="block text-[8px] uppercase font-black text-gray-400 mb-1">Initial DM</span>
+                      {outputs.outreachEngineOutput.linkedIn.initialDM}
                     </div>
-                  ))}
+                    {outputs.outreachEngineOutput.linkedIn.followUps.map((f, i) => (
+                      <div key={i} className="p-4 bg-gray-50 border border-gray-100 text-[11px] leading-relaxed italic">
+                        <span className="block text-[8px] uppercase font-black text-gray-300 mb-1">Follow-up {i + 1}</span>
+                        {f}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {outputs.outreachEngineOutput.email && (
+                <div className="space-y-6">
+                  <h3 className="text-sm font-black uppercase tracking-tight flex items-center gap-2">
+                    <Mail size={16} /> Cold Email Strategy
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="p-6 border-2 border-black rounded-lg">
+                      <span className="block text-[8px] uppercase font-black text-gray-400 mb-1">Subject: {outputs.outreachEngineOutput.email.subjectLine}</span>
+                      <div className="text-[11px] leading-relaxed whitespace-pre-wrap mt-4 font-medium">
+                        {outputs.outreachEngineOutput.email.body}
+                      </div>
+                    </div>
+                    {outputs.outreachEngineOutput.email.followUps.map((f, i) => (
+                      <div key={i} className="p-4 bg-primary/5 border-l-2 border-primary text-[11px] leading-relaxed">
+                        <span className="block text-[8px] uppercase font-black text-primary/50 mb-1 text-right">Email Follow-up {i + 1}</span>
+                        {f}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-        ))}
+        ) : (
+          <p className="text-gray-400 italic">No outreach sequence generated yet.</p>
+        )}
       </section>
 
       {/* 10. ACTION PLAN */}

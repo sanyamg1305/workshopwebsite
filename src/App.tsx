@@ -109,25 +109,8 @@ export interface WorkshopState {
     primaryColor: string;
     secondaryColor: string;
     inspirationImage: string | null;
-    campaignType: string[];
-    campaignTypeOther: string;
-    tone: string[];
-    toneOther: string;
-    cta: string[];
-    ctaOther: string;
-    numFollowUps: string;
-    numFollowUpsOther: string;
-    freeOfferType: string;
-    freeOfferTypeOther: string;
-    toolName: string;
-    toolDescription: string;
-    strategicNotes: string;
-    narrativeAngles: string[];
-    narrativeAnglesOther: string;
-    dmAngle: string[];
-    dmAngleOther: string;
-    dmTone: string[];
-    dmToneOther: string;
+    outreachChannel: 'LinkedIn' | 'Email' | 'Both';
+    outreachAngle: 'Authority' | 'ROI' | 'Pain-led' | 'Contrarian' | 'Curiosity' | 'Offer-led';
   };
   outputs: {
     profileClarityScore: number;
@@ -140,13 +123,11 @@ export interface WorkshopState {
     icps: gemini.DetailedICP[];
     icpSummary: string;
     valueProp: string;
+    valuePropTables: any[];
     websitePrompt: string;
-    gtmStrategy: gemini.GTMStrategy | null;
-    campaignFlow: string[];
-    outreachCampaign: gemini.OutreachCampaign | null;
-    dmMessages: { name: string; message: string; whyItWorks: string }[];
-    valuePropTables: gemini.ValuePropTable[];
-    globalSolution: string;
+    gtmStrategy: any | null;
+    outreachEngineOutput: gemini.OutreachEngineOutput | null;
+    globalSolution?: string;
     profileImprovements?: string[];
   };
 }
@@ -1927,7 +1908,7 @@ const Step5GTMStrategy = () => {
   );
 };
 
-const Step6OutreachCampaign = () => {
+const Step6OutreachEngine = () => {
   const [showErrors, setShowErrors] = useState(false);
   const { state, setStep, completeStep, updateInput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
@@ -1935,182 +1916,81 @@ const Step6OutreachCampaign = () => {
 
   const handleGenerate = async () => {
     setShowErrors(true);
-    setTimeout(async () => {
-      const firstError = document.querySelector(".border-red-500, .border-red-500\\/50");
-      if (firstError) {
-        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return;
-      }
-
-      // System Integrity
-      const hasInputs = state.inputs.campaignType.length > 0 && 
-                        state.inputs.tone.length > 0 && 
-                        state.inputs.cta.length > 0;
-      
-      if (!hasInputs) {
-        setError("Please select at least one Campaign Type, Tone, and CTA.");
-        return;
-      }
-      
-      setLoading(true);
-      if (typeof setError !== 'undefined') setError(null);
-      let success = false;
-      for (let attempt = 1; attempt <= 2; attempt++) {
-        try {
-          await generateOutput(6);
-          success = true;
-          break;
-        } catch (err) {
-          if (attempt === 2) {
-            setError("Something went wrong. Please try again.");
-          }
-        }
-      }
-      setLoading(false);
-    }, 100);
+    setLoading(true);
+    setError(null);
+    try {
+      await generateOutput(6);
+    } catch (err) {
+      setError("Something went wrong. Please try again.");
+    }
+    setLoading(false);
   };
 
-  const types = ['LinkedIn', 'Email', 'Hybrid', 'Twitter/X', 'Cold Call Script'];
-  const tones = ['Friendly', 'Direct', 'Insight-led', 'Curious', 'Challenger', 'Helpful', 'Urgent'];
-  const ctas = ['Soft', 'Direct', 'Question-based', 'Value-first', 'Calendar Link', 'Reply-based'];
-  const angles = ['Visibility/Inbound', 'Positioning/Differentiation', 'Authority/Credibility', 'Contrarian/Insight', 'Revenue/Opportunity'];
-  const offers = ['Lead Magnet', 'Free Audit', 'Strategy Session', 'Custom Tool', 'Case Study', 'Checklist'];
+  const angles = ['Authority', 'ROI', 'Pain-led', 'Contrarian', 'Curiosity', 'Offer-led'];
+  const channels = ['LinkedIn', 'Email', 'Both'];
+
+  const out = state.outputs.outreachEngineOutput;
 
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-2xl font-bold mb-2">Outreach Campaign</h2>
-        <p className="text-text-secondary">Design the flow of your automated outreach sequence.</p>
+        <h2 className="text-2xl font-bold mb-2">Outreach Strategy Engine</h2>
+        <p className="text-text-secondary">Generate high-conversion, angle-driven messaging for your target channels.</p>
       </div>
 
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <MultiSelectDropdown showErrors={showErrors}
-            label="Campaign Type"
-            options={types}
-            selected={state.inputs.campaignType}
-            onChange={(val) => updateInput('campaignType', val)}
-            otherValue={state.inputs.campaignTypeOther}
-            onOtherChange={(val) => updateInput('campaignTypeOther', val)}
-            placeholder="Select Type(s)"
-          />
-
-          <MultiSelectDropdown showErrors={showErrors}
-            label="Tone of Voice"
-            options={tones}
-            selected={state.inputs.tone}
-            onChange={(val) => updateInput('tone', val)}
-            otherValue={state.inputs.toneOther}
-            onOtherChange={(val) => updateInput('toneOther', val)}
-            placeholder="Select Tone(s)"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <MultiSelectDropdown showErrors={showErrors}
-            label="Call to Action"
-            options={ctas}
-            selected={state.inputs.cta}
-            onChange={(val) => updateInput('cta', val)}
-            otherValue={state.inputs.ctaOther}
-            onOtherChange={(val) => updateInput('ctaOther', val)}
-            placeholder="Select CTA(s)"
-          />
-
-          <MultiSelectDropdown showErrors={showErrors}
-            label="Narrative Angles"
-            options={angles}
-            selected={state.inputs.narrativeAngles}
-            onChange={(val) => updateInput('narrativeAngles', val)}
-            otherValue={state.inputs.narrativeAnglesOther}
-            onOtherChange={(val) => updateInput('narrativeAnglesOther', val)}
-            placeholder="Select Angle(s)"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <MultiSelectDropdown showErrors={showErrors}
-            label="Number of Follow-ups"
-            options={['1', '2', '3', '4', '5', '6', '7']}
-            selected={[state.inputs.numFollowUps]}
-            onChange={(val) => {
-              if (val.length > 0) updateInput('numFollowUps', val[0]);
-            }}
-            singleSelect={true}
-            otherValue={state.inputs.numFollowUpsOther}
-            onOtherChange={(val) => updateInput('numFollowUpsOther', val)}
-          />
-
-          <MultiSelectDropdown showErrors={showErrors}
-            label="Free Offer Type"
-            options={offers}
-            selected={[state.inputs.freeOfferType]}
-            onChange={(val) => {
-              if (val.length > 0) updateInput('freeOfferType', val[0]);
-            }}
-            singleSelect={true}
-            otherValue={state.inputs.freeOfferTypeOther}
-            onOtherChange={(val) => updateInput('freeOfferTypeOther', val)}
-          />
-        </div>
-
+      <div className="bg-section p-6 rounded-2xl border border-border space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase text-text-secondary tracking-wider">Tool Name *</label>
-            <input
-              type="text"
-              placeholder="e.g. ROI Calculator"
-              className="w-full px-4 py-3 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg"
-              value={state.inputs.toolName}
-              onChange={(e) => updateInput('toolName', e.target.value)}
-            />
+            <label className="text-xs font-bold uppercase text-text-secondary tracking-wider">Target Channel</label>
+            <div className="flex gap-2">
+              {channels.map(c => (
+                <button
+                  key={c}
+                  onClick={() => updateInput('outreachChannel', c)}
+                  className={`flex-1 py-3 rounded-xl border font-bold text-sm transition-all ${
+                    state.inputs.outreachChannel === c 
+                      ? 'bg-primary border-primary text-black' 
+                      : 'border-border text-text-secondary hover:border-primary/50'
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
           </div>
+
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase text-text-secondary tracking-wider">Tool Description *</label>
-            <input
-              type="text"
-              placeholder="e.g. Helps calculate potential savings..."
-              className="w-full px-4 py-3 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg"
-              value={state.inputs.toolDescription}
-              onChange={(e) => updateInput('toolDescription', e.target.value)}
-            />
+            <label className="text-xs font-bold uppercase text-text-secondary tracking-wider">Strategic Angle</label>
+            <div className="grid grid-cols-2 gap-2">
+              {angles.map(a => (
+                <button
+                  key={a}
+                  onClick={() => updateInput('outreachAngle', a)}
+                  className={`py-2 rounded-xl border font-bold text-[10px] uppercase tracking-wider transition-all ${
+                    state.inputs.outreachAngle === a 
+                      ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' 
+                      : 'border-border text-text-secondary hover:border-primary/50'
+                  }`}
+                >
+                  {a}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-xs font-bold uppercase text-text-secondary tracking-wider">Strategic Notes</label>
-          <textarea
-            placeholder="Any specific instructions or context for the AI..."
-            className="w-full px-4 py-3 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg min-h-[100px]"
-            value={state.inputs.strategicNotes}
-            onChange={(e) => updateInput('strategicNotes', e.target.value)}
-          />
-        </div>
-      </div>
-
-            {error && (
-        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-sm flex items-start gap-3 shadow-sm mb-4">
-          <Zap size={20} className="text-red-500 mt-1 shrink-0" />
-          <div className="flex-1">
-            <p className="font-bold">Generation Failed</p>
-            <p className="mt-1">{error}</p>
-          </div>
-          <button onClick={() => setError(null)} className="px-3 py-1.5 bg-red-500/20 rounded-lg font-bold hover:bg-red-500/30 transition-colors text-xs">Dismiss</button>
-        </div>
-      )}
-      <div className="pt-8 border-t border-border space-y-4">
-        {!state.outputs.outreachCampaign ? (
+        {!out ? (
           <ActionButton
             onClick={handleGenerate}
             loading={loading}
-            label="Build Outreach Sequence"
-            microtext="Automate your top-of-funnel outbound"
-            disabled={loading || state.inputs.campaignType.length === 0 || state.inputs.tone.length === 0 || state.inputs.cta.length === 0}
+            label="Generate Outreach Strategy"
+            microtext={`Create ${state.inputs.outreachAngle}-led messaging`}
+            disabled={loading}
           />
         ) : (
           <div className="space-y-6">
             <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
-              <p className="text-emerald-500 font-bold text-sm">✓ Outreach Campaigns Built Successfully</p>
+              <p className="text-emerald-500 font-bold text-sm">✓ {state.inputs.outreachAngle} Campaign Generated</p>
             </div>
             <div className="flex gap-4">
               <button
@@ -2118,213 +1998,14 @@ const Step6OutreachCampaign = () => {
                 disabled={loading}
                 className="flex-1 py-4 bg-section text-white border border-border rounded-xl font-bold hover:bg-section-alt transition-all disabled:opacity-50"
               >
-                {loading ? "Regenerating..." : "Regenerate Campaigns"}
+                {loading ? "Regenerating..." : "Regenerate Single Angle"}
               </button>
               <ActionButton
                 onClick={() => {
                   completeStep(6);
                   setStep(7);
                 }}
-                label="Generate DMs & Emails"
-                microtext="Create ready-to-send conversations"
-                className="flex-[2]"
-              />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {state.outputs.outreachCampaign && (
-        <div className="space-y-12">
-          <div className="p-8 bg-primary/5 border-2 border-primary/20 rounded-3xl">
-            <h4 className="text-xs font-bold uppercase tracking-widest text-primary mb-4 flex items-center gap-2">
-              <Sparkles size={16} />
-              Campaign Strategy Summary
-            </h4>
-            <p className="text-lg font-medium leading-relaxed italic">
-              "{state.outputs.outreachCampaign.strategySummary}"
-            </p>
-          </div>
-
-          <div className="space-y-6">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-2">
-              <Send size={16} className="text-primary" />
-              Connection Notes (3 Versions)
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {['version1', 'version2', 'version3'].map((v, i) => (
-                <div key={v} className="p-6 bg-section border border-border rounded-2xl relative group hover:border-primary transition-all">
-                  <div className="absolute -top-3 -left-3 w-8 h-8 bg-primary text-black rounded-full flex items-center justify-center font-bold text-sm shadow-lg">
-                    V{i + 1}
-                  </div>
-                  <div className="text-sm text-text-primary leading-relaxed mb-4">
-                    {(state.outputs.outreachCampaign?.connectionNotes as any)[v]}
-                  </div>
-                  <button 
-                    onClick={() => {
-                      navigator.clipboard.writeText((state.outputs.outreachCampaign?.connectionNotes as any)[v]);
-                      alert('Copied!');
-                    }}
-                    className="w-full py-2 text-[10px] font-bold uppercase tracking-wider border border-border rounded-lg hover:bg-primary hover:border-primary hover:text-black transition-all"
-                  >
-                    Copy
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {[1, 2, 3].map(num => {
-            const followUp = (state.outputs.outreachCampaign as any)[`followUp${num}`];
-            if (!followUp) return null;
-
-            return (
-              <div key={num} className="space-y-6">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-2">
-                  <MessageSquare size={16} className="text-primary" />
-                  Follow-up {num} (3 Versions)
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {['version1', 'version2', 'version3'].map((v, i) => (
-                    <div key={v} className="p-6 bg-section border border-border rounded-2xl relative group hover:border-primary transition-all">
-                      <div className="absolute -top-3 -left-3 w-8 h-8 bg-primary text-black rounded-full flex items-center justify-center font-bold text-sm shadow-lg">
-                        V{i + 1}
-                      </div>
-                      <div className="text-xs text-text-primary leading-relaxed mb-4 whitespace-pre-wrap">
-                        {followUp[v]}
-                      </div>
-                      <button 
-                        onClick={() => {
-                          navigator.clipboard.writeText(followUp[v]);
-                          alert('Copied!');
-                        }}
-                        className="w-full py-2 text-[10px] font-bold uppercase tracking-wider border border-border rounded-lg hover:bg-primary hover:border-primary hover:text-black transition-all"
-                      >
-                        Copy
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const Step7DMGenerator = () => {
-  const [showErrors, setShowErrors] = useState(false);
-  const { state, setStep, completeStep, updateInput, generateOutput } = useWorkshop();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleGenerate = async () => {
-    setShowErrors(true);
-    setTimeout(async () => {
-      const firstError = document.querySelector(".border-red-500, .border-red-500\\/50");
-      if (firstError) {
-        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return;
-      }
-
-      // System Integrity
-      const hasInputs = state.inputs.dmAngle.length > 0 && state.inputs.dmTone.length > 0;
-      
-      if (!hasInputs) {
-        setError("Please select at least one Message Angle and Tone.");
-        return;
-      }
-      
-      setLoading(true);
-      if (typeof setError !== 'undefined') setError(null);
-      let success = false;
-      for (let attempt = 1; attempt <= 2; attempt++) {
-        try {
-          await generateOutput(7);
-          success = true;
-          break;
-        } catch (err) {
-          if (attempt === 2) {
-            setError("Something went wrong. Please try again.");
-          }
-        }
-      }
-      setLoading(false);
-    }, 100);
-  };
-
-  const angles = ['Pain', 'Curiosity', 'Insight', 'Trend', 'Case Study', 'Mutual Connection', 'Recent News', 'Compliment'];
-  const tones = ['Friendly', 'Professional', 'Direct', 'Witty', 'Empathetic', 'Bold'];
-
-  return (
-    <div className="space-y-8">
-      <div>
-        <h2 className="text-2xl font-bold mb-2">DM Generator</h2>
-        <p className="text-text-secondary">Generate high-converting messages based on your ICP and Value Prop.</p>
-      </div>
-
-      <div className="space-y-6">
-        <MultiSelectDropdown showErrors={showErrors}
-          label="Message Angle"
-          options={angles}
-          selected={state.inputs.dmAngle}
-          onChange={(val) => updateInput('dmAngle', val)}
-          otherValue={state.inputs.dmAngleOther}
-          onOtherChange={(val) => updateInput('dmAngleOther', val)}
-          placeholder="Select Angle(s)"
-        />
-
-        <MultiSelectDropdown showErrors={showErrors}
-          label="Message Tone"
-          options={tones}
-          selected={state.inputs.dmTone}
-          onChange={(val) => updateInput('dmTone', val)}
-          otherValue={state.inputs.dmToneOther}
-          onOtherChange={(val) => updateInput('dmToneOther', val)}
-          placeholder="Select Tone(s)"
-        />
-      </div>
-
-            {error && (
-        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-sm flex items-start gap-3 shadow-sm mb-4">
-          <Zap size={20} className="text-red-500 mt-1 shrink-0" />
-          <div className="flex-1">
-            <p className="font-bold">Generation Failed</p>
-            <p className="mt-1">{error}</p>
-          </div>
-          <button onClick={() => setError(null)} className="px-3 py-1.5 bg-red-500/20 rounded-lg font-bold hover:bg-red-500/30 transition-colors text-xs">Dismiss</button>
-        </div>
-      )}
-      <div className="pt-8 border-t border-border space-y-4">
-        {state.outputs.dmMessages.length === 0 ? (
-          <ActionButton
-            onClick={handleGenerate}
-            loading={loading}
-            label="Generate Personal DMs"
-            microtext="Start ready-to-send conversations"
-            disabled={loading || state.inputs.dmAngle.length === 0 || state.inputs.dmTone.length === 0}
-          />
-        ) : (
-          <div className="space-y-6">
-            <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
-              <p className="text-emerald-500 font-bold text-sm">✓ Direct Messages & Conversion Scripts Ready</p>
-            </div>
-            <div className="flex gap-4">
-              <button
-                onClick={handleGenerate}
-                disabled={loading}
-                className="flex-1 py-4 bg-section text-white border border-border rounded-xl font-bold hover:bg-section-alt transition-all disabled:opacity-50"
-              >
-                {loading ? "Regenerating..." : "Regenerate DMs"}
-              </button>
-              <ActionButton
-                onClick={() => {
-                  completeStep(7);
-                  setStep(8);
-                }}
-                label="Export Full Strategy Report"
+                label="Finalize Strategy Report"
                 microtext="Download your complete playbook"
                 className="flex-[2]"
               />
@@ -2333,31 +2014,92 @@ const Step7DMGenerator = () => {
         )}
       </div>
 
-      <div className="space-y-4">
-        {state.outputs.dmMessages.map((msg, i) => (
-          <OutputCard key={i} title={msg.name} copyText={msg.message} icon={MessageSquare}>
-            <div className="text-base font-normal whitespace-pre-wrap mb-4">{msg.message}</div>
-            <div className="p-4 bg-primary/10 border border-primary/20 rounded-xl">
-              <div className="text-[10px] font-bold uppercase text-primary mb-1 flex items-center gap-1">
-                <Zap size={10} />
-                Why it works
-              </div>
-              <div className="text-xs text-text-secondary leading-relaxed">{msg.whyItWorks}</div>
+      {error && (
+        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-sm">
+          {error}
+        </div>
+      )}
+
+      {out && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-10"
+        >
+          <div className="p-8 bg-primary/5 border-2 border-primary/20 rounded-3xl relative group overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+              <Zap size={64} className="text-primary" />
             </div>
-          </OutputCard>
-        ))}
-      </div>
+            <h4 className="text-xs font-black uppercase text-primary mb-4 tracking-[0.2em] flex items-center gap-2">
+              <Sparkles size={16} /> Strategy Hook: {state.inputs.outreachAngle}
+            </h4>
+            <p className="text-xl font-black leading-tight italic">
+              "{out.strategySummary}"
+            </p>
+          </div>
+
+          {(state.inputs.outreachChannel === 'LinkedIn' || state.inputs.outreachChannel === 'Both') && out.linkedIn && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <h3 className="text-lg font-black flex items-center gap-2 uppercase tracking-tight">
+                <Linkedin size={20} className="text-primary" /> LinkedIn Sequence
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <OutputCard title="Connection Request" icon={User} copyText={out.linkedIn.connectionRequest}>
+                  <p className="text-sm leading-relaxed">{out.linkedIn.connectionRequest}</p>
+                </OutputCard>
+                <OutputCard title="Initial Message" icon={MessageSquare} copyText={out.linkedIn.initialDM}>
+                  <p className="text-sm leading-relaxed">{out.linkedIn.initialDM}</p>
+                </OutputCard>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black uppercase text-text-secondary tracking-widest px-1">Follow-up Sequence</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {out.linkedIn.followUps.map((msg, i) => (
+                    <OutputCard key={i} title={`Follow-up ${i + 1}`} icon={Send} copyText={msg}>
+                      <p className="text-xs leading-relaxed italic">"{msg}"</p>
+                    </OutputCard>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {(state.inputs.outreachChannel === 'Email' || state.inputs.outreachChannel === 'Both') && out.email && (
+            <div className="space-y-6 pt-10 border-t border-border animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <h3 className="text-lg font-black flex items-center gap-2 uppercase tracking-tight">
+                <Mail size={20} className="text-primary" /> Cold Email Strategy
+              </h3>
+              
+              <OutputCard title={`Subject: ${out.email.subjectLine}`} icon={Zap} copyText={out.email.subjectLine}>
+                <div className="text-sm leading-relaxed whitespace-pre-wrap font-medium">
+                  {out.email.body}
+                </div>
+              </OutputCard>
+
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black uppercase text-text-secondary tracking-widest px-1">Email Follow-ups</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {out.email.followUps.map((msg, i) => (
+                    <OutputCard key={i} title={`Email Follow-up ${i + 1}`} icon={Send} copyText={msg}>
+                      <p className="text-xs leading-relaxed">{msg}</p>
+                    </OutputCard>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </motion.div>
+      )}
     </div>
   );
 };
 
-const Step8Summary = () => {
-  const [showErrors, setShowErrors] = useState(false);
+const Step7Summary = () => {
   const { state } = useWorkshop();
 
-  const handleDownload = () => {
-    window.print();
-  };
+  const handleDownload = () => window.print();
 
   return (
     <div className="space-y-8">
@@ -2370,70 +2112,69 @@ const Step8Summary = () => {
           <CheckCircle2 size={48} className="text-black" />
         </motion.div>
         <h2 className="text-4xl font-black mb-2">Workshop Complete!</h2>
-        <p className="text-text-secondary text-lg">You've built a complete B2B lead generation engine. Here's your summary.</p>
+        <p className="text-text-secondary text-lg">You've built a complete B2B lead generation engine.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="p-8 border-2 border-border rounded-3xl bg-section shadow-sm hover:border-primary transition-colors group">
+        <div className="p-8 border-2 border-border rounded-3xl bg-section shadow-sm group">
           <div className="flex items-center gap-3 mb-4">
             <Target className="text-primary group-hover:scale-110 transition-transform" size={20} />
-            <h4 className="text-xs font-bold uppercase tracking-widest text-text-secondary">Ideal Customer Profile</h4>
+            <h4 className="text-xs font-bold uppercase tracking-widest text-text-secondary">Target Market</h4>
           </div>
-          <p className="text-sm leading-relaxed line-clamp-4">{state.outputs.icpSummary}</p>
+          <p className="text-sm leading-relaxed line-clamp-4">{state.outputs.icpSummary || "Strategy configured for multiple ICPs."}</p>
         </div>
         
-        <div className="p-8 border-2 border-primary/30 rounded-3xl bg-primary/5 shadow-sm hover:border-primary transition-colors group">
+        <div className="p-8 border-2 border-primary/30 rounded-3xl bg-primary/5 shadow-sm group">
           <div className="flex items-center gap-3 mb-4">
             <Zap className="text-primary group-hover:scale-110 transition-transform" size={20} />
-            <h4 className="text-xs font-bold uppercase tracking-widest text-text-secondary">Winning Value Prop</h4>
+            <h4 className="text-xs font-bold uppercase tracking-widest text-text-secondary">Value Prop</h4>
           </div>
           <p className="text-lg font-black text-primary leading-tight">{state.outputs.valueProp}</p>
         </div>
 
-        <div className="p-8 border-2 border-border rounded-3xl bg-section shadow-sm hover:border-primary transition-colors group">
+        <div className="p-8 border-2 border-border rounded-3xl bg-section shadow-sm group">
           <div className="flex items-center gap-3 mb-4">
-            <TrendingUp className="text-primary group-hover:scale-110 transition-transform" size={20} />
-            <h4 className="text-xs font-bold uppercase tracking-widest text-text-secondary">GTM Strategy</h4>
+            <Send className="text-primary group-hover:scale-110 transition-transform" size={20} />
+            <h4 className="text-xs font-bold uppercase tracking-widest text-text-secondary">Outreach Engine</h4>
           </div>
-          <div className="space-y-1">
-            <div className="text-sm font-bold">{state.outputs.gtmStrategy?.leadGen.channels[0]?.channel || 'N/A'}</div>
-            <div className="text-xs text-text-secondary">Secondary: {state.outputs.gtmStrategy?.leadGen.channels[1]?.channel || 'N/A'}</div>
+          <div className="space-y-2">
+            <div className="text-sm font-bold">{state.inputs.outreachChannel} | {state.inputs.outreachAngle}</div>
+            {state.outputs.outreachEngineOutput && (
+              <p className="text-xs text-text-secondary italic line-clamp-3">"{state.outputs.outreachEngineOutput.strategySummary}"</p>
+            )}
           </div>
         </div>
 
-        <div className="p-8 border-2 border-border rounded-3xl bg-section shadow-sm hover:border-primary transition-colors group">
+        <div className="p-8 border-2 border-border rounded-3xl bg-section shadow-sm group">
           <div className="flex items-center gap-3 mb-4">
-            <Layers className="text-primary group-hover:scale-110 transition-transform" size={20} />
-            <h4 className="text-xs font-bold uppercase tracking-widest text-text-secondary">Campaign Setup</h4>
+            <Download className="text-primary group-hover:scale-110 transition-transform" size={20} />
+            <h4 className="text-xs font-bold uppercase tracking-widest text-text-secondary">Assets Ready</h4>
           </div>
-          <div className="text-sm font-bold">{state.inputs.campaignType.join(', ')}</div>
-          <div className="text-xs text-text-secondary">{state.inputs.tone.join(', ')} Tone · {state.inputs.cta.join(', ')} CTA</div>
-          {state.outputs.outreachCampaign && (
-            <div className="mt-4 pt-4 border-t border-border">
-              <div className="text-[10px] font-bold uppercase text-primary mb-1">Strategy</div>
-              <p className="text-xs text-text-secondary line-clamp-2 italic">"{state.outputs.outreachCampaign.strategySummary}"</p>
-            </div>
-          )}
+          <p className="text-xs text-text-secondary">
+             ✓ LinkedIn Profile Hook <br />
+             ✓ Multi-Channel Sequence <br />
+             ✓ Strategy Report PDF
+          </p>
         </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 mt-12">
         <button
           onClick={() => {
-            navigator.clipboard.writeText(JSON.stringify(state, null, 2));
-            alert('Full state copied to clipboard!');
+            navigator.clipboard.writeText(JSON.stringify(state.outputs, null, 2));
+            alert('Full strategy data copied!');
           }}
           className="flex-1 py-5 border-2 border-border rounded-2xl font-bold hover:bg-section transition-all flex items-center justify-center gap-3"
         >
           <Copy size={20} />
-          Copy Full Data
+          Copy Results
         </button>
         <button
           onClick={handleDownload}
-          className="flex-1 py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
+          className="flex-1 py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
         >
           <Download size={20} />
-          Generate Strategy Report [PDF]
+          Generate strategy PDF
         </button>
       </div>
     </div>
@@ -2579,9 +2320,7 @@ export default function App() {
         valueProp: '',
         websitePrompt: '',
         gtmStrategy: null,
-        campaignFlow: [],
-        outreachCampaign: null,
-        dmMessages: [],
+        outreachEngineOutput: null,
         valuePropTables: [],
         globalSolution: '',
       },
@@ -2738,7 +2477,7 @@ export default function App() {
         newOutputs.websitePrompt = prompt;
       } else if (step === 5) {
         const industryStr = inputs.industry.includes('Other') 
-          ? [...inputs.industry.filter(i => i !== 'Other'), inputs.industryOther].join(', ')
+          ? [...inputs.industry.filter((i: string) => i !== 'Other'), inputs.industryOther].join(', ')
           : inputs.industry.join(', ');
         const strategy = await gemini.generateDetailedGTM({
           icps: newOutputs.icps,
@@ -2748,77 +2487,22 @@ export default function App() {
         });
         newOutputs.gtmStrategy = strategy;
       } else if (step === 6) {
-        const industryStr = inputs.industry.includes('Other') 
-          ? [...inputs.industry.filter(i => i !== 'Other'), inputs.industryOther].join(', ')
-          : inputs.industry.join(', ');
-        
-        const toneStr = inputs.tone.includes('Other')
-          ? [...inputs.tone.filter(t => t !== 'Other'), inputs.toneOther].join(', ')
-          : inputs.tone.join(', ');
-          
-        const ctaStr = inputs.cta.includes('Other')
-          ? [...inputs.cta.filter(c => c !== 'Other'), inputs.ctaOther].join(', ')
-          : inputs.cta.join(', ');
-
-        const painPointsStr = inputs.painPoints.includes('Other')
-          ? [...inputs.painPoints.filter(p => p !== 'Other'), inputs.painPointsOther].join(', ')
-          : inputs.painPoints.join(', ');
-
-        const narrativeAnglesStr = inputs.narrativeAngles.includes('Other')
-          ? [...inputs.narrativeAngles.filter(a => a !== 'Other'), inputs.narrativeAnglesOther]
-          : inputs.narrativeAngles;
-
-        const numFollowUpsVal = inputs.numFollowUps === 'Other' 
-          ? parseInt(inputs.numFollowUpsOther) || 3 
-          : parseInt(inputs.numFollowUps) || 3;
-          
-        const freeOfferTypeStr = inputs.freeOfferType === 'Other'
-          ? inputs.freeOfferTypeOther
-          : inputs.freeOfferType;
-
-        const campaign = await gemini.generateOutreachCampaign({
+        const outreach = await gemini.generateOutreachEngine({
           clientName: inputs.fullName,
           companyName: inputs.companyName,
           whatTheySell: inputs.offer,
-          targetIndustry: industryStr,
-          primaryProblem: painPointsStr,
-          narrativeAngles: narrativeAnglesStr,
-          tonePreference: toneStr,
-          icpJobTitles: newOutputs.icps.map(i => i.name).join(', '),
-          icpIndustry: newOutputs.icps.map(i => i.whoTheyAre).join(', '),
-          icpPainPoints: newOutputs.icps.flatMap(i => i.painPoints),
-          numFollowUps: numFollowUpsVal,
-          freeOfferType: freeOfferTypeStr,
-          toolName: inputs.toolName,
-          toolDescription: inputs.toolDescription,
-          ctaStyle: ctaStr,
-          strategicNotes: inputs.strategicNotes
+          targetIndustry: inputs.industry.filter((i: string) => i !== 'Other').join(', '),
+          primaryProblem: newOutputs.icps[0]?.painPoints[0] || "",
+          valueProp: newOutputs.valueProp,
+          icpSummary: newOutputs.icpSummary,
+          gtmStrategy: JSON.stringify(newOutputs.gtmStrategy),
+          angle: inputs.outreachAngle,
+          channel: inputs.outreachChannel
         });
-
-        newOutputs.outreachCampaign = campaign;
-        newOutputs.campaignFlow = [
-          "Connection Request",
-          ...Array.from({ length: numFollowUpsVal }, (_, i) => `Follow-up ${i + 1}`)
-        ];
-      } else if (step === 7) {
-        const industryStr = inputs.industry.includes('Other') 
-          ? [...inputs.industry.filter(i => i !== 'Other'), inputs.industryOther].join(', ')
-          : inputs.industry.join(', ');
-        
-        const angleStr = inputs.dmAngle.includes('Other')
-          ? [...inputs.dmAngle.filter(a => a !== 'Other'), inputs.dmAngleOther].join(', ')
-          : inputs.dmAngle.join(', ');
-          
-        const toneStr = inputs.dmTone.includes('Other')
-          ? [...inputs.dmTone.filter(t => t !== 'Other'), inputs.dmToneOther].join(', ')
-          : inputs.dmTone.join(', ');
-
-        const dms = await gemini.generateDMAngles(industryStr, newOutputs.icpSummary, newOutputs.valueProp);
-        newOutputs.dmMessages = dms;
+        newOutputs.outreachEngineOutput = outreach;
       }
 
-      setState(prev => ({ ...prev, outputs: newOutputs }));
-      completeStep(step);
+      setState(prev => ({ ...prev, outputs: newOutputs, completedSteps: [...prev.completedSteps, step] }));
     } catch (err) {
       console.error("Error generating output:", err);
       throw err;
@@ -2831,9 +2515,8 @@ export default function App() {
     { id: 3, label: 'Value Proposition', icon: Zap },
     { id: 4, label: 'Website Builder', icon: Globe },
     { id: 5, label: 'GTM Strategy', icon: TrendingUp },
-    { id: 6, label: 'Outreach Campaign', icon: Send },
-    { id: 7, label: 'DM Generator', icon: MessageSquare },
-    { id: 8, label: 'Wrap Up', icon: LayoutDashboard },
+    { id: 6, label: 'Outreach Engine', icon: Send },
+    { id: 7, label: 'Wrap Up', icon: LayoutDashboard },
   ];
 
   const currentStepData = steps.find(s => s.id === state.currentStep);
@@ -2883,12 +2566,12 @@ export default function App() {
           {/* Top Bar */}
           <header className="h-16 border-b border-border bg-bg/80 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between px-8">
             <div className="flex items-center gap-4">
-              <span className="text-sm font-bold text-text-secondary">Step {state.currentStep} of 8</span>
+              <span className="text-sm font-bold text-text-secondary">Step {state.currentStep} of 7</span>
               <div className="w-48 h-1.5 bg-border rounded-full overflow-hidden">
                 <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${(state.currentStep / 8) * 100}%` }}
-                  className="h-full bg-primary"
+                   initial={{ width: 0 }}
+                   animate={{ width: `${(state.currentStep / 7) * 100}%` }}
+                   className="h-full bg-primary"
                 />
               </div>
             </div>
@@ -2914,9 +2597,8 @@ export default function App() {
                   {state.currentStep === 3 && <Step3ValueProp />}
                   {state.currentStep === 4 && <Step4WebsiteBuilder />}
                   {state.currentStep === 5 && <Step5GTMStrategy />}
-                  {state.currentStep === 6 && <Step6OutreachCampaign />}
-                  {state.currentStep === 7 && <Step7DMGenerator />}
-                  {state.currentStep === 8 && <Step8Summary />}
+                  {state.currentStep === 6 && <Step6OutreachEngine />}
+                  {state.currentStep === 7 && <Step7Summary />}
                 </motion.div>
               </AnimatePresence>
 
@@ -2929,12 +2611,12 @@ export default function App() {
                 >
                   Back
                 </button>
-                {state.currentStep < 8 && (
+                {state.currentStep < 7 && (
                   <div className="relative group">
                     <button
                       onClick={() => {
                         if (state.completedSteps.includes(state.currentStep as StepId)) {
-                          setStep(Math.min(8, state.currentStep + 1) as StepId);
+                          setStep(Math.min(7, state.currentStep + 1) as StepId);
                         }
                       }}
                       disabled={!state.completedSteps.includes(state.currentStep as StepId)}
@@ -2946,7 +2628,9 @@ export default function App() {
                         }
                       `}
                     >
-                      {state.currentStep === 1 ? 'Define Your Target ICPs' : 'Next Step'}
+                      {state.currentStep === 1 ? 'Define Your Target ICPs' : 
+                       state.currentStep === 5 ? 'Build Your Outreach Engine' :
+                       'Next Step'}
                       <ArrowRight size={18} />
                     </button>
                   </div>
