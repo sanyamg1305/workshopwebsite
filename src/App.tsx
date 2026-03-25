@@ -34,7 +34,9 @@ import {
   Check,
   ChevronDown,
   X,
-  Upload
+  Upload,
+  RotateCcw,
+  History
 } from 'lucide-react';
 import * as gemini from './services/gemini';
 import { supabase } from './services/supabase';
@@ -2192,6 +2194,40 @@ const Step7Summary = () => {
   );
 };
 
+const ResumeModal = ({ onResume, onStartOver }: { onResume: () => void, onStartOver: () => void }) => (
+  <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.9, y: 20 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      className="max-w-md w-full bg-section border border-border rounded-3xl p-8 shadow-2xl text-center"
+    >
+      <div className="w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+        <History className="text-primary" size={32} />
+      </div>
+      <h2 className="text-2xl font-bold mb-4">Resume where you left off?</h2>
+      <p className="text-text-secondary mb-8">
+        We found your saved progress. Would you like to continue from your last step or start a new workshop?
+      </p>
+      <div className="space-y-3">
+        <button
+          onClick={onResume}
+          className="w-full py-4 bg-primary text-black rounded-xl font-bold text-lg hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+        >
+          Resume Workshop
+          <ArrowRight size={20} />
+        </button>
+        <button
+          onClick={onStartOver}
+          className="w-full py-4 bg-bg text-text-secondary border border-border rounded-xl font-bold text-lg hover:bg-section transition-all flex items-center justify-center gap-2"
+        >
+          <RotateCcw size={18} />
+          Start Over
+        </button>
+      </div>
+    </motion.div>
+  </div>
+);
+
 // --- Main App ---
 
 export default function App() {
@@ -2337,6 +2373,48 @@ export default function App() {
       },
     };
   });
+
+  const [showResumeModal, setShowResumeModal] = useState(false);
+  const [savedStep, setSavedStep] = useState<number | null>(null);
+  const [showSaveIndicator, setShowSaveIndicator] = useState(false);
+
+  // Check for saved progress on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('workshop_progress_step');
+    if (saved) {
+      const step = parseInt(saved, 10);
+      if (step > 0 && step !== state.currentStep) {
+        setSavedStep(step);
+        setShowResumeModal(true);
+      }
+    }
+  }, []);
+
+  // Auto-save progress
+  useEffect(() => {
+    if (state.currentStep > 0) {
+      localStorage.setItem('workshop_progress_step', state.currentStep.toString());
+      
+      // Brief save indicator
+      setShowSaveIndicator(true);
+      const timer = setTimeout(() => setShowSaveIndicator(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [state.currentStep]);
+
+  const handleResume = () => {
+    if (savedStep !== null) {
+      setStep(savedStep as StepId);
+    }
+    setShowResumeModal(false);
+  };
+
+  const handleStartOver = () => {
+    localStorage.removeItem('workshop_progress_step');
+    localStorage.removeItem('userLeadData');
+    // Reload to reset the entire initialization logic
+    window.location.reload();
+  };
 
   const setStep = (step: StepId) => setState(prev => ({ ...prev, currentStep: step }));
 
@@ -2604,6 +2682,19 @@ export default function App() {
               </div>
             </div>
             <div className="flex items-center gap-4">
+              <AnimatePresence>
+                {showSaveIndicator && (
+                  <motion.div 
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20"
+                  >
+                    <Check size={12} />
+                    Progress Saved
+                  </motion.div>
+                )}
+              </AnimatePresence>
               <button className="text-sm font-medium hover:text-primary transition-colors">Save Draft</button>
               <div className="w-8 h-8 rounded-full bg-section border border-border flex items-center justify-center text-xs font-bold">SC</div>
             </div>
@@ -2671,6 +2762,14 @@ export default function App() {
       <div id="strategy-report-container">
         <StrategyReport state={state} />
       </div>
+      <AnimatePresence>
+        {showResumeModal && (
+          <ResumeModal 
+            onResume={handleResume} 
+            onStartOver={handleStartOver} 
+          />
+        )}
+      </AnimatePresence>
     </WorkshopContext.Provider>
   );
 }
