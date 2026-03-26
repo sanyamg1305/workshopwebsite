@@ -2517,17 +2517,18 @@ export default function App() {
       if (user) {
         const syncToCloud = async () => {
           setSaveStatus('syncing');
+          const si = buildSafeInputs(state.inputs);
           try {
             const docRef = doc(db, 'users', user.uid, 'workshop', 'active');
             await updateDoc(docRef, { ...state });
             saveInBackground('workshop_submissions', {
               user_uid: user.uid,
               user_email: safeStr(user.email),
-              full_name: state.inputs?.fullName ?? '',
-              work_email: state.inputs?.workEmail ?? '',
-              phone: state.inputs?.phone ?? '',
-              company_name: state.inputs?.companyName ?? '',
-              your_role: safeArr<string>(state.inputs?.yourRole),
+              full_name: si.fullName,
+              work_email: si.workEmail,
+              phone: si.phone,
+              company_name: si.companyName,
+              your_role: si.yourRole,
               current_step: state.currentStep,
               workshop_inputs: state.inputs,
               workshop_outputs: state.outputs,
@@ -2604,6 +2605,7 @@ export default function App() {
     }));
 
     const runBackgroundSave = async () => {
+      const si = buildSafeInputs(state.inputs);
       try {
         if (user) {
           await setDoc(doc(db, 'users', user.uid, 'workshop', 'active'), {
@@ -2623,7 +2625,7 @@ export default function App() {
             work_email: workEmail,
             phone,
             company_name: companyName,
-            your_role: safeArr<string>(state.inputs?.yourRole),
+            your_role: si.yourRole,
             current_step: 0,
             workshop_inputs: buildSafeInputs({ ...state.inputs, fullName, workEmail, phone, companyName }),
             workshop_outputs: state.outputs,
@@ -2637,7 +2639,7 @@ export default function App() {
           setSubmissionId(safeStr(data.id));
           localStorage.setItem(
             'userLeadData',
-            JSON.stringify({ fullName, workEmail, phone, companyName, yourRole: safeArr<string>(state.inputs?.yourRole), submissionId: data.id })
+            JSON.stringify({ fullName, workEmail, phone, companyName, yourRole: si.yourRole, submissionId: data.id })
           );
         }
       } catch (err) {

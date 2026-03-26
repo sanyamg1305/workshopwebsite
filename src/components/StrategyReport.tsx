@@ -118,7 +118,7 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
           <div className="space-y-3">
             <p className="text-[11px] font-black uppercase tracking-[0.5em] text-gray-300">Organization Representative</p>
             <p className="text-3xl font-black uppercase tracking-tight leading-none">{si.brandName || "Workshop Client"}</p>
-            <p className="text-sm font-bold text-gray-500 mt-2">{si.fullName} — {safeInputs?.yourRole?.[0] || 'Stakeholder'}</p>
+            <p className="text-sm font-bold text-gray-500 mt-2">{si.fullName} — {si.yourRole?.[0] || 'Stakeholder'}</p>
           </div>
           <div className="space-y-3 text-right">
             <p className="text-[11px] font-black uppercase tracking-[0.5em] text-gray-300">Strategic Release</p>
@@ -360,7 +360,7 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
               <div className="mt-8 flex items-center gap-10 border-t border-gray-100 pt-8">
                  <div className="space-y-1">
                     <span className="text-[8px] font-black uppercase text-gray-400">Primary Focus</span>
-                    <p className="text-sm font-bold uppercase text-primary italic leading-none">{safeInputs?.targetIcpDesignation?.[0] || icps[0]?.name}</p> 
+                    <p className="text-sm font-bold uppercase text-primary italic leading-none">{si.targetIcpDesignation?.[0] || icps[0]?.name}</p> 
                  </div>
                  <div className="h-4 w-px bg-gray-100" />
                  <div className="space-y-1">
