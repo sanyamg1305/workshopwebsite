@@ -271,7 +271,7 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
               ) : (
                 <div className="space-y-4">
                    <h5 className="text-[9px] font-black uppercase text-gray-400 italic">Clarity Metrics</h5>
-                   <p className="text-xs font-medium leading-relaxed">{typeof outputs.scoreExplanation === "string" ? outputs.scoreExplanation : outputs.scoreExplanation.overallSummary}</p>
+                   <p className="text-xs font-medium leading-relaxed">{outputs.scoreExplanation}</p>
                 </div>
               )}
            </Layer2>
@@ -550,35 +550,39 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
         <div className="space-y-16">
           {gtmStrategy?.leadMagnets?.map((m: any, i: number) => (
             <div key={i} className="page-break-inside-avoid space-y-8">
-               <Layer1 title={m.name || m.title} outcome={m.whatItDoes || m.outcome}/>
+               <Layer1 title={m.name} outcome={m.whatItDoes}/>
                
                <Layer2 title="Asset Specification">
-                  <div className="space-y-4">
-                     <h5 className="text-[9px] font-black uppercase text-gray-400 italic">Core Thesis</h5>
-                     <p className="text-xs font-bold text-gray-800 italic leading-relaxed">"{m.whyItWorks || m.problem}"</p>
-                  </div>
-                  <div className="space-y-4">
-                     <h5 className="text-[9px] font-black uppercase text-gray-400 italic">Target & Format</h5>
-                     <div className="flex items-center gap-4">
-                        <div className="px-5 py-2 bg-black text-white text-[10px] font-black uppercase rounded-full">{m.type || m.format}</div>
-                        <div className="text-[10px] font-bold text-primary italic tracking-widest">Priority Segment Asset</div>
+                  <div className="grid grid-cols-2 gap-12">
+                     <div className="space-y-4">
+                        <h5 className="text-[9px] font-black uppercase text-gray-400 italic">Core Business Value</h5>
+                        <p className="text-xs font-bold text-gray-800 italic leading-relaxed bg-gray-50 p-4 rounded-xl">"{m.whyValuable}"</p>
+                     </div>
+                     <div className="space-y-4">
+                        <h5 className="text-[9px] font-black uppercase text-gray-400 italic">Target & Tool Format</h5>
+                        <div className="flex items-center gap-4">
+                           <div className="px-5 py-2 bg-black text-white text-[10px] font-black uppercase rounded-full">{m.format}</div>
+                           <div className="text-[10px] font-bold text-primary italic tracking-widest">Priority Segment Asset</div>
+                        </div>
                      </div>
                   </div>
                </Layer2>
 
-               <Layer3 title="Deliverable Architecture">
-                  <div className="columns-2 gap-8">
-                     <ul className="space-y-2">
-                        {m.contents?.map((content: string, idx: number) => (
-                          <li key={idx} className="text-[10px] font-bold flex items-center gap-3 text-gray-600 bg-gray-50 p-3 rounded-xl">
-                             <CheckCircle2 size={12} className="text-primary shrink-0" />
-                             {content}
-                          </li>
-                        ))}
-                     </ul>
-                     <div className="p-6 bg-black text-white rounded-2xl flex flex-col justify-center text-center">
-                        <span className="text-[8px] font-black uppercase text-gray-500 mb-2">Primary CTA</span>
-                        <p className="text-xs font-black uppercase tracking-tighter text-primary">{m.cta}</p>
+               <Layer3 title="Tool Architecture">
+                  <div className="grid grid-cols-2 gap-12">
+                     <div className="space-y-6">
+                        <div className="p-5 bg-gray-50 border border-gray-100 rounded-2xl space-y-2">
+                           <h6 className="text-[8px] font-black uppercase text-gray-400">Required User Input</h6>
+                           <p className="text-[10px] font-bold text-gray-700">{m.userInput}</p>
+                        </div>
+                        <div className="p-5 bg-primary/5 border border-primary/10 rounded-2xl space-y-2">
+                           <h6 className="text-[8px] font-black uppercase text-primary/70">Tangible Tool Output</h6>
+                           <p className="text-[10px] font-black text-gray-900">{m.output}</p>
+                        </div>
+                     </div>
+                     <div className="p-8 bg-black text-white rounded-3xl flex flex-col justify-center text-center shadow-xl">
+                        <span className="text-[10px] font-black uppercase text-gray-500 mb-3 tracking-widest">Primary Conversion CTA</span>
+                        <p className="text-sm font-black uppercase tracking-tighter text-primary">{m.cta}</p>
                      </div>
                   </div>
                </Layer3>

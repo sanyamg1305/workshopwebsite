@@ -1823,37 +1823,43 @@ const Step5GTMStrategy = () => {
                   {magnets.map((lm: any, i: number) => (
                     <div key={i} className="p-8 bg-section border border-border rounded-3xl space-y-6 relative overflow-hidden group hover:border-primary transition-all hover:shadow-xl hover:-translate-y-1">
                       <div className="absolute top-0 right-0 p-4 bg-primary/10 rounded-bl-3xl">
-                        <Sparkles size={24} className="text-primary" />
+                        <Zap size={24} className="text-primary" />
                       </div>
                       <div className="space-y-2">
                         <div className="inline-block px-3 py-1 bg-section-alt border border-border rounded-lg text-[10px] font-black uppercase tracking-widest text-text-secondary mb-2">{lm.format}</div>
-                        <h3 className="text-2xl font-black pr-8 leading-tight">{lm.title}</h3>
-                        <p className="text-xs font-bold text-primary uppercase tracking-widest">For: {lm.targetICP}</p>
+                        <h3 className="text-2xl font-black pr-8 leading-tight">{lm.name}</h3>
+                        <p className="text-xs font-bold text-primary uppercase tracking-widest italic">Segment: {lm.targetICP}</p>
                       </div>
 
-                      <div className="space-y-4">
+                      <div className="space-y-5">
                         <div className="space-y-1">
-                          <div className="text-[10px] font-black uppercase text-text-secondary flex items-center gap-1">The Problem:</div>
-                          <div className="text-sm font-medium leading-relaxed">{lm.problem}</div>
+                          <div className="text-[10px] font-black uppercase text-text-secondary flex items-center gap-1">The Tool Outcome:</div>
+                          <div className="text-sm font-bold leading-relaxed italic">"{lm.whatItDoes}"</div>
                         </div>
-                        <div className="space-y-1">
-                          <div className="text-[10px] font-black uppercase text-text-secondary flex items-center gap-1">The High-Value Outcome:</div>
-                          <div className="text-sm text-text-secondary leading-relaxed font-bold italic">"{lm.outcome}"</div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="p-4 bg-section-alt border border-border rounded-2xl space-y-2">
+                            <div className="text-[9px] font-black uppercase text-gray-400 flex items-center gap-1">
+                              <ArrowRight size={10} /> User Input
+                            </div>
+                            <div className="text-[11px] font-bold leading-tight">{lm.userInput}</div>
+                          </div>
+                          <div className="p-4 bg-primary/5 border border-primary/20 rounded-2xl space-y-2">
+                            <div className="text-[9px] font-black uppercase text-primary/70 flex items-center gap-1">
+                              <Zap size={10} /> Tool Output
+                            </div>
+                            <div className="text-[11px] font-bold leading-tight">{lm.output}</div>
+                          </div>
                         </div>
+
                         <div className="space-y-2">
-                          <div className="text-[10px] font-black uppercase text-text-secondary">Key Consulting Assets Included:</div>
-                          <ul className="space-y-1.5">
-                            {lm.contents.map((item: string, idx: number) => (
-                              <li key={idx} className="text-xs flex items-start gap-2 text-text-secondary italic">
-                                <div className="w-1 h-1 bg-primary rounded-full mt-1.5 shrink-0" />
-                                {item}
-                              </li>
-                            ))}
-                          </ul>
+                          <div className="text-[10px] font-black uppercase text-text-secondary">Strategic Business Value:</div>
+                          <p className="text-xs font-medium text-text-secondary leading-relaxed bg-gray-50 p-3 rounded-xl border border-gray-100">
+                            {lm.whyValuable}
+                          </p>
                         </div>
+
                         <div className="pt-4 border-t border-border flex flex-col gap-3">
-                          <div className="text-[10px] font-black uppercase text-text-secondary">Perceived Economic Value:</div>
-                          <div className="text-sm font-black text-emerald-500">{lm.value}</div>
                           <div className="inline-block w-fit px-4 py-2 bg-primary text-black rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20">
                             {lm.cta}
                           </div>

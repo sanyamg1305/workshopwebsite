@@ -360,14 +360,14 @@ export const generateValueProp = async (outcome: string, method: string, replace
 };
 
 export interface LeadMagnet {
-  title: string;
-  format: string;
+  name: string;
+  whatItDoes: string;
+  userInput: string;
+  output: string;
+  whyValuable: string;
+  format: 'Calculator' | 'Diagnostic tool' | 'Decision tool' | 'Generator' | 'Analyzer';
   targetICP: string;
-  problem: string;
-  outcome: string;
-  contents: string[];
   cta: string;
-  value: string;
 }
 
 export interface GTMStrategy {
@@ -424,23 +424,23 @@ export const generateDetailedGTM = async (inputs: {
         - Outreach Strategy: For each ICP, provide channel-specific tips and best practices (What to personalize, when to send, follow-up timing, subject line style, etc.). DO NOT provide message scripts here.
     2. Partner-Led Growth (Ideal Partners, Models, Outreach Pitch, Scale Strategy)
     3. Event-Led Growth (Event Types, Specific Ideas per ICP, Funnel, Conversion Strategy)
-    4. Lead Magnet Strategy (CRITICAL): Generate EXACTLY 3 high-conversion lead magnets based on the ICPs.
+    4. Lead Magnet Strategy (CRITICAL): Generate EXACTLY 3 high-conversion, TOOL-BASED lead magnets.
        
-       Rules:
-       - NEVER return generic ideas like "Ultimate Guide".
-       - EACH must feel like a $5K consulting asset given for free.
-       - Each must be specific, actionable, and immediately usable.
-       - Focus on tangible outcomes, not theory.
+       STRICT RULES:
+       - NEVER return "Guides", "Ebooks", "Checklists", or generic "Swipe Files".
+       - Assets must be interactive or result-oriented "mini-products".
+       - Each must solve a real, painful, immediate bottleneck.
+       - Each must be usable in <15 minutes and deliver a tangible output.
        
        For EACH lead magnet, provide:
-       1. Title (high-conversion, curiosity-driven)
-       2. Format (PDF / Tool / Template / Calculator / Audit / Checklist)
-       3. Target ICP (which ICP this is specifically for)
-       4. Core Problem it solves (very specific bottleneck)
-       5. Promise / Outcome (clear measurable result)
-       6. Key Contents (array of strings: bullet points of what’s inside)
-       7. CTA (clear next step, business-oriented)
-       8. Perceived Value (why this feels like a premium consulting asset)
+       1. Name (Clear, not clever: e.g., "Calculate Exactly How Many Leads You Need...")
+       2. What it does (1 line outcome, no concept fluff)
+       3. User Input (What they enter: e.g., team size, deal size)
+       4. Output (What they get: e.g., a number, an insight, a decision)
+       5. Why it's Valuable (Tie directly to a painful business problem)
+       6. Format (Must be: Calculator, Diagnostic tool, Decision tool, Generator, or Analyzer)
+       7. Target ICP (Which ICP this is specifically for)
+       8. CTA (Clear business-oriented next step)
     
     QUALITY RULES:
     - EVERYTHING MUST BE CONTEXTUAL to the ICPs and Pain Points.
@@ -571,16 +571,16 @@ export const generateDetailedGTM = async (inputs: {
             items: {
               type: Type.OBJECT,
               properties: {
-                title: { type: Type.STRING },
+                name: { type: Type.STRING },
+                whatItDoes: { type: Type.STRING },
+                userInput: { type: Type.STRING },
+                output: { type: Type.STRING },
+                whyValuable: { type: Type.STRING },
                 format: { type: Type.STRING },
                 targetICP: { type: Type.STRING },
-                problem: { type: Type.STRING },
-                outcome: { type: Type.STRING },
-                contents: { type: Type.ARRAY, items: { type: Type.STRING } },
-                cta: { type: Type.STRING },
-                value: { type: Type.STRING }
+                cta: { type: Type.STRING }
               },
-              required: ["title", "format", "targetICP", "problem", "outcome", "contents", "cta", "value"]
+              required: ["name", "whatItDoes", "userInput", "output", "whyValuable", "format", "targetICP", "cta"]
             }
           }
         },
@@ -660,12 +660,17 @@ export const generateWebsitePrompt = async (inputs: {
       3. Solution Section: How ${inputs.brandName} solves these problems.
       4. Value Proposition Section: Focus on the specific outcomes and strategic difference.
       5. 🚀 Free Resource / Free Tool Section (MANDATORY INSERTION): 
-         - Must include EXACTLY 3 resources:
-           1. Interactive Tool (calculator / generator / analyzer)
-           2. Template / Resource (checklist / swipe file)
-           3. Insight-based Asset (audit / teardown / report)
-         - Format for EACH resource: Name, Type, What it does (1-2 lines, outcome-focused), Who it is for (specific ICP), Pain it solves, Why it works (psychology), and CTA example (for outreach).
-         - Must feel specific, premium, high-value, non-generic (no simple ebooks), and align with earlier sections.
+         - Must include EXACTLY 3 high-utility, TOOL-BASED resources.
+         - FORBIDDEN: "Guides", "Ebooks", "Checklists", or generic PDFs.
+         - Must feel like interactive "mini-products".
+         - Format for EACH resource: 
+           - Name: (Clear, not clever outcome-based title)
+           - Format: (Calculator / Diagnostic tool / Decision tool / Generator / Analyzer)
+           - What it does: (1 line outcome)
+           - User Input: (What they enter)
+           - Output: (What they get)
+           - Why it works: (Psychological trigger / Business value)
+           - CTA: (Strategic next step)
       6. CTA Section: Final push for conversion.
       7. ❓ FAQ Section (Objection Handling): 6-10 highly relevant questions answering:
          - Trust (credibility)
