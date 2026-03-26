@@ -2258,16 +2258,16 @@ const ResetModal = ({ onConfirm, onCancel }: { onConfirm: () => void, onCancel: 
       <div className="w-20 h-20 bg-red-500/10 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-red-500/20">
         <RotateCcw className="text-red-500" size={40} />
       </div>
-      <h2 className="text-3xl font-black mb-4">Reset Workshop?</h2>
+      <h2 className="text-3xl font-black mb-4">Are you sure you want to restart?</h2>
       <p className="text-text-secondary mb-8 leading-relaxed">
-        This will <span className="text-red-500 font-bold uppercase">permanently erase</span> all your current progress and generated assets. You'll start over from the beginning.
+        This will erase all your progress.
       </p>
       <div className="space-y-3">
         <button
           onClick={onConfirm}
           className="w-full py-4 bg-red-500 text-white rounded-xl font-black text-lg hover:bg-red-600 transition-all shadow-xl shadow-red-500/20 flex items-center justify-center gap-2"
         >
-          Yes, Reset Everything
+          Reset
         </button>
         <button
           onClick={onCancel}
