@@ -116,7 +116,7 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
           <div className="space-y-3">
             <p className="text-[11px] font-black uppercase tracking-[0.5em] text-gray-300">Organization Representative</p>
             <p className="text-3xl font-black uppercase tracking-tight leading-none">{inputs.brandName || "Workshop Client"}</p>
-            <p className="text-sm font-bold text-gray-500 mt-2">{inputs.fullName} — {inputs.leadRole?.[0] || 'Stakeholder'}</p>
+            <p className="text-sm font-bold text-gray-500 mt-2">{inputs.fullName} — {inputs?.yourRole?.[0] || 'Stakeholder'}</p>
           </div>
           <div className="space-y-3 text-right">
             <p className="text-[11px] font-black uppercase tracking-[0.5em] text-gray-300">Strategic Release</p>

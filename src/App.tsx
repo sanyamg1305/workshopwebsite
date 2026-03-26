@@ -77,8 +77,8 @@ export interface WorkshopState {
     workEmail: string;
     phone: string;
     companyName: string;
-    leadRole: string[];
-    leadRoleOther: string;
+    yourRole: string[];
+    yourRoleOther: string;
     linkedinUrl: string;
     linkedinHeadline: string;
     linkedinAbout: string;
@@ -508,9 +508,12 @@ const Step1ProfileCheck = () => {
       setLoading(true);
       setError(null);
 
-      // Validation for Role and Company
-      if (!state.inputs.leadRole.length && !state.inputs.leadRoleOther) {
-        setError("Please complete Role and Company to optimize your profile");
+      // SAFE GUARDS: Validate yourRole
+      const currentRole = state?.inputs?.yourRole || [];
+      const currentRoleOther = state?.inputs?.yourRoleOther || "";
+      
+      if (!currentRole.length && !currentRoleOther.trim()) {
+        setError("Role is required. Please select or type your professional role.");
         setLoading(false);
         return;
       }
@@ -587,12 +590,12 @@ const Step1ProfileCheck = () => {
             />
           </div>
           <MultiSelectDropdown showErrors={showErrors}
-            label="Your Role *"
-            options={ROLES}
-            selected={state.inputs.leadRole}
-            onChange={(val) => updateInput('leadRole', val)}
-            otherValue={state.inputs.leadRoleOther}
-            onOtherChange={(val) => updateInput('leadRoleOther', val)}
+            label="Your Professional Role / Niche"
+            options={['Founder', 'Sales Leader', 'Growth Marketer', 'Content Creator', 'Consultant', 'Agency Owner', 'Professional Service']}
+            selected={state?.inputs?.yourRole || []}
+            onChange={(val) => updateInput('yourRole', val)}
+            otherValue={state?.inputs?.yourRoleOther || ""}
+            onOtherChange={(val) => updateInput('yourRoleOther', val)}
             placeholder="Select Role(s)"
           />
         </div>
@@ -2465,8 +2468,8 @@ const INITIAL_WORKSHOP_INPUTS = {
   workEmail: '',
   phone: '',
   companyName: '',
-  leadRole: [],
-  leadRoleOther: '',
+  yourRole: [],
+  yourRoleOther: '',
   linkedinUrl: '',
   linkedinHeadline: '',
   linkedinAbout: '',
@@ -2703,7 +2706,7 @@ export default function App() {
               work_email: state.inputs.workEmail,
               phone: state.inputs.phone,
               company_name: state.inputs.companyName,
-              lead_role: state.inputs.leadRole,
+              your_role: state?.inputs?.yourRole || [],
               current_step: state.currentStep,
               workshop_inputs: state.inputs,
               workshop_outputs: state.outputs
@@ -2816,7 +2819,7 @@ export default function App() {
             work_email: workEmail,
             phone: phone,
             company_name: companyName,
-            lead_role: state.inputs.leadRole,
+            your_role: state?.inputs?.yourRole || [],
             current_step: 0,
             workshop_inputs: { ...state.inputs, fullName, workEmail, phone, companyName },
             workshop_outputs: state.outputs
@@ -2828,7 +2831,7 @@ export default function App() {
           console.warn("Supabase Upsert Error (Non-blocking):", sbError);
         } else if (data) {
           setSubmissionId(data.id);
-          const leadData = { fullName, workEmail, phone, companyName, leadRole: state.inputs.leadRole, submissionId: data.id };
+          const leadData = { fullName, workEmail, phone, companyName, yourRole: state?.inputs?.yourRole || [], submissionId: data.id };
           localStorage.setItem('userLeadData', JSON.stringify(leadData));
         }
         console.log("Background profile save complete.");
@@ -2929,7 +2932,7 @@ export default function App() {
 
     try {
       if (step === 1) {
-        const roleStr = normalizeInputList(currentInputs!.leadRole, currentInputs!.leadRoleOther);
+        const roleStr = normalizeInputList(currentInputs!.yourRole || [], currentInputs!.yourRoleOther || "");
         const targetIcpStr = normalizeInputList(currentInputs!.targetIcp, currentInputs!.targetIcpOther);
         const toneStr = normalizeInputList(currentInputs!.tonePreference, currentInputs!.tonePreferenceOther);
 
