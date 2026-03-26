@@ -47,6 +47,17 @@ import { onAuthStateChanged, signInWithPopup, signOut, User as FirebaseUser } fr
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { DebouncedInput, DebouncedTextarea } from './components/DebouncedInput';
 import { useNonBlockingSave } from './hooks/useNonBlockingSave';
+import { ROLES, SIZES, INDUSTRIES, TONES, NARRATIVE_ANGLES } from './constants/workshop';
+import { buildIcp, normalizeInputList } from './utils/workshop';
+
+const normalizeInputArray = (list: string[], otherVal?: string): string[] => {
+    if (!list || list.length === 0) return [];
+    if (list.includes('Other') && otherVal) {
+        const others = otherVal.split(',').map(s => s.trim()).filter(Boolean);
+        return [...list.filter(item => item !== 'Other'), ...others];
+    }
+    return list;
+};
 // logo moved to public/logo.png
 
 // --- Types ---
@@ -158,7 +169,7 @@ export interface WorkshopState {
     websitePrompt: string;
     gtmStrategy: any | null;
     outreachEngineOutput: gemini.OutreachEngineOutput | null;
-    leadMagnets: gemini.LeadMagnet[];
+    leadMagnets: any[];
     globalSolution?: string;
     profileImprovements?: string[];
   };
@@ -484,10 +495,6 @@ const Step1ProfileCheck = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const roles = ['Founder / Co-Founder', 'CEO / CXO', 'CTO / VP Engineering', 'Head of Product', 'Head of Growth', 'Head of Sales', 'Head of Marketing', 'RevOps Lead', 'SDR / BDR Manager', 'Enterprise Sales Leader', 'Partnerships Manager', 'Operations Head', 'Strategy Lead', 'Procurement Head'];
-  const icps = ['Founder / Co-Founder', 'CEO / CXO', 'CTO / VP Engineering', 'Head of Product', 'Head of Growth', 'Head of Sales', 'Head of Marketing', 'RevOps Lead', 'SDR / BDR Manager', 'Enterprise Sales Leader', 'Partnerships Manager', 'Operations Head', 'Strategy Lead', 'Procurement Head'];
-  const tones = ['Bold', 'Professional', 'Casual', 'Witty', 'Direct', 'Empathetic', 'Data-driven'];
-
   const handleOptimize = async () => {    setShowErrors(true);
     setTimeout(async () => {
       const firstError = document.querySelector(".border-red-500, .border-red-500\\/50");
@@ -497,7 +504,7 @@ const Step1ProfileCheck = () => {
       }
       
       setLoading(true);
-      if (typeof setError !== 'undefined') setError(null);
+      setError(null);
 
       // Validation for Role and Company
       if (!state.inputs.leadRole.length && !state.inputs.leadRoleOther) {
@@ -511,18 +518,10 @@ const Step1ProfileCheck = () => {
         return;
       }
 
-      let success = false;
-      for (let attempt = 1; attempt <= 2; attempt++) {
-        try {
-          await generateOutput(1);
-          success = true;
-          break;
-        } catch (err) {
-          if (attempt === 2) {
-            if (typeof setError !== 'undefined') setError("Something went wrong. Please try again.");
-            else alert("Something went wrong. Please try again.");
-          }
-        }
+      try {
+        await generateOutput(1);
+      } catch (err: any) {
+        setError(err.message || "Something went wrong. Please try again.");
       }
       setLoading(false);
     }, 100);
@@ -566,6 +565,11 @@ const Step1ProfileCheck = () => {
             value={state.inputs.linkedinAbout}
             onDebounce={(val) => updateInput('linkedinAbout', val)}
           />
+          {!state.inputs.linkedinAbout && (
+            <p className="text-[10px] text-primary/80 font-medium italic animate-pulse">
+              Tip: For a more accurate score, include your About section.
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -582,7 +586,7 @@ const Step1ProfileCheck = () => {
           </div>
           <MultiSelectDropdown showErrors={showErrors}
             label="Your Role *"
-            options={['Founder', 'CEO', 'Marketer', 'Sales Head', 'Freelancer', 'Consultant']}
+            options={ROLES}
             selected={state.inputs.leadRole}
             onChange={(val) => updateInput('leadRole', val)}
             otherValue={state.inputs.leadRoleOther}
@@ -606,7 +610,7 @@ const Step1ProfileCheck = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <MultiSelectDropdown showErrors={showErrors}
             label="Target ICP Designation"
-            options={icps}
+            options={ROLES}
             selected={state.inputs.targetIcp}
             onChange={(val) => updateInput('targetIcp', val)}
             otherValue={state.inputs.targetIcpOther}
@@ -617,7 +621,7 @@ const Step1ProfileCheck = () => {
 
         <MultiSelectDropdown showErrors={showErrors}
           label="Tone Preference"
-          options={tones}
+          options={TONES}
           selected={state.inputs.tonePreference}
           onChange={(val) => updateInput('tonePreference', val)}
           otherValue={state.inputs.tonePreferenceOther}
@@ -768,75 +772,34 @@ const Step2ICPBuilder = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeIcp, setActiveIcp] = useState<1 | 2 | 3>(1);
 
-  const handleGenerate = async () => {    setShowErrors(true);
+  const handleGenerate = async () => {
+    setShowErrors(true);
+    setLoading(true);
+    setError(null);
+    
     setTimeout(async () => {
-      // 1. Check for basic "This field is required" errors (HTML/CSS indicators)
       const firstError = document.querySelector(".border-red-500, .border-red-500\\/50");
       if (firstError) {
         firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setLoading(false);
         return;
       }
 
-      // 2. Strict ICP Validation rule: Role, Size, and Industry must all be filled for an ICP to be valid
-      const buildIcp = (num: number) => {
-        const roles = state.inputs[`icp${num}_roles` as keyof typeof state.inputs] as string[];
-        const sizes = state.inputs[`icp${num}_sizes` as keyof typeof state.inputs] as string[];
-        const inds = state.inputs[`icp${num}_industries` as keyof typeof state.inputs] as string[];
-        
-        if (!roles || roles.length === 0 || !sizes || sizes.length === 0 || !inds || inds.length === 0) return null;
-        
-        return { roles, sizes, inds };
-      };
-
-      const validIcps = [buildIcp(1), buildIcp(2), buildIcp(3)].filter(Boolean);
-      
-      if (validIcps.length === 0) {
-        setError("Please complete all required fields (Role, Size, and Industry) for at least one ICP before generating.");
-        return;
-      }
-      
-      setLoading(true);
-      if (typeof setError !== 'undefined') setError(null);
-      let success = false;
-      for (let attempt = 1; attempt <= 2; attempt++) {
-        try {
-          await generateOutput(2);
-          success = true;
-          break;
-        } catch (err) {
-          if (attempt === 2) {
-            if (typeof setError !== 'undefined') setError("Something went wrong. Please try again.");
-            else alert("Something went wrong. Please try again.");
-          }
-        }
+      try {
+        await generateOutput(2);
+      } catch (err: any) {
+        setError(err.message || "Something went wrong. Please try again.");
       }
       setLoading(false);
     }, 100);
   };
 
-  const roles = [
-    'Founder / Co-Founder', 'CEO / CXO', 'CTO / VP Engineering', 'Head of Product', 'Head of Growth', 'Head of Sales', 'Head of Marketing', 'RevOps Lead', 'SDR / BDR Manager', 'Enterprise Sales Leader', 'Partnerships Manager', 'Operations Head', 'Strategy Lead', 'Procurement Head', 'Other'
-  ];
-  const sizes = ['1–10', '10–50', '50–200', '200–500', '500–1000', '1000+', 'Other'];
-  const industries = [
-    'SaaS', 'Fintech', 'Healthtech', 'Edtech', 'E-commerce', 'D2C', 'Agencies', 
-    'Consulting', 'Coaching', 'Real Estate', 'Manufacturing', 'Logistics', 
-    'HR Tech', 'Martech', 'Legal', 'Finance', 'Healthcare', 'Recruitment', 
-    'IT Services', 'Web3 / Crypto', 'Gaming', 'Media', 'Hospitality', 
-    'Travel', 'Education', 'Non-profit', 'Government', 'Local Businesses', 
-    'Freelancers', 'B2B Services', 'B2B SaaS', 'Marketplaces', 'AI / ML Startups', 
-    'Enterprise Software', 'Cybersecurity', 'DevTools', 'Climate Tech', 'Automotive', 'Retail', 'Other'
-  ];
-
   const renderIcpForm = (num: 1 | 2 | 3) => {
     const prefix = `icp${num}_` as any;
+    const isCompleted = state.outputs.icps && state.outputs.icps.length >= num;
+
     return (
-      <motion.div 
-        key={num}
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="space-y-6 bg-section p-8 rounded-3xl border border-border"
-      >
+      <div className="space-y-6 bg-section p-8 rounded-3xl border border-border">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-black">
             {num}
@@ -846,7 +809,7 @@ const Step2ICPBuilder = () => {
 
         <MultiSelectDropdown showErrors={showErrors}
           label="Designation / Role"
-          options={roles}
+          options={ROLES}
           selected={state.inputs[`icp${num}_roles` as keyof WorkshopState['inputs']] as string[]}
           onChange={(val) => updateInput(`icp${num}_roles` as any, val)}
           otherValue={state.inputs[`icp${num}_rolesOther` as keyof WorkshopState['inputs']] as string}
@@ -855,7 +818,7 @@ const Step2ICPBuilder = () => {
 
         <MultiSelectDropdown showErrors={showErrors}
           label="Company Size"
-          options={sizes}
+          options={SIZES}
           selected={state.inputs[`icp${num}_sizes` as keyof WorkshopState['inputs']] as string[]}
           onChange={(val) => updateInput(`icp${num}_sizes` as any, val)}
           otherValue={state.inputs[`icp${num}_sizesOther` as keyof WorkshopState['inputs']] as string}
@@ -864,13 +827,21 @@ const Step2ICPBuilder = () => {
 
         <MultiSelectDropdown showErrors={showErrors}
           label="Industry"
-          options={industries}
+          options={INDUSTRIES}
           selected={state.inputs[`icp${num}_industries` as keyof WorkshopState['inputs']] as string[]}
           onChange={(val) => updateInput(`icp${num}_industries` as any, val)}
           otherValue={state.inputs[`icp${num}_industriesOther` as keyof WorkshopState['inputs']] as string}
           onOtherChange={(val) => updateInput(`icp${num}_industriesOther` as any, val)}
         />
-      </motion.div>
+        <div className="flex items-center gap-4 mt-8">
+          <ActionButton 
+            onClick={handleGenerate} 
+            loading={loading} 
+            className="w-full"
+            label="Generate ICP Profile"
+          />
+        </div>
+      </div>
     );
   };
 
@@ -886,7 +857,9 @@ const Step2ICPBuilder = () => {
           <button
             key={num}
             onClick={() => setActiveIcp(num as 1 | 2 | 3)}
-            className={`px-6 py-2 rounded-xl font-bold text-sm transition-all ${activeIcp === num ? 'bg-primary text-black shadow-lg' : 'text-text-secondary hover:text-text'}`}
+            className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${
+              activeIcp === num ? 'bg-primary text-black shadow-lg shadow-primary/20' : 'text-text-secondary hover:text-text hover:bg-bg'
+            }`}
           >
             ICP {num}
           </button>
@@ -895,7 +868,7 @@ const Step2ICPBuilder = () => {
 
       {renderIcpForm(activeIcp)}
 
-            {error && (
+      {error && (
         <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-sm flex items-start gap-3 shadow-sm mb-4">
           <Zap size={20} className="text-red-500 mt-1 shrink-0" />
           <div className="flex-1">
@@ -1008,7 +981,8 @@ const Step3ValueProp = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleGenerate = async () => {    setShowErrors(true);
+  const handleGenerate = async () => {
+    setShowErrors(true);
     setTimeout(async () => {
       const firstError = document.querySelector(".border-red-500, .border-red-500\\/50");
       if (firstError) {
@@ -1017,19 +991,19 @@ const Step3ValueProp = () => {
       }
       
       setLoading(true);
-      if (typeof setError !== 'undefined') setError(null);
-      let success = false;
-      for (let attempt = 1; attempt <= 2; attempt++) {
-        try {
-          await generateOutput(3);
-          success = true;
-          break;
-        } catch (err) {
-          if (attempt === 2) {
-            if (typeof setError !== 'undefined') setError("Something went wrong. Please try again.");
-            else alert("Something went wrong. Please try again.");
-          }
-        }
+      setError(null);
+
+      // DEPENDENCY GUARD: ICPs must be present
+      if (!state.outputs.icps || state.outputs.icps.length === 0) {
+        setError("Complete ICP step first");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        await generateOutput(3);
+      } catch (err: any) {
+        setError(err.message || "Something went wrong. Please try again.");
       }
       setLoading(false);
     }, 100);
@@ -1174,6 +1148,14 @@ const Step4WebsiteBuilder = () => {
     setShowErrors(true);
     setLoading(true);
     setError(null);
+
+    // BRAND VALIDATION
+    if (!state.inputs.brandName?.trim()) {
+      setError("Enter a brand name first");
+      setLoading(false);
+      return;
+    }
+
     try {
       await generateOutput(4);
     } catch (err: any) {
@@ -1436,25 +1418,26 @@ const Step5GTMStrategy = () => {
       }
       
       setLoading(true);
-      if (typeof setError !== 'undefined') setError(null);
-      let success = false;
-      for (let attempt = 1; attempt <= 2; attempt++) {
-        try {
-          await generateOutput(5);
-          success = true;
-          break;
-        } catch (err) {
-          if (attempt === 2) {
-            if (typeof setError !== 'undefined') setError("Something went wrong. Please try again.");
-            else alert("Something went wrong. Please try again.");
-          }
-        }
+      setError(null);
+
+      // DEPENDENCY GUARD: ICPs and Value Prop must be present
+      if (!state.outputs.icps?.length || !state.outputs.valuePropTables?.length) {
+        setError("Complete ICP and Value Prop steps first");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        await generateOutput(5);
+      } catch (err: any) {
+        setError(err.message || "Something went wrong. Please try again.");
       }
       setLoading(false);
     }, 100);
   };
 
   const strategy = state.outputs.gtmStrategy;
+  const magnets: any[] = state.outputs.leadMagnets || [];
 
   return (
     <div className="space-y-8">
@@ -1776,7 +1759,7 @@ const Step5GTMStrategy = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {strategy.leadMagnets.map((lm: LeadMagnet, i: number) => (
+                  {magnets.map((lm: any, i: number) => (
                     <div key={i} className="p-8 bg-section border border-border rounded-3xl space-y-6 relative overflow-hidden group hover:border-primary transition-all hover:shadow-xl hover:-translate-y-1">
                       <div className="absolute top-0 right-0 p-4 bg-primary/10 rounded-bl-3xl">
                         <Sparkles size={24} className="text-primary" />
@@ -1799,7 +1782,7 @@ const Step5GTMStrategy = () => {
                         <div className="space-y-2">
                           <div className="text-[10px] font-black uppercase text-text-secondary">Key Consulting Assets Included:</div>
                           <ul className="space-y-1.5">
-                            {lm.contents.map((item, idx) => (
+                            {lm.contents.map((item: string, idx: number) => (
                               <li key={idx} className="text-xs flex items-start gap-2 text-text-secondary italic">
                                 <div className="w-1 h-1 bg-primary rounded-full mt-1.5 shrink-0" />
                                 {item}
@@ -1834,35 +1817,37 @@ const Step6OutreachEngine = () => {
   const [error, setError] = useState<string | null>(null);
 
   const handleGenerate = async () => {
-    // 1. Validate Inputs
-    const icpData = state.outputs.icps;
-    const valuePropData = state.outputs.valuePropTables;
-    const selectedAngle = state.inputs.outreachAngle;
-    const tone = state.inputs.tonePreference;
-
-    console.log("Step 6 Input Validation:", { icpData, valuePropData, selectedAngle, tone });
-
-    if (!icpData || icpData.length === 0 || !valuePropData || valuePropData.length === 0) {
-      setError("Complete previous steps (ICP Mapping & Value Prop) before generating outreach strategy.");
-      return;
-    }
-
-    if (!selectedAngle) {
-      setError("Please select a strategic angle first.");
-      return;
-    }
-
     setShowErrors(true);
-    setLoading(true);
-    setError(null);
-    try {
-      await generateOutput(6);
-      console.log("Step 6 Output:", state.outputs.outreachEngineOutput);
-    } catch (err) {
-      console.error("Step 6 Generation Error:", err);
-      setError("Generation failed. Please retry.");
-    }
-    setLoading(false);
+    setTimeout(async () => {
+      const firstError = document.querySelector(".border-red-500, .border-red-500\\/50");
+      if (firstError) {
+        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      
+      setLoading(true);
+      setError(null);
+
+      // DEPENDENCY GUARD
+      if (!state.outputs.gtmStrategy) {
+        setError("Complete GTM Strategy step first");
+        setLoading(false);
+        return;
+      }
+
+      if (!state.inputs.outreachAngle) {
+        setError("Please select a strategic angle first.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        await generateOutput(6);
+      } catch (err: any) {
+        setError(err.message || "Something went wrong. Please try again.");
+      }
+      setLoading(false);
+    }, 100);
   };
 
   const angles = ['Authority', 'ROI', 'Pain-led', 'Contrarian', 'Curiosity', 'Offer-led'];
@@ -2760,7 +2745,15 @@ export default function App() {
   };
 
 
-  const setStep = (step: StepId) => setState(prev => ({ ...prev, currentStep: step }));
+  const setStep = (step: StepId) => {
+    // GUIDED WORKFLOW: Prevent jumping ahead beyond linear progression
+    const maxAllowedStep = Math.max(...state.completedSteps, -1) + 1;
+    if (step > maxAllowedStep) {
+      console.warn(`[Navigation] Blocked jump to Step ${step}. Completed up to: ${state.completedSteps}`);
+      return;
+    }
+    setState(prev => ({ ...prev, currentStep: step }));
+  };
 
   const updateInput = (key: keyof WorkshopState['inputs'], value: any) => {
     setState(prev => ({
@@ -2826,140 +2819,176 @@ export default function App() {
 
   const generateOutput = async (step: StepId) => {
     setState(prev => ({ ...prev, isGenerating: true, generationError: null }));
-    const { inputs } = state;
-    let newOutputs = { ...state.outputs };
+    
+    // We'll use a local copy of inputs/outputs to work with the most recent data
+    let currentInputs: WorkshopState['inputs'];
+    let currentOutputs: WorkshopState['outputs'];
+    
+    // Captured via functional setState to ensure we have the absolute latest snapshot
+    setState(prev => {
+      currentInputs = prev.inputs;
+      currentOutputs = prev.outputs;
+      return prev;
+    });
 
     try {
       if (step === 1) {
-        
-        const roleStr = inputs.leadRole.includes('Other')
-          ? [...inputs.leadRole.filter(r => r !== 'Other'), ...(inputs.leadRoleOther as string).split(',').map(s => s.trim()).filter(Boolean)].join(', ')
-          : inputs.leadRole.join(', ');
-
-        const targetIcpStr = inputs.targetIcp.includes('Other')
-          ? [...inputs.targetIcp.filter(i => i !== 'Other'), ...(inputs.targetIcpOther as string).split(',').map(s => s.trim()).filter(Boolean)].join(', ')
-          : inputs.targetIcp.join(', ');
-
-        const toneStr = inputs.tonePreference.includes('Other')
-          ? [...inputs.tonePreference.filter(t => t !== 'Other'), ...(inputs.tonePreferenceOther as string).split(',').map(s => s.trim()).filter(Boolean)].join(', ')
-          : inputs.tonePreference.join(', ');
+        const roleStr = normalizeInputList(currentInputs!.leadRole, currentInputs!.leadRoleOther);
+        const targetIcpStr = normalizeInputList(currentInputs!.targetIcp, currentInputs!.targetIcpOther);
+        const toneStr = normalizeInputList(currentInputs!.tonePreference, currentInputs!.tonePreferenceOther);
 
         const result = await gemini.optimizeLinkedInProfile({
-          headline: inputs.linkedinHeadline,
-          about: inputs.linkedinAbout,
+          headline: currentInputs!.linkedinHeadline,
+          about: currentInputs!.linkedinAbout,
           role: roleStr,
-          company: inputs.companyName,
+          company: currentInputs!.companyName,
           targetIcp: targetIcpStr,
           tone: toneStr,
-          offer: inputs.offer
+          offer: currentInputs!.offer
         });
-        newOutputs.profileClarityScore = result.clarityScore;
-        newOutputs.scoreMeaning = result.scoreMeaning;
-        newOutputs.scoreExplanation = result.scoreExplanation;
-        newOutputs.optimizedHeadlines = result.headlines;
-        newOutputs.optimizedAbout = result.aboutSection;
-        newOutputs.positioningAngles = result.positioningAngles;
-        newOutputs.keywordScore = result.keywordScore;
+
+        setState(prev => ({
+          ...prev,
+          outputs: {
+            ...prev.outputs,
+            profileClarityScore: result.clarityScore,
+            scoreMeaning: result.scoreMeaning,
+            scoreExplanation: result.scoreExplanation,
+            optimizedHeadlines: result.headlines,
+            optimizedAbout: result.aboutSection,
+            positioningAngles: result.positioningAngles,
+            keywordScore: result.keywordScore
+          }
+        }));
       } else if (step === 2) {
-        const buildIcp = (num: number) => {
-          const roles = inputs[`icp${num}_roles` as keyof typeof inputs] as string[];
-          const sizes = inputs[`icp${num}_sizes` as keyof typeof inputs] as string[];
-          const inds = inputs[`icp${num}_industries` as keyof typeof inputs] as string[];
-          
-          const hasRoles = roles && roles.length > 0;
-          const hasSizes = sizes && sizes.length > 0;
-          const hasInds = inds && inds.length > 0;
-
-          // STRICT VALIDATION: All 3 core fields must be present
-          if (!hasRoles || !hasSizes || !hasInds) return null;
-          
-          return {
-            roles: roles.includes('Other') ? [...roles.filter(r => r !== 'Other'), ...(inputs[`icp${num}_rolesOther` as keyof typeof inputs] as string).split(',').map(s => s.trim()).filter(Boolean)] : roles,
-            sizes: sizes.includes('Other') ? [...sizes.filter(s => s !== 'Other'), ...(inputs[`icp${num}_sizesOther` as keyof typeof inputs] as string).split(',').map(s => s.trim()).filter(Boolean)] : sizes,
-            industries: inds.includes('Other') ? [...inds.filter(i => i !== 'Other'), ...(inputs[`icp${num}_industriesOther` as keyof typeof inputs] as string).split(',').map(s => s.trim()).filter(Boolean)] : inds,
-          };
-        };
-
-        const validIcps = [buildIcp(1), buildIcp(2), buildIcp(3)].filter(Boolean);
+        const validIcps = [buildIcp(1, currentInputs!), buildIcp(2, currentInputs!), buildIcp(3, currentInputs!)].filter(Boolean);
+        
         if (validIcps.length === 0) {
-            throw new Error("Please complete all required fields for at least one ICP before generating.");
+          throw new Error("Please complete all required fields (Role, Size, and Industry) for at least one ICP before generating.");
         }
 
         const result = await gemini.generateDetailedICPs({
           icps: validIcps,
-          offer: inputs.offer
+          offer: currentInputs!.offer
         });
-        newOutputs.icps = result;
-        newOutputs.icpSummary = `Generated ${validIcps.length} detailed strategic ICP(s): ${result.map((r: any) => r.name).join(', ')}`;
+
+        setState(prev => ({
+          ...prev,
+          outputs: {
+            ...prev.outputs,
+            icps: result,
+            icpSummary: `Generated ${validIcps.length} detailed strategic ICP(s): ${result.map((r: any) => r.name).join(', ')}`
+          }
+        }));
       } else if (step === 3) {
+        // DEPENDENCY GUARD: Ensure ICPs exist
+        if (!currentOutputs!.icps || currentOutputs!.icps.length === 0) {
+          throw new Error("Complete ICP step first");
+        }
+
+        const narrativeAngles = normalizeInputArray(currentInputs!.narrativeAngles || [], currentInputs!.narrativeAnglesOther);
+        const tonePreference = normalizeInputArray(currentInputs!.tonePreference || [], currentInputs!.tonePreferenceOther);
+
         const vpTables = await gemini.generateValuePropTables({
-          icps: newOutputs.icps,
-          offer: inputs.offer,
-          narrativeAngles: (inputs.narrativeAngles || []).includes('Other') 
-            ? [...(inputs.narrativeAngles || []).filter(a => a !== 'Other'), ...(inputs.narrativeAnglesOther as string).split(',').map(s => s.trim()).filter(Boolean)] 
-            : (inputs.narrativeAngles || []),
-          tonePreference: (inputs.tonePreference || []).includes('Other')
-            ? [...(inputs.tonePreference || []).filter(t => t !== 'Other'), ...(inputs.tonePreferenceOther as string).split(',').map(s => s.trim()).filter(Boolean)]
-            : (inputs.tonePreference || [])
+          icps: currentOutputs!.icps,
+          offer: currentInputs!.offer,
+          narrativeAngles: narrativeAngles.length > 0 ? narrativeAngles : ["Authority", "ROI"],
+          tonePreference: tonePreference.length > 0 ? tonePreference : ["Professional"]
         });
         
         const globalSol = await gemini.generateGlobalSolution(vpTables);
 
-        newOutputs.valuePropTables = vpTables;
-        newOutputs.globalSolution = globalSol;
+        setState(prev => ({
+          ...prev,
+          outputs: {
+            ...prev.outputs,
+            valuePropTables: vpTables,
+            globalSolution: globalSol
+          }
+        }));
       } else if (step === 4) {
-        const prompt = await gemini.generateWebsitePrompt({
-          brandName: inputs.brandName, 
-          primaryColor: inputs.primaryColor, 
-          secondaryColor: inputs.secondaryColor, 
-          inspirationImage: inputs.inspirationImage, 
-          valueProp: newOutputs.globalSolution || newOutputs.valueProp || "Our value proposition",
-          icpSummary: newOutputs.icpSummary,
-          offer: inputs.offer,
-          narrativeAngles: inputs.narrativeAngles?.includes('Other') 
-            ? [...inputs.narrativeAngles.filter(a => a !== 'Other'), inputs.narrativeAnglesOther] 
-            : (inputs.narrativeAngles || []),
-          tonePreference: inputs.tonePreference?.includes('Other')
-            ? [...inputs.tonePreference.filter(t => t !== 'Other'), inputs.tonePreferenceOther]
-            : (inputs.tonePreference || [])
+        // BRAND VALIDATION
+        if (!currentInputs!.brandName?.trim()) {
+          throw new Error("Enter a brand name first");
+        }
+
+        const websitePromptOutput = await gemini.generateWebsitePrompt({
+          brandName: currentInputs!.brandName, 
+          primaryColor: currentInputs!.primaryColor, 
+          secondaryColor: currentInputs!.secondaryColor, 
+          inspirationImage: currentInputs!.inspirationImage,
+          valueProp: currentOutputs!.globalSolution || currentOutputs!.valueProp || "Our value proposition",
+          icpSummary: currentOutputs!.icpSummary,
+          offer: currentInputs!.offer,
+          narrativeAngles: normalizeInputArray(currentInputs!.narrativeAngles || [], currentInputs!.narrativeAnglesOther).length > 0 
+            ? normalizeInputArray(currentInputs!.narrativeAngles || [], currentInputs!.narrativeAnglesOther) 
+            : ["Authority", "ROI"],
+          tonePreference: normalizeInputArray(currentInputs!.tonePreference || [], currentInputs!.tonePreferenceOther).length > 0 
+            ? normalizeInputArray(currentInputs!.tonePreference || [], currentInputs!.tonePreferenceOther) 
+            : ["Professional"]
         });
-        newOutputs.websitePrompt = prompt;
+
+        setState(prev => ({
+          ...prev,
+          outputs: {
+            ...prev.outputs,
+            websitePrompt: websitePromptOutput
+          },
+          completedSteps: prev.completedSteps.includes(4) ? prev.completedSteps : [...prev.completedSteps, 4]
+        }));
       } else if (step === 5) {
-        const indList = Array.isArray(inputs.industry) ? inputs.industry : [];
-        const industryStr = indList.includes('Other') 
-          ? [...indList.filter((i: string) => i !== 'Other'), inputs.industryOther].join(', ')
-          : indList.join(', ');
+        // INDUSTRY FALLBACK
+        const rawIndustry = currentInputs!.industry || [];
+        const industryStr = normalizeInputList(rawIndustry, currentInputs!.industryOther) || 
+                          currentOutputs!.icps?.[0]?.whoTheyAre || 
+                          "B2B Services";
+
         const strategy = await gemini.generateDetailedGTM({
-          icps: newOutputs.icps,
-          offer: inputs.offer,
-          valuePropTables: newOutputs.valuePropTables,
+          icps: currentOutputs!.icps,
+          offer: currentInputs!.offer,
+          valuePropTables: currentOutputs!.valuePropTables,
           industry: industryStr
         });
-        newOutputs.gtmStrategy = strategy;
-        newOutputs.leadMagnets = strategy.leadMagnets;
+
+        setState(prev => ({
+          ...prev,
+          outputs: {
+            ...prev.outputs,
+            gtmStrategy: strategy,
+            leadMagnets: strategy.leadMagnets
+          },
+          completedSteps: prev.completedSteps.includes(5) ? prev.completedSteps : [...prev.completedSteps, 5]
+        }));
       } else if (step === 6) {
-        const ind = Array.isArray(inputs.industry) ? inputs.industry : [];
-        // CRITICAL: Pass the outreach part of GTM if it exists as an object
-        const gtmContext = newOutputs.gtmStrategy?.leadGen?.outreach
-          ? JSON.stringify(newOutputs.gtmStrategy.leadGen.outreach).substring(0, 1500)
-          : "Standard GTM";
-          
+        // DEPENDENCY GUARD
+        if (!currentOutputs!.gtmStrategy) {
+          throw new Error("Complete GTM Strategy step first");
+        }
+
         const outreach = await gemini.generateOutreachEngine({
-          clientName: inputs.fullName,
-          companyName: inputs.companyName,
-          whatTheySell: inputs.offer,
-          targetIndustry: ind.filter((i: string) => i !== 'Other').join(', '),
-          primaryProblem: newOutputs.icps[0]?.painPoints[0] || "",
-          valueProp: newOutputs.globalSolution || newOutputs.valueProp || "Strategic Growth Positioning",
-          icpSummary: newOutputs.icpSummary,
-          gtmStrategy: gtmContext,
-          angle: inputs.outreachAngle || 'Authority',
-          channel: inputs.outreachChannel || 'Both'
+          clientName: currentInputs!.fullName,
+          companyName: currentInputs!.companyName,
+          whatTheySell: currentInputs!.offer,
+          targetIndustry: normalizeInputList(currentInputs!.industry || [], currentInputs!.industryOther) || "B2B",
+          primaryProblem: currentOutputs!.icps?.[0]?.painPoints?.[0] || "Inefficiency",
+          valueProp: currentOutputs!.globalSolution || currentOutputs!.valueProp || "Strategic growth",
+          icpSummary: currentOutputs!.icpSummary,
+          gtmStrategy: JSON.stringify(currentOutputs!.gtmStrategy).substring(0, 2000),
+          angle: currentInputs!.outreachAngle || 'Authority',
+          channel: currentInputs!.outreachChannel || 'Both'
         });
-        newOutputs.outreachEngineOutput = outreach;
+
+        setState(prev => ({
+          ...prev,
+          outputs: {
+            ...prev.outputs,
+            outreachEngineOutput: outreach
+          },
+          completedSteps: prev.completedSteps.includes(6) ? prev.completedSteps : [...prev.completedSteps, 6]
+        }));
       }
 
-      setState(prev => ({ ...prev, outputs: newOutputs, completedSteps: [...prev.completedSteps, step], isGenerating: false, generationError: null }));
+      setState(prev => ({ ...prev, isGenerating: false, generationError: null }));
     } catch (err: any) {
       console.error("Error generating output:", err);
       setState(prev => ({ ...prev, isGenerating: false, generationError: err.message || "Something went wrong." }));
