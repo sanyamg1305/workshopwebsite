@@ -44,7 +44,7 @@ import { supabase } from './services/supabase';
 import { auth, googleProvider, db } from './services/firebase';
 import { onAuthStateChanged, signInWithPopup, signOut, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import logo from './assets/logo.png';
+// logo moved to public/logo.png
 
 // --- Types ---
 
@@ -2297,7 +2297,7 @@ const Step0LeadCapture = React.memo(({
         className="max-w-xl w-full bg-section border border-border rounded-3xl p-8 md:p-12 shadow-2xl"
       >
         <div className="text-center mb-10">
-          <img src={logo} alt="Logo" className="h-16 w-auto mx-auto mb-6" />
+          <img src="/logo.png" alt="Logo" className="h-16 w-auto mx-auto mb-6" />
           <h1 className="text-3xl md:text-4xl font-black tracking-tight text-text-primary mb-4">
             {user ? "Complete Your Profile" : "Start Your Growth Workshop"}
           </h1>
@@ -2691,8 +2691,10 @@ export default function App() {
     setLoading(true);
     setError('');
 
+    console.log("Submitting lead form...", formData);
     try {
       if (user) {
+        console.log("Saving to Firestore...");
         await setDoc(doc(db, 'users', user.uid, 'workshop', 'active'), {
           ...state,
           leadFormFilled: true,
@@ -2700,8 +2702,10 @@ export default function App() {
           completedSteps: [0],
           inputs: { ...state.inputs, fullName, workEmail, phone, companyName }
         });
+        console.log("Firestore Save complete.");
       }
 
+      console.log("Saving to Supabase...");
       // Legacy support for Supabase tracking
       const { data, error: sbError } = await supabase
         .from('workshop_submissions')
@@ -2728,6 +2732,7 @@ export default function App() {
         localStorage.setItem('userLeadData', JSON.stringify(leadData));
       }
 
+      console.log("Supabase Save complete.");
       setState(prev => ({ ...prev, leadFormFilled: true }));
       completeStep(0);
       setStep(1);
@@ -2990,7 +2995,7 @@ export default function App() {
         <aside className="w-72 border-r border-border fixed h-full bg-bg z-20 hidden lg:block">
           <div className="p-8">
             <div className="flex items-center gap-2 mb-12">
-              <img src={logo} alt="Logo" className="h-10 w-auto" />
+              <img src="/logo.png" alt="Logo" className="h-10 w-auto" />
             </div>
             <nav className="space-y-1">
               {steps.map(s => (

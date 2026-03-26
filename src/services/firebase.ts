@@ -11,6 +11,10 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
+if (!import.meta.env.VITE_FIREBASE_API_KEY) {
+  console.warn("Firebase Configuration is missing from Environment Variables (import.meta.env). Session persistence will HANG if attempt to save.");
+}
+
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
