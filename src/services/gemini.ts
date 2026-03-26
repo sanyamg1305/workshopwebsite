@@ -308,11 +308,14 @@ export const generateValueProp = async (outcome: string, method: string, replace
 };
 
 export interface LeadMagnet {
-  name: string;
-  description: string;
-  whyIcpWantsIt: string;
-  howItTiesToOutreach: string;
-  icpName: string;
+  title: string;
+  format: string;
+  targetICP: string;
+  problem: string;
+  outcome: string;
+  contents: string[];
+  cta: string;
+  value: string;
 }
 
 export interface GTMStrategy {
@@ -369,14 +372,23 @@ export const generateDetailedGTM = async (inputs: {
         - Outreach Strategy: For each ICP, provide channel-specific tips and best practices (What to personalize, when to send, follow-up timing, subject line style, etc.). DO NOT provide message scripts here.
     2. Partner-Led Growth (Ideal Partners, Models, Outreach Pitch, Scale Strategy)
     3. Event-Led Growth (Event Types, Specific Ideas per ICP, Funnel, Conversion Strategy)
-    4. Lead Magnet Ideas (CRITICAL): Generate EXACTLY 1 high-quality lead magnet for EACH ICP.
+    4. Lead Magnet Strategy (CRITICAL): Generate EXACTLY 3 high-conversion lead magnets based on the ICPs.
+       
        Rules:
-       - Must be hyper-specific to the ICP's unique pain point and immediately usable.
-       - Outcome-driven: Solve a SPECIFIC bottleneck (e.g., "The [Outcome] [Asset Type] for [ICP]").
-       - Premium Naming: Use professional asset types (Playbook, Template, Audit, Framework, Scorecard, Calculator, Teardown, Blueprint, Roadmap).
-       - AVOID generic words like "Guide", "Ebook", "Tips", "Checklist".
-       - High Perceived Value: Must feel like a paid consulting deliverable.
-       - For each, provide: name, description (what it does), whyIcpWantsIt (outcome/pain alignment), howItTiesToOutreach (where to use: LinkedIn/Email/Landing Page), and icpName.
+       - NEVER return generic ideas like "Ultimate Guide".
+       - EACH must feel like a $5K consulting asset given for free.
+       - Each must be specific, actionable, and immediately usable.
+       - Focus on tangible outcomes, not theory.
+       
+       For EACH lead magnet, provide:
+       1. Title (high-conversion, curiosity-driven)
+       2. Format (PDF / Tool / Template / Calculator / Audit / Checklist)
+       3. Target ICP (which ICP this is specifically for)
+       4. Core Problem it solves (very specific bottleneck)
+       5. Promise / Outcome (clear measurable result)
+       6. Key Contents (array of strings: bullet points of what’s inside)
+       7. CTA (clear next step, business-oriented)
+       8. Perceived Value (why this feels like a premium consulting asset)
     
     QUALITY RULES:
     - EVERYTHING MUST BE CONTEXTUAL to the ICPs and Pain Points.
@@ -507,13 +519,16 @@ export const generateDetailedGTM = async (inputs: {
             items: {
               type: Type.OBJECT,
               properties: {
-                name: { type: Type.STRING },
-                description: { type: Type.STRING },
-                whyIcpWantsIt: { type: Type.STRING },
-                howItTiesToOutreach: { type: Type.STRING },
-                icpName: { type: Type.STRING }
+                title: { type: Type.STRING },
+                format: { type: Type.STRING },
+                targetICP: { type: Type.STRING },
+                problem: { type: Type.STRING },
+                outcome: { type: Type.STRING },
+                contents: { type: Type.ARRAY, items: { type: Type.STRING } },
+                cta: { type: Type.STRING },
+                value: { type: Type.STRING }
               },
-              required: ["name", "description", "whyIcpWantsIt", "howItTiesToOutreach", "icpName"]
+              required: ["title", "format", "targetICP", "problem", "outcome", "contents", "cta", "value"]
             }
           }
         },

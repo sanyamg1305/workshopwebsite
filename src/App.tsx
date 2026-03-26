@@ -45,6 +45,7 @@ import { auth, googleProvider, db } from './services/firebase';
 import { onAuthStateChanged, signInWithPopup, signOut, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { DebouncedInput, DebouncedTextarea } from './components/DebouncedInput';
+import { useNonBlockingSave } from './hooks/useNonBlockingSave';
 // logo moved to public/logo.png
 
 // --- Types ---
@@ -1793,31 +1794,43 @@ const Step5GTMStrategy = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {strategy.leadMagnets.map((lm: any, i: number) => (
-                    <div key={i} className="p-8 bg-section border border-border rounded-3xl space-y-6 relative overflow-hidden group hover:border-primary transition-colors hover:shadow-lg hover:-translate-y-1">
+                  {strategy.leadMagnets.map((lm: LeadMagnet, i: number) => (
+                    <div key={i} className="p-8 bg-section border border-border rounded-3xl space-y-6 relative overflow-hidden group hover:border-primary transition-all hover:shadow-xl hover:-translate-y-1">
                       <div className="absolute top-0 right-0 p-4 bg-primary/10 rounded-bl-3xl">
                         <Sparkles size={24} className="text-primary" />
                       </div>
                       <div className="space-y-2">
-                        <h3 className="text-2xl font-black pr-8">{lm.name}</h3>
+                        <div className="inline-block px-3 py-1 bg-section-alt border border-border rounded-lg text-[10px] font-black uppercase tracking-widest text-text-secondary mb-2">{lm.format}</div>
+                        <h3 className="text-2xl font-black pr-8 leading-tight">{lm.title}</h3>
+                        <p className="text-xs font-bold text-primary uppercase tracking-widest">For: {lm.targetICP}</p>
                       </div>
 
                       <div className="space-y-4">
                         <div className="space-y-1">
-                          <div className="text-[10px] font-black uppercase text-text-secondary flex items-center gap-1">What it does:</div>
-                          <div className="text-sm font-medium leading-relaxed">{lm.whatItDoes}</div>
+                          <div className="text-[10px] font-black uppercase text-text-secondary flex items-center gap-1">The Problem:</div>
+                          <div className="text-sm font-medium leading-relaxed">{lm.problem}</div>
                         </div>
                         <div className="space-y-1">
-                          <div className="text-[10px] font-black uppercase text-text-secondary flex items-center gap-1">Why it works:</div>
-                          <div className="text-sm text-text-secondary leading-relaxed">{lm.whyItWorks}</div>
+                          <div className="text-[10px] font-black uppercase text-text-secondary flex items-center gap-1">The High-Value Outcome:</div>
+                          <div className="text-sm text-text-secondary leading-relaxed font-bold italic">"{lm.outcome}"</div>
                         </div>
-                        <div className="space-y-1">
-                          <div className="text-[10px] font-black uppercase text-text-secondary flex items-center gap-1">How to use in outreach:</div>
-                          <div className="text-sm text-text-secondary leading-relaxed italic border-l-2 border-primary/50 pl-3">"{lm.howToUse}"</div>
+                        <div className="space-y-2">
+                          <div className="text-[10px] font-black uppercase text-text-secondary">Key Consulting Assets Included:</div>
+                          <ul className="space-y-1.5">
+                            {lm.contents.map((item, idx) => (
+                              <li key={idx} className="text-xs flex items-start gap-2 text-text-secondary italic">
+                                <div className="w-1 h-1 bg-primary rounded-full mt-1.5 shrink-0" />
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
                         </div>
-                        <div className="space-y-1">
-                          <div className="text-[10px] font-black uppercase text-text-secondary flex items-center gap-1">CTA:</div>
-                          <div className="inline-block px-3 py-1 bg-primary/10 border border-primary/20 rounded-full text-xs font-bold uppercase tracking-widest text-primary">{lm.cta}</div>
+                        <div className="pt-4 border-t border-border flex flex-col gap-3">
+                          <div className="text-[10px] font-black uppercase text-text-secondary">Perceived Economic Value:</div>
+                          <div className="text-sm font-black text-emerald-500">{lm.value}</div>
+                          <div className="inline-block w-fit px-4 py-2 bg-primary text-black rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20">
+                            {lm.cta}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -2558,6 +2571,7 @@ export default function App() {
 
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [sessionToResume, setSessionToResume] = useState<WorkshopState | null>(null);
+  const { saveInBackground, isSaving: isSbSaving } = useNonBlockingSave();
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(false);
@@ -2616,21 +2630,39 @@ export default function App() {
   };
 
 
-  // Auto-save progress to Firestore (Debounced & Background)
+  // Auto-save progress to Firestore & Supabase (Debounced & Background)
   useEffect(() => {
     if (user && state.leadFormFilled && state.currentStep > 0) {
       setSaveStatus('saving');
+      
       const syncData = async () => {
         try {
-          // Use updateDoc to send background updates
+          // 1. Firestore Sync (updateDoc)
           const docRef = doc(db, 'users', user.uid, 'workshop', 'active');
           await updateDoc(docRef, { ...state });
+          
+          // 2. Supabase Sync (Non-blocking hook pattern)
+          // We fire this and don't await it to ensure zero UI impact
+          saveInBackground('workshop_submissions', {
+            user_uid: user.uid,
+            user_email: user.email,
+            full_name: state.inputs.fullName,
+            work_email: state.inputs.workEmail,
+            phone: state.inputs.phone,
+            company_name: state.inputs.companyName,
+            lead_role: state.inputs.leadRole,
+            current_step: state.currentStep,
+            workshop_inputs: state.inputs,
+            workshop_outputs: state.outputs
+          });
+
           setSaveStatus('saved');
         } catch (err) {
-          console.error("Firestore Sync Error:", err);
-          // If updateDoc fails (e.g. document doesn't exist yet), fallback to setDoc
+          console.error("Persistence Sync Error:", err);
+          // Fallback to setDoc if updateDoc fails
           try {
-            await setDoc(doc(db, 'users', user.uid, 'workshop', 'active'), state);
+            const docRef = doc(db, 'users', user.uid, 'workshop', 'active');
+            await setDoc(docRef, state);
             setSaveStatus('saved');
           } catch (innerErr) {
             setSaveStatus('idle');
@@ -2641,7 +2673,7 @@ export default function App() {
       const timer = setTimeout(syncData, 1000);
       return () => clearTimeout(timer);
     }
-  }, [user, state]);
+  }, [user, state, saveInBackground]);
 
   const handleResume = () => {
     if (sessionToResume) {
