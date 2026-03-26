@@ -43,7 +43,8 @@ import * as gemini from './services/gemini';
 import { supabase } from './services/supabase';
 import { auth, googleProvider, db } from './services/firebase';
 import { onAuthStateChanged, signInWithPopup, signOut, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { DebouncedInput, DebouncedTextarea } from './components/DebouncedInput';
 // logo moved to public/logo.png
 
 // --- Types ---
@@ -342,15 +343,15 @@ const MultiSelectDropdown = ({
               <label className="text-[10px] font-bold uppercase text-primary tracking-widest">Please specify *</label>
               <span className="text-[9px] text-text-secondary italic">Tip: You can add multiple entries using commas</span>
             </div>
-            <input
-              ref={otherInputRef}
+            <DebouncedInput
+              ref={otherInputRef as any}
               type="text"
               required
               placeholder="Enter values (separate with commas)"
               style={{ backgroundColor: '#000000', color: '#FFFFFF' }}
               className={`w-full px-4 py-3 rounded-xl border ${!otherValue.trim() ? 'border-red-500/50' : 'border-border'} focus:border-primary focus:ring-1 focus:ring-primary outline-none text-sm transition-all`}
               value={otherValue}
-              onChange={(e) => onOtherChange(e.target.value)}
+              onDebounce={(val) => onOtherChange(val)}
             />
             {!otherValue.trim() && (
               <p className="text-[10px] text-red-500 font-medium">Please specify your selection</p>
@@ -497,35 +498,35 @@ const Step1ProfileCheck = () => {
         </div>
         <div className="space-y-2">
           <label className="text-xs font-bold uppercase text-text-secondary">LinkedIn Headline *</label>
-          <input
+          <DebouncedInput
             type="text"
             placeholder="e.g. Founder @ XYZ | Helping..."
             className="w-full px-4 py-3 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg"
             value={state.inputs.linkedinHeadline}
-            onChange={(e) => updateInput('linkedinHeadline', e.target.value)}
+            onDebounce={(val) => updateInput('linkedinHeadline', val)}
           />
         </div>
 
         <div className="space-y-2">
           <label className="text-xs font-bold uppercase text-text-secondary">About Section</label>
-          <textarea
+          <DebouncedTextarea
             placeholder="Paste your About section here..."
             className="w-full px-4 py-3 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg min-h-[120px]"
             value={state.inputs.linkedinAbout}
-            onChange={(e) => updateInput('linkedinAbout', e.target.value)}
+            onDebounce={(val) => updateInput('linkedinAbout', val)}
           />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <label className="text-xs font-bold uppercase text-text-secondary">Company Name *</label>
-            <input
+            <DebouncedInput
               type="text"
               required
               placeholder="e.g. Myntmore"
               className={`w-full px-4 py-3 rounded-xl border ${showErrors && !state.inputs.companyName ? "border-red-500" : "border-border"} focus:ring-2 focus:ring-primary/50 outline-none bg-bg`}
               value={state.inputs.companyName}
-              onChange={(e) => updateInput("companyName", e.target.value)}
+              onDebounce={(val) => updateInput("companyName", val)}
             />
           </div>
           <MultiSelectDropdown showErrors={showErrors}
@@ -541,12 +542,12 @@ const Step1ProfileCheck = () => {
 
         <div className="space-y-2">
           <label className="text-xs font-bold uppercase text-text-secondary">What do you offer?</label>
-          <input
+          <DebouncedInput
             type="text"
             placeholder="e.g. We help [ICP] achieve [outcome] or X → Y for Z"
             className={`w-full px-4 py-3 rounded-xl border ${showErrors && !state.inputs.offer ? "border-red-500" : "border-border"} focus:ring-2 focus:ring-primary/50 outline-none bg-bg`}
             value={state.inputs.offer}
-            onChange={(e) => updateInput('offer', e.target.value)}
+            onDebounce={(val) => updateInput('offer', val)}
           />
           <p className="text-[10px] text-text-secondary">Example: "Reduce hiring time → for Talent Leaders → using automation"</p>
         </div>
@@ -1243,12 +1244,12 @@ const Step4WebsiteBuilder = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase text-text-secondary">Brand Name</label>
-              <input
+              <DebouncedInput
                 type="text"
                 className="w-full px-4 py-3 rounded-xl border border-border bg-bg focus:border-primary/50 outline-none transition-all"
                 placeholder="e.g. Myntmore"
                 value={state.inputs.brandName}
-                onChange={(e) => updateInput('brandName', e.target.value)}
+                onDebounce={(val) => updateInput('brandName', val)}
               />
             </div>
             
@@ -1262,11 +1263,11 @@ const Step4WebsiteBuilder = () => {
                     value={state.inputs.primaryColor}
                     onChange={(e) => updateInput('primaryColor', e.target.value)}
                   />
-                  <input
+                  <DebouncedInput
                     type="text"
                     className="w-full px-3 py-3 rounded-xl border border-border bg-bg focus:border-primary/50 outline-none font-mono text-xs transition-all"
                     value={state.inputs.primaryColor}
-                    onChange={(e) => updateInput('primaryColor', e.target.value)}
+                    onDebounce={(val) => updateInput('primaryColor', val)}
                   />
                 </div>
               </div>
@@ -1279,11 +1280,11 @@ const Step4WebsiteBuilder = () => {
                     value={state.inputs.secondaryColor}
                     onChange={(e) => updateInput('secondaryColor', e.target.value)}
                   />
-                  <input
+                  <DebouncedInput
                     type="text"
                     className="w-full px-3 py-3 rounded-xl border border-border bg-bg focus:border-primary/50 outline-none font-mono text-xs transition-all"
                     value={state.inputs.secondaryColor}
-                    onChange={(e) => updateInput('secondaryColor', e.target.value)}
+                    onDebounce={(val) => updateInput('secondaryColor', val)}
                   />
                 </div>
               </div>
@@ -2297,7 +2298,7 @@ const Step0LeadCapture = React.memo(({
         className="max-w-xl w-full bg-section border border-border rounded-3xl p-8 md:p-12 shadow-2xl"
       >
         <div className="text-center mb-10">
-          <img src="/logo.png" alt="Logo" className="h-16 w-auto mx-auto mb-6" />
+          <img src="/logo.png" alt="Logo" className="h-16 w-auto mx-auto mb-6 object-contain" />
           <h1 className="text-3xl md:text-4xl font-black tracking-tight text-text-primary mb-4">
             {user ? "Complete Your Profile" : "Start Your Growth Workshop"}
           </h1>
@@ -2569,7 +2570,7 @@ export default function App() {
 
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [sessionToResume, setSessionToResume] = useState<WorkshopState | null>(null);
-  const [showSaveIndicator, setShowSaveIndicator] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -2627,16 +2628,25 @@ export default function App() {
   };
 
 
-  // Auto-save progress to Firestore
+  // Auto-save progress to Firestore (Debounced & Background)
   useEffect(() => {
     if (user && state.leadFormFilled && state.currentStep > 0) {
+      setSaveStatus('saving');
       const syncData = async () => {
         try {
-          await setDoc(doc(db, 'users', user.uid, 'workshop', 'active'), state);
-          setShowSaveIndicator(true);
-          setTimeout(() => setShowSaveIndicator(false), 2000);
+          // Use updateDoc to send background updates
+          const docRef = doc(db, 'users', user.uid, 'workshop', 'active');
+          await updateDoc(docRef, { ...state });
+          setSaveStatus('saved');
         } catch (err) {
           console.error("Firestore Sync Error:", err);
+          // If updateDoc fails (e.g. document doesn't exist yet), fallback to setDoc
+          try {
+            await setDoc(doc(db, 'users', user.uid, 'workshop', 'active'), state);
+            setSaveStatus('saved');
+          } catch (innerErr) {
+            setSaveStatus('idle');
+          }
         }
       };
 
@@ -2994,8 +3004,17 @@ export default function App() {
         {/* Sidebar */}
         <aside className="w-72 border-r border-border fixed h-full bg-bg z-20 hidden lg:block">
           <div className="p-8">
-            <div className="flex items-center gap-2 mb-12">
-              <img src="/logo.png" alt="Logo" className="h-10 w-auto" />
+            <div className="flex items-center justify-between mb-12">
+              <img src="/logo.png" alt="Logo" className="h-10 w-auto object-contain max-w-[160px]" style={{ aspectRatio: 'auto' }} />
+              {saveStatus !== 'idle' && (
+                <div className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full flex items-center gap-1.5 transition-all duration-500 ${saveStatus === 'saving' ? 'bg-primary/10 text-primary animate-pulse' : 'bg-green-500/10 text-green-600'}`}>
+                  {saveStatus === 'saving' ? (
+                    <><Loader2 className="animate-spin" size={10} /> Saving</>
+                  ) : (
+                    <><CheckCircle2 size={10} /> Saved ✓</>
+                  )}
+                </div>
+              )}
             </div>
             <nav className="space-y-1">
               {steps.map(s => (
@@ -3034,19 +3053,7 @@ export default function App() {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <AnimatePresence>
-                {showSaveIndicator && (
-                  <motion.div 
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -10 }}
-                    className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20"
-                  >
-                    <Check size={12} />
-                    Progress Saved
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {/* Old progress indicator removed in favor of Sidebar status */}
               {user ? (
                 <div className="flex items-center gap-4">
                   <div className="flex flex-col items-end">
@@ -3114,11 +3121,15 @@ export default function App() {
                         }
                       `}
                     >
-                      {state.currentStep === 1 ? 'Define Your Target ICPs' : 
-                       state.currentStep === 5 ? 'Build Your Outreach Engine' :
-                       'Next Step'}
-                      <ArrowRight size={18} />
-                    </button>
+                        {state.currentStep === 1 ? 'Generate ICP' : 
+                         state.currentStep === 2 ? 'Build Value Proposition' :
+                         state.currentStep === 3 ? 'Generate Website Assets' :
+                         state.currentStep === 4 ? 'Create Strategy' :
+                         state.currentStep === 5 ? 'Generate Outreach' :
+                         state.currentStep === 6 ? 'Finalize Strategy Report' :
+                         'Next Step'}
+                        <ArrowRight size={18} />
+                      </button>
                   </div>
                 )}
               </div>
