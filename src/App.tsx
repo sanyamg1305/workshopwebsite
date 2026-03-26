@@ -2494,6 +2494,7 @@ export default function App() {
           setAuthIsReady(true);
         }
       } else {
+        setState((prev) => ({ ...prev, isCheckingStatus: false }));
         setAuthIsReady(true);
       }
     });
