@@ -23,7 +23,7 @@ export const StrategyDocument = ({ state }: { state: any }) => {
     <div className="bg-white text-black font-serif w-full max-w-[1000px] mx-auto pdf-container">
       {/* 1. COVER PAGE */}
       <div className="h-screen flex flex-col justify-center items-center text-center p-12 border-8 border-black m-8 break-after-page">
-        <h1 className="text-6xl font-black mb-6 uppercase tracking-widest">{inputs.brandName || inputs.companyName || "B2B Strategy"}</h1>
+        <h1 className="text-6xl font-black mb-6 uppercase tracking-widest">{inputs.brandName || inputs.companyName || "Growth Strategy"}</h1>
         <div className="w-24 h-2 bg-black mx-auto mb-8"></div>
         <h2 className="text-3xl font-bold text-gray-800 mb-12 italic leading-relaxed max-w-2xl">
           "{outputs.valueProp}"
@@ -48,7 +48,7 @@ export const StrategyDocument = ({ state }: { state: any }) => {
             </div>
             <div>
               <h3 className="font-bold uppercase tracking-wider text-sm mb-2 text-gray-500">Who We Target</h3>
-              <p>{outputs.icpSummary || "B2B Decision Makers"}</p>
+              <p>{outputs.icpSummary || "Strategic Decision Makers"}</p>
             </div>
             <div>
               <h3 className="font-bold uppercase tracking-wider text-sm mb-2 text-gray-500">Core Positioning Insight</h3>

@@ -44,6 +44,7 @@ import { supabase } from './services/supabase';
 import { auth, googleProvider, db } from './services/firebase';
 import { onAuthStateChanged, signInWithPopup, signOut, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import logo from './assets/logo.png';
 
 // --- Types ---
 
@@ -1982,71 +1983,81 @@ const Step6OutreachEngine = () => {
             </p>
           </div>
 
-          {/* Subject Lines */}
+          {/* LinkedIn Sequence */}
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h3 className="text-lg font-black flex items-center gap-2 uppercase tracking-tight">
-              <Zap size={20} className="text-primary" /> High-Conversion Subject Lines
+              <Linkedin size={20} className="text-primary" /> LinkedIn Sequence
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-              {out.subjectLines.map((subject, i) => (
-                <div key={i} className="flex items-center gap-4 p-4 bg-section border border-border rounded-xl group hover:border-primary/50 transition-all">
-                  <div className="w-8 h-8 rounded-full bg-bg flex items-center justify-center text-[10px] font-bold text-primary border border-border">
-                    {i + 1}
+            <div className="space-y-4">
+              <div className="p-6 bg-section border border-border rounded-xl group hover:border-primary/30 transition-all">
+                <span className="block text-[10px] uppercase font-bold text-primary mb-2 tracking-widest">Connection Request</span>
+                <p className="text-sm leading-relaxed text-text-primary whitespace-pre-wrap">
+                  {out.linkedIn.connectionRequest}
+                </p>
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(out.linkedIn.connectionRequest);
+                    alert('Copied!');
+                  }}
+                  className="mt-4 text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-1 hover:underline"
+                >
+                  <Copy size={12} /> Copy Request
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {out.linkedIn.followUps.map((f, i) => (
+                  <div key={i} className="p-4 bg-section/50 border border-border rounded-xl">
+                    <span className="block text-[8px] uppercase font-bold text-text-secondary mb-2 text-right">Follow-up {i + 1}</span>
+                    <p className="text-[11px] leading-relaxed italic text-text-secondary">"{f}"</p>
                   </div>
-                  <p className="flex-1 font-bold text-sm">{subject}</p>
-                  <button 
-                    onClick={() => {
-                      navigator.clipboard.writeText(subject);
-                      alert('Subject copied!');
-                    }}
-                    className="p-2 hover:text-primary transition-colors"
-                  >
-                    <Copy size={16} />
-                  </button>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Cold Emails */}
+          {/* Email Campaign */}
           <div className="space-y-6">
             <h3 className="text-lg font-black flex items-center gap-2 uppercase tracking-tight">
-              <Mail size={20} className="text-primary" /> Multi-Angle Outreach Assets
+              <Mail size={20} className="text-primary" /> Cold Email Campaign
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {out.coldEmails.map((email, i) => (
-                <OutputCard key={i} title={`Campaign Option ${i + 1}`} icon={Send} copyText={email.body}>
-                  <div className="space-y-3">
-                    <div className="p-2 bg-bg rounded-lg border border-border text-[10px] font-bold uppercase tracking-widest text-text-secondary">
-                      Subject: {email.subject}
-                    </div>
-                    <p className="text-xs leading-relaxed whitespace-pre-wrap">{email.body}</p>
-                  </div>
-                </OutputCard>
-              ))}
-            </div>
-          </div>
-
-          {/* Short Openers */}
-          <div className="space-y-6">
-            <h3 className="text-lg font-black flex items-center gap-2 uppercase tracking-tight">
-              <MessageSquare size={20} className="text-primary" /> Conversation Starters
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {out.shortOpeners.map((opener, i) => (
-                <div key={i} className="p-4 bg-section/50 border border-border rounded-xl hover:border-primary/30 transition-all">
-                  <p className="text-[11px] leading-relaxed italic text-text-secondary">"{opener}"</p>
+            <div className="space-y-4">
+              <div className="p-6 bg-section border-2 border-primary/10 rounded-xl relative overflow-hidden group hover:border-primary/30 transition-all">
+                <div className="absolute top-0 right-0 bg-primary/10 px-3 py-1 text-[8px] font-black uppercase tracking-tighter">Primary Asset</div>
+                <div className="inline-block px-3 py-1 bg-bg rounded-lg border border-border text-[10px] font-bold uppercase tracking-widest text-primary mb-4">
+                  Subject: {out.email.subjectLine}
+                </div>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap text-text-primary">
+                  {out.email.body}
+                </p>
+                <div className="flex gap-4 mt-6 pt-4 border-t border-border">
                   <button 
                     onClick={() => {
-                      navigator.clipboard.writeText(opener);
-                      alert('Opener copied!');
+                      navigator.clipboard.writeText(out.email.body);
+                      alert('Email body copied!');
                     }}
-                    className="mt-3 text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-1 hover:underline"
+                    className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-1 hover:underline"
                   >
-                    <Copy size={10} /> Copy
+                    <Copy size={12} /> Copy Body
+                  </button>
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(out.email.subjectLine);
+                      alert('Subject line copied!');
+                    }}
+                    className="text-[10px] font-bold uppercase tracking-widest text-text-secondary flex items-center gap-1 hover:underline"
+                  >
+                    <Copy size={12} /> Copy Subject
                   </button>
                 </div>
-              ))}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {out.email.followUps.map((f, i) => (
+                  <div key={i} className="p-4 bg-section/50 border border-border rounded-xl">
+                    <span className="block text-[8px] uppercase font-bold text-primary mb-2 text-right">Email Follow-up {i + 1}</span>
+                    <p className="text-[11px] leading-relaxed italic text-text-secondary">"{f}"</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </motion.div>
@@ -2093,7 +2104,7 @@ const Step7Summary = () => {
           <CheckCircle2 size={48} className="text-black" />
         </motion.div>
         <h2 className="text-4xl font-black mb-2">Workshop Complete!</h2>
-        <p className="text-text-secondary text-lg">You've built a complete B2B lead generation engine.</p>
+        <p className="text-text-secondary text-lg">You've built a complete growth strategy engine.</p>
         
         {error && (
           <motion.div 
@@ -2286,9 +2297,9 @@ const Step0LeadCapture = React.memo(({
         className="max-w-xl w-full bg-section border border-border rounded-3xl p-8 md:p-12 shadow-2xl"
       >
         <div className="text-center mb-10">
-          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center font-black text-2xl text-black mx-auto mb-6 shadow-lg shadow-primary/20">M</div>
+          <img src={logo} alt="Logo" className="h-16 w-auto mx-auto mb-6" />
           <h1 className="text-3xl md:text-4xl font-black tracking-tight text-text-primary mb-4">
-            {user ? "Complete Your Profile" : "Start Your B2B Growth Workshop"}
+            {user ? "Complete Your Profile" : "Start Your Growth Workshop"}
           </h1>
           <p className="text-text-secondary text-lg">
             {user 
@@ -2918,7 +2929,7 @@ export default function App() {
           whatTheySell: inputs.offer,
           targetIndustry: ind.filter((i: string) => i !== 'Other').join(', '),
           primaryProblem: newOutputs.icps[0]?.painPoints[0] || "",
-          valueProp: newOutputs.globalSolution || newOutputs.valueProp || "Strategic B2B Positioning",
+          valueProp: newOutputs.globalSolution || newOutputs.valueProp || "Strategic Growth Positioning",
           icpSummary: newOutputs.icpSummary,
           gtmStrategy: gtmContext,
           angle: inputs.outreachAngle || 'Authority',
@@ -2979,8 +2990,7 @@ export default function App() {
         <aside className="w-72 border-r border-border fixed h-full bg-bg z-20 hidden lg:block">
           <div className="p-8">
             <div className="flex items-center gap-2 mb-12">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center font-black text-black">B2B</div>
-              <span className="font-bold text-xl tracking-tight text-text-primary">Lead Gen</span>
+              <img src={logo} alt="Logo" className="h-10 w-auto" />
             </div>
             <nav className="space-y-1">
               {steps.map(s => (

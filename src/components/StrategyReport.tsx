@@ -19,8 +19,8 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
             <span className="font-black tracking-tighter text-2xl uppercase">Myntmore Workshop</span>
           </div>
           <h1 className="text-7xl font-black mb-6 leading-[0.9] uppercase tracking-tight">
-            B2B Lead Generation <br />
-            <span className="text-primary italic">Strategy Report</span>
+            Growth Strategy <br />
+            <span className="text-primary italic">Workshop Report</span>
           </h1>
           <div className="h-2 w-32 bg-primary mb-12"></div>
           <p className="text-2xl font-bold text-gray-800 max-w-2xl mb-4">

@@ -670,12 +670,15 @@ export const generateCampaignFlow = async (type: string, tone: string, cta: stri
 
 export interface OutreachEngineOutput {
   strategySummary: string;
-  subjectLines: string[]; // Exactly 5
-  coldEmails: {
-    subject: string;
+  linkedIn: {
+    connectionRequest: string;
+    followUps: string[];
+  };
+  email: {
+    subjectLine: string;
     body: string;
-  }[]; // 3-4 total
-  shortOpeners: string[]; // 3-4 total
+    followUps: string[];
+  };
 }
 
 export const generateOutreachEngine = async (inputs: {
@@ -711,45 +714,21 @@ export const generateOutreachEngine = async (inputs: {
     -------------------------------------
     OUTPUT REQUIREMENTS:
     
-    A. SUBJECT LINES (Generate EXACTLY 5)
-    Rules:
-    - Max 8 words
-    - Each must be a DIFFERENT angle:
-      1. Pattern interrupt
-      2. Pain-based
-      3. Curiosity gap
-      4. Outcome-driven
-      5. Contrarian
-    - No generic phrases.
+    A. LinkedIn Logic
+    - Connection Request: Short, human-to-human. No pitch.
+    - Follow-ups: 3 distinct follow-ups that lean into the ${inputs.angle} angle.
     
-    B. COLD EMAILS (Generate 3 or 4)
-    Rules:
-    - Short (4–6 lines max)
-    - Use variables: {firstname}, {lastname}, {company}
-    - Personalized to the ICP and Pain Points
-    - Clear CTA
-    - No fluff.
-    
-    C. SHORT OPENERS (Generate 3 or 4)
-    Rules:
-    - 1–2 lines only
-    - Open-ended, designed to start a conversation
-    - Must feel natural and human.
+    B. Email Logic
+    - Subject Line: Pattern interrupt or authority-based.
+    - Body: 1 primary outreach email (short, 3-5 lines).
+    - Follow-ups: 2 distinct follow-ups.
     
     GLOBAL WRITING RULES:
     - No em dashes (—).
     - No corporate jargon.
     - Sharp, clean sentences.
     
-    Return a JSON object with:
-    {
-      "strategySummary": "Explain the psychological hook for this angle (1-2 lines)",
-      "subjectLines": ["Subject 1", "Subject 2", "Subject 3", "Subject 4", "Subject 5"],
-      "coldEmails": [
-        { "subject": "...", "body": "..." }
-      ],
-      "shortOpeners": ["Opener 1", "Opener 2", "..."]
-    }
+    Return a JSON object following the OutreachEngineOutput interface.
   `;
 
   const response = await ai.models.generateContent({
@@ -761,21 +740,25 @@ export const generateOutreachEngine = async (inputs: {
         type: Type.OBJECT,
         properties: {
           strategySummary: { type: Type.STRING },
-          subjectLines: { type: Type.ARRAY, items: { type: Type.STRING } },
-          coldEmails: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                subject: { type: Type.STRING },
-                body: { type: Type.STRING }
-              },
-              required: ["subject", "body"]
-            }
+          linkedIn: {
+            type: Type.OBJECT,
+            properties: {
+              connectionRequest: { type: Type.STRING },
+              followUps: { type: Type.ARRAY, items: { type: Type.STRING } }
+            },
+            required: ["connectionRequest", "followUps"]
           },
-          shortOpeners: { type: Type.ARRAY, items: { type: Type.STRING } }
+          email: {
+            type: Type.OBJECT,
+            properties: {
+              subjectLine: { type: Type.STRING },
+              body: { type: Type.STRING },
+              followUps: { type: Type.ARRAY, items: { type: Type.STRING } }
+            },
+            required: ["subjectLine", "body", "followUps"]
+          }
         },
-        required: ["strategySummary", "subjectLines", "coldEmails", "shortOpeners"]
+        required: ["strategySummary", "linkedIn", "email"]
       }
     }
   });
