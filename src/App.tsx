@@ -836,63 +836,20 @@ const Step2ICPBuilder = () => {
   const [activeIcp, setActiveIcp] = useState<1 | 2 | 3>(1);
 
   const handleGenerate = async () => {
-    setShowErrors(true);
     setLoading(true);
     setError(null);
     
-    // 1. SINGLE SOURCE OF TRUTH: Build ICP objects accounting for "Other" inputs
-    const inputs = state.inputs as any;
-    const icps = [1, 2, 3].map(index => {
-      const roles = [
-        ...(inputs[`icp${index}_roles`] || []),
-        ...(inputs[`icp${index}_rolesOther`]
-          ? inputs[`icp${index}_rolesOther`].split(",").map((r: string) => r.trim()).filter(Boolean)
-          : [])
-      ];
-
-      const industries = [
-        ...(inputs[`icp${index}_industries`] || []),
-        ...(inputs[`icp${index}_industriesOther`]
-          ? inputs[`icp${index}_industriesOther`].split(",").map((i: string) => i.trim()).filter(Boolean)
-          : [])
-      ];
-
-      const companySizes = inputs[`icp${index}_sizes`] || [];
-
-      return { roles, industries, companySizes };
-    });
-
-    // 2. DEBUG LOG (TEMPORARY)
-    console.log("Built ICPs:", icps);
-
-    // 3. VALIDATE: At least one ICP must be fully complete
-    const hasValidICP = icps.some(icp => 
-      icp.roles.length > 0 && 
-      icp.industries.length > 0 && 
-      icp.companySizes.length > 0
-    );
-
-    if (!hasValidICP) {
-      setError("Please complete all required fields (Role, Size, and Industry) for at least one ICP before generating.");
-      setLoading(false);
-      return;
-    }
-
-    // Ensure we have latest state before proceeding
+    // UI should NEVER block prematurely. Let system process then decide validity.
     setTimeout(async () => {
-      const firstError = document.querySelector(".border-red-500, .border-red-500\\/50");
-      if (firstError) {
-        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        setLoading(false);
-        return;
-      }
-
       try {
         await generateOutput(2);
+        setError(null); // Success overrides any previous error
       } catch (err: any) {
-        setError(err.message || "Something went wrong. Please try again.");
+        // Error only shows when truly invalid (handled inside generateOutput)
+        console.warn("Generation stopped:", err.message);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }, 0);
   };
 
@@ -3000,10 +2957,42 @@ export default function App() {
           }
         }));
       } else if (step === 2) {
-        const validIcps = [buildIcp(1, currentInputs!), buildIcp(2, currentInputs!), buildIcp(3, currentInputs!)].filter(Boolean);
-        
-        if (validIcps.length === 0) {
-          throw new Error("Please complete all required fields (Role, Size, and Industry) for at least one ICP before generating.");
+        // SINGLE SOURCE OF TRUTH: Construct final ICPs from inputs (accounting for "Other" fields)
+        const inputs = currentInputs! as any;
+        const icps = [1, 2, 3].map(index => {
+          const roles = [
+            ...(inputs[`icp${index}_roles`] || []),
+            ...(inputs[`icp${index}_rolesOther`]
+              ? inputs[`icp${index}_rolesOther`].split(",").map((r: string) => r.trim()).filter(Boolean)
+              : [])
+          ];
+
+          const industries = [
+            ...(inputs[`icp${index}_industries`] || []),
+            ...(inputs[`icp${index}_industriesOther`]
+              ? inputs[`icp${index}_industriesOther`].split(",").map((i: string) => i.trim()).filter(Boolean)
+              : [])
+          ];
+
+          const companySizes = inputs[`icp${index}_sizes`] || [];
+
+          return { roles, industries, companySizes };
+        });
+
+        // DEBUG LOG (TEMPORARY)
+        console.log("Built ICPs for Generation:", icps);
+
+        const validIcps = icps.filter(icp =>
+          icp.roles.length > 0 &&
+          icp.industries.length > 0 &&
+          icp.companySizes.length > 0
+        ).map((icp, idx) => ({
+          ...icp,
+          name: `ICP ${idx + 1}`
+        }));
+
+        if (!validIcps.length) {
+          throw new Error("Please define at least one ICP properly (Roles, Industries, and Sizes are required)");
         }
 
         const result = await gemini.generateDetailedICPs({
