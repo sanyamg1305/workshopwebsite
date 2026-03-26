@@ -2359,10 +2359,9 @@ const Step0LeadCapture = React.memo(({
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase text-text-secondary tracking-widest">Phone Number *</label>
+                <label className="text-xs font-bold uppercase text-text-secondary tracking-widest">Phone Number</label>
                 <input
                   type="tel"
-                  required
                   className="w-full px-4 py-4 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg text-lg transition-all"
                   value={localInputs.phone}
                   onChange={(e) => handleChange('phone', e.target.value)}
@@ -2371,10 +2370,9 @@ const Step0LeadCapture = React.memo(({
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase text-text-secondary tracking-widest">Company Name *</label>
+                <label className="text-xs font-bold uppercase text-text-secondary tracking-widest">Company Name</label>
                 <input
                   type="text"
-                  required
                   className="w-full px-4 py-4 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg text-lg transition-all"
                   value={localInputs.companyName}
                   onChange={(e) => handleChange('companyName', e.target.value)}
@@ -2387,20 +2385,10 @@ const Step0LeadCapture = React.memo(({
 
             <button
               type="submit"
-              disabled={loading}
-              className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-primary/30 flex items-center justify-center gap-3 disabled:opacity-50"
+              className="w-full py-5 bg-primary text-black rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-primary/30 flex items-center justify-center gap-3"
             >
-              {loading ? (
-                <>
-                  <Loader2 className="animate-spin" size={24} />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  Enter Workshop
-                  <ArrowRight size={24} />
-                </>
-              )}
+              Enter Workshop
+              <ArrowRight size={24} />
             </button>
             <button 
               type="button"
@@ -2682,13 +2670,15 @@ export default function App() {
     }
   };
 
-  const handleSubmit = async (formData: any) => {
+  const handleSubmit = (formData: any) => {
     const { fullName, workEmail, phone, companyName } = formData;
     
-    // Update global state first so handleSubmit can use it if needed, 
-    // though here we use the formData directly for the Supabase call
+    // 1. IMPROVEMENT: Immediate state update and navigation (non-blocking)
     setState(prev => ({
       ...prev,
+      leadFormFilled: true,
+      currentStep: 1,
+      completedSteps: [...prev.completedSteps.filter(s => s !== 0), 0],
       inputs: {
         ...prev.inputs,
         fullName,
@@ -2698,60 +2688,53 @@ export default function App() {
       }
     }));
 
-    setLoading(true);
-    setError('');
+    // 2. IMPROVEMENT: Async Background Save (No await)
+    const runBackgroundSave = async () => {
+      console.log("Saving profile data in background...");
+      try {
+        if (user) {
+          // Firebase Save
+          await setDoc(doc(db, 'users', user.uid, 'workshop', 'active'), {
+            ...state,
+            leadFormFilled: true,
+            currentStep: 1,
+            completedSteps: [0],
+            inputs: { ...state.inputs, fullName, workEmail, phone, companyName }
+          });
+        }
 
-    console.log("Submitting lead form...", formData);
-    try {
-      if (user) {
-        console.log("Saving to Firestore...");
-        await setDoc(doc(db, 'users', user.uid, 'workshop', 'active'), {
-          ...state,
-          leadFormFilled: true,
-          currentStep: 1,
-          completedSteps: [0],
-          inputs: { ...state.inputs, fullName, workEmail, phone, companyName }
-        });
-        console.log("Firestore Save complete.");
+        // Supabase Upsert (Non-blocking tracking)
+        const { data, error: sbError } = await supabase
+          .from('workshop_submissions')
+          .upsert({
+            user_uid: user?.uid,
+            user_email: user?.email,
+            full_name: fullName,
+            work_email: workEmail,
+            phone: phone,
+            company_name: companyName,
+            lead_role: state.inputs.leadRole,
+            current_step: 0,
+            workshop_inputs: { ...state.inputs, fullName, workEmail, phone, companyName },
+            workshop_outputs: state.outputs
+          }, { onConflict: 'user_uid' })
+          .select()
+          .single();
+
+        if (sbError) {
+          console.warn("Supabase Upsert Error (Non-blocking):", sbError);
+        } else if (data) {
+          setSubmissionId(data.id);
+          const leadData = { fullName, workEmail, phone, companyName, leadRole: state.inputs.leadRole, submissionId: data.id };
+          localStorage.setItem('userLeadData', JSON.stringify(leadData));
+        }
+        console.log("Background profile save complete.");
+      } catch (err: any) {
+        console.error("Background Save Error:", err);
       }
+    };
 
-      console.log("Saving to Supabase...");
-      // Legacy support for Supabase tracking
-      const { data, error: sbError } = await supabase
-        .from('workshop_submissions')
-        .insert({
-          user_uid: user?.uid,
-          user_email: user?.email,
-          full_name: fullName,
-          work_email: workEmail,
-          phone: phone,
-          company_name: companyName,
-          lead_role: state.inputs.leadRole,
-          current_step: 0,
-          workshop_inputs: { ...state.inputs, fullName, workEmail, phone, companyName },
-          workshop_outputs: state.outputs
-        })
-        .select()
-        .single();
-
-      if (sbError) {
-        console.warn("Supabase Insert Error (Non-blocking):", sbError);
-      } else if (data) {
-        setSubmissionId(data.id);
-        const leadData = { fullName, workEmail, phone, companyName, leadRole: state.inputs.leadRole, submissionId: data.id };
-        localStorage.setItem('userLeadData', JSON.stringify(leadData));
-      }
-
-      console.log("Supabase Save complete.");
-      setState(prev => ({ ...prev, leadFormFilled: true }));
-      completeStep(0);
-      setStep(1);
-    } catch (err: any) {
-      console.error("Workshop Start Error:", err);
-      setError('Failed to start workshop. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    runBackgroundSave();
   };
 
 
