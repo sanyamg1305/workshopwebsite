@@ -2431,7 +2431,7 @@ export default function App() {
       }
     }
 
-    return { ...INITIAL_WORKSHOP_STATE, isCheckingStatus: false } as WorkshopState;
+    return { ...INITIAL_WORKSHOP_STATE, isCheckingStatus: true } as WorkshopState;
   });
 
   const [showResumeModal, setShowResumeModal] = useState(false);
@@ -2440,12 +2440,23 @@ export default function App() {
   const { saveInBackground, isSaving: isSbSaving } = useNonBlockingSave();
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'syncing'>('idle');
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [authIsReady, setAuthIsReady] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // ── PHASE 3: CRASH DETECTION ──
+  useEffect(() => {
+    const handleError = (message: any, source: any, lineno: any, colno: any, error: any) => {
+      console.error("Global Error captured:", error || message);
+    };
+    window.onerror = handleError;
+    return () => { window.onerror = null; };
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
+      
       if (firebaseUser) {
         setState((prev) => ({ ...prev, isCheckingStatus: true }));
         try {
@@ -2480,7 +2491,10 @@ export default function App() {
           console.warn('Error checking for existing session', err);
         } finally {
           setState((prev) => ({ ...prev, isCheckingStatus: false }));
+          setAuthIsReady(true);
         }
+      } else {
+        setAuthIsReady(true);
       }
     });
     return () => unsubscribe();
@@ -2890,18 +2904,22 @@ export default function App() {
     { id: 7, label: 'Wrap Up', icon: LayoutDashboard },
   ];
 
-  if (!user || !state.leadFormFilled || state.isCheckingStatus) {
+  if (!authIsReady || state.isCheckingStatus) {
     return (
-      <WorkshopContext.Provider value={{ state, setStep, updateInput, completeStep, completeAndGoToStep, generateOutput, updateOutput, setSubmissionId }}>
-        {state.isCheckingStatus ? (
-          <div className="fixed inset-0 bg-bg flex flex-col items-center justify-center gap-6">
-            <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center font-black text-2xl text-black shadow-lg shadow-primary/20 animate-bounce">M</div>
-            <div className="flex flex-col items-center gap-2">
-              <Loader2 className="animate-spin text-primary" size={32} />
-              <p className="text-text-secondary font-bold uppercase tracking-widest text-xs">Verifying Access...</p>
-            </div>
-          </div>
-        ) : (
+      <div className="fixed inset-0 bg-bg flex flex-col items-center justify-center gap-6">
+        <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center font-black text-2xl text-black shadow-lg shadow-primary/20 animate-bounce">M</div>
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="animate-spin text-primary" size={32} />
+          <p className="text-text-secondary font-bold uppercase tracking-widest text-xs">Verifying Access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  try {
+    if (!user || !state.leadFormFilled) {
+      return (
+        <WorkshopContext.Provider value={{ state, setStep, updateInput, completeStep, completeAndGoToStep, generateOutput, updateOutput, setSubmissionId }}>
           <Step0LeadCapture
             user={user}
             loading={loading}
@@ -2911,12 +2929,23 @@ export default function App() {
             onLogout={handleLogout}
             onSubmit={handleSubmit}
           />
-        )}
-      </WorkshopContext.Provider>
+        </WorkshopContext.Provider>
+      );
+    }
+  } catch (err) {
+    console.error("Critical Render Crash in Login Gate:", err);
+    return (
+      <div className="fixed inset-0 bg-bg flex flex-col items-center justify-center p-8 text-center">
+        <AlertCircle className="text-red-500 mb-4" size={48} />
+        <h2 className="text-2xl font-black uppercase mb-2">Something Went Wrong</h2>
+        <p className="text-text-secondary text-sm max-w-md">We encountered an error while loading your session. Please try refreshing the page.</p>
+        <button onClick={() => window.location.reload()} className="mt-6 px-8 py-3 bg-primary text-black rounded-xl font-bold">Refresh Page</button>
+      </div>
     );
   }
 
-  return (
+  try {
+    return (
     <WorkshopContext.Provider value={{ state, setStep, updateInput, completeStep, completeAndGoToStep, generateOutput, updateOutput, setSubmissionId }}>
       <div className="print:hidden flex min-h-screen bg-bg">
         {/* Sidebar */}
@@ -3114,7 +3143,18 @@ export default function App() {
         {showResetModal && <ResetModal onConfirm={handleResetWorkshop} onCancel={() => setShowResetModal(false)} />}
       </AnimatePresence>
     </WorkshopContext.Provider>
-  );
+    );
+  } catch (err) {
+    console.error("Critical Render Crash in Workshop Phase:", err);
+    return (
+      <div className="fixed inset-0 bg-bg flex flex-col items-center justify-center p-8 text-center">
+        <AlertCircle className="text-red-500 mb-4" size={48} />
+        <h2 className="text-2xl font-black uppercase mb-2">Something Went Wrong</h2>
+        <p className="text-text-secondary text-sm max-w-md">We encountered an error while loading your session. Please try refreshing the page.</p>
+        <button onClick={() => window.location.reload()} className="mt-6 px-8 py-3 bg-primary text-black rounded-xl font-bold">Refresh Page</button>
+      </div>
+    );
+  }
 }
 
 /*
