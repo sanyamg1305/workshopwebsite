@@ -157,7 +157,7 @@ export interface WorkshopState {
   outputs: {
     profileClarityScore: number;
     scoreMeaning: string;
-    scoreExplanation: string;
+    scoreExplanation: gemini.DiagnosticReport | string;
     optimizedHeadlines: string[];
     optimizedAbout: string;
     positioningAngles: string;
@@ -683,32 +683,93 @@ const Step1ProfileCheck = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="p-6 bg-section border border-border rounded-2xl">
-              <h4 className="text-xs font-bold uppercase text-text-secondary mb-3">What Your Score Means</h4>
-              <div className="space-y-2">
-                {[
-                  { range: "90–100", label: "Excellent", min: 90 },
-                  { range: "70–89", label: "Strong", min: 70 },
-                  { range: "50–69", label: "Average", min: 50 },
-                  { range: "Below 50", label: "Needs Improvement", min: 0 }
-                ].map((tier) => {
-                  const isCurrent = tier.range === "Below 50" 
-                    ? state.outputs.profileClarityScore < 50 
-                    : (state.outputs.profileClarityScore >= tier.min && (tier.min === 90 ? state.outputs.profileClarityScore <= 100 : state.outputs.profileClarityScore < (tier.min + 20)));
-                  
-                  return (
-                    <div key={tier.label} className={`flex items-center justify-between p-2 rounded-lg border ${isCurrent ? 'bg-primary/20 border-primary text-primary font-bold' : 'border-transparent text-text-secondary opacity-50'}`}>
-                      <span className="text-xs uppercase tracking-wider">{tier.label}</span>
-                      <span className="text-xs">{tier.range}</span>
+          <div className="grid grid-cols-1 gap-8">
+            <div className="p-8 bg-section border border-border rounded-3xl space-y-8">
+              <div>
+                <h4 className="text-xs font-black uppercase text-primary mb-3 tracking-[0.2em] flex items-center gap-2">
+                  <Flame size={14} />
+                  Diagnostic Report
+                </h4>
+                {typeof state.outputs.scoreExplanation !== 'string' ? (
+                  <div className="space-y-8">
+                    {/* Overall Summary */}
+                    <div className="pb-6 border-b border-border">
+                      <h5 className="text-[10px] font-black uppercase text-text-secondary mb-2 tracking-widest">🔹 Overall Summary</h5>
+                      <p className="text-lg font-bold italic leading-snug">
+                        "{state.outputs.scoreExplanation.overallSummary}"
+                      </p>
                     </div>
-                  );
-                })}
+
+                    {/* Score Breakdown */}
+                    <div className="space-y-6">
+                      <h5 className="text-[10px] font-black uppercase text-text-secondary mb-2 tracking-widest">🔹 Score Breakdown</h5>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {[
+                          { id: 'clarity', label: 'Clarity' },
+                          { id: 'specificity', label: 'Specificity' },
+                          { id: 'differentiation', label: 'Differentiation' },
+                          { id: 'proof', label: 'Proof' },
+                          { id: 'execution', label: 'Execution' }
+                        ].map((dim) => {
+                          const data = (state.outputs.scoreExplanation as gemini.DiagnosticReport).scoreBreakdown[dim.id as keyof gemini.DiagnosticReport['scoreBreakdown']];
+                          return (
+                            <div key={dim.id} className="p-4 bg-bg rounded-2xl border border-border/50">
+                              <div className="flex justify-between items-center mb-3">
+                                <span className="text-xs font-black uppercase tracking-wider">{dim.label}</span>
+                                <span className="text-primary font-black">
+                                  {data.score} <span className="text-[10px] opacity-40">/ 20</span>
+                                </span>
+                              </div>
+                              <ul className="space-y-1.5">
+                                {data.bullets.map((bullet, idx) => (
+                                  <li key={idx} className="text-[10px] font-medium leading-tight text-text-secondary flex items-start gap-1.5 italic">
+                                    <div className="w-1 h-1 bg-primary/40 rounded-full mt-1.5 shrink-0" />
+                                    {bullet}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Working & Improve */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-border">
+                      <div className="space-y-4">
+                        <h5 className="text-[10px] font-black uppercase text-emerald-500 tracking-widest flex items-center gap-2">
+                          <CheckCircle2 size={12} />
+                          🔹 What's Working
+                        </h5>
+                        <ul className="space-y-2">
+                          {state.outputs.scoreExplanation.whatsWorking.map((item, i) => (
+                            <li key={i} className="text-xs font-bold flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="space-y-4">
+                        <h5 className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
+                          <AlertCircle size={12} />
+                          🔹 What to Improve
+                        </h5>
+                        <ul className="space-y-2">
+                          {state.outputs.scoreExplanation.toImprove.map((item, i) => (
+                            <li key={i} className="text-xs font-bold flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 bg-primary rounded-full" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm leading-relaxed">{state.outputs.scoreExplanation}</p>
+                )}
               </div>
-            </div>
-            <div className="p-6 bg-section border border-border rounded-2xl">
-              <h4 className="text-xs font-bold uppercase text-text-secondary mb-3">Score Explanation</h4>
-              <p className="text-sm leading-relaxed">{state.outputs.scoreExplanation}</p>
             </div>
           </div>
 

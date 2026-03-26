@@ -208,21 +208,72 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
             </Layer1>
 
            <Layer2 title="Strategic Score Analysis">
-              <div className="space-y-4">
-                 <h5 className="text-[9px] font-black uppercase text-gray-400 italic">Clarity Metrics</h5>
-                 <p className="text-xs font-medium leading-relaxed">{outputs.scoreExplanation}</p>
-              </div>
-              <div className="space-y-4">
-                 <h5 className="text-[9px] font-black uppercase text-gray-400 italic">Critical Optimization Points</h5>
-                 <ul className="space-y-2">
-                    {outputs.scoreMeaning?.split('.').filter(Boolean).slice(0, 4).map((item, i) => (
-                       <li key={i} className="text-[10px] font-bold text-gray-600 flex items-start gap-2">
-                          <div className="w-1.5 h-1.5 bg-primary rounded-full mt-1.5 shrink-0" />
-                          {item.trim()}
-                       </li>
-                    ))}
-                 </ul>
-              </div>
+              {typeof outputs.scoreExplanation !== 'string' ? (
+                <div className="space-y-8">
+                  <div className="pb-4 border-b border-gray-100">
+                    <h5 className="text-[9px] font-black uppercase text-gray-400 italic mb-2">Overall Strategic Position</h5>
+                    <p className="text-xs font-bold leading-relaxed italic">"{outputs.scoreExplanation.overallSummary}"</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-x-12 gap-y-8">
+                    {[
+                      { id: 'clarity', label: 'Clarity' },
+                      { id: 'specificity', label: 'Specificity' },
+                      { id: 'differentiation', label: 'Differentiation' },
+                      { id: 'proof', label: 'Proof' },
+                      { id: 'execution', label: 'Execution' }
+                    ].map((dim) => {
+                      const data = (outputs.scoreExplanation as any).scoreBreakdown[dim.id];
+                      return (
+                        <div key={dim.id} className="space-y-3">
+                          <div className="flex justify-between items-center border-b border-gray-50 pb-1">
+                            <span className="text-[9px] font-black uppercase tracking-widest">{dim.label}</span>
+                            <span className="text-[10px] font-black text-primary">{data.score}/20</span>
+                          </div>
+                          <ul className="space-y-1.5">
+                            {data.bullets.map((bullet: string, idx: number) => (
+                              <li key={idx} className="text-[9px] font-medium text-gray-500 leading-tight flex items-start gap-1.5">
+                                <div className="w-1 h-1 bg-primary/40 rounded-full mt-1.5 shrink-0" />
+                                {bullet}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-12 pt-6 border-t border-gray-100">
+                    <div className="space-y-4">
+                      <h5 className="text-[9px] font-black uppercase text-emerald-600 italic">Core Strengths</h5>
+                      <ul className="space-y-2">
+                        {outputs.scoreExplanation.whatsWorking.map((item, i) => (
+                          <li key={i} className="text-[9px] font-bold text-gray-700 flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="space-y-4">
+                      <h5 className="text-[9px] font-black uppercase text-primary italic">Priority Improvements</h5>
+                      <ul className="space-y-2">
+                        {outputs.scoreExplanation.toImprove.map((item, i) => (
+                          <li key={i} className="text-[9px] font-bold text-gray-700 flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 bg-primary rounded-full" />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                   <h5 className="text-[9px] font-black uppercase text-gray-400 italic">Clarity Metrics</h5>
+                   <p className="text-xs font-medium leading-relaxed">{typeof outputs.scoreExplanation === "string" ? outputs.scoreExplanation : outputs.scoreExplanation.overallSummary}</p>
+                </div>
+              )}
            </Layer2>
 
            <Layer3 title="Full Engagement Narrative (LinkedIn About)">
@@ -630,7 +681,7 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
                  <p className="opacity-70 italic">{gtmStrategy?.strategicNarrative || "N/A"}</p>
                  <div className="mt-8 p-6 bg-gray-50 rounded-2xl">
                     <h5 className="text-[9px] font-black uppercase text-black mb-4">Full LinkedIn Profile Logic</h5>
-                    <p className="whitespace-pre-wrap text-[10px]">{outputs.scoreExplanation}</p>
+                    <p className="whitespace-pre-wrap text-[10px]">{typeof outputs.scoreExplanation === "string" ? outputs.scoreExplanation : outputs.scoreExplanation.overallSummary}</p>
                  </div>
               </div>
            </Layer3>

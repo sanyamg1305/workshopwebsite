@@ -14,6 +14,19 @@ const getAI = () => {
   return new GoogleGenAI({ apiKey });
 };
 
+export interface DiagnosticReport {
+  overallSummary: string;
+  scoreBreakdown: {
+    clarity: { score: number; bullets: string[] };
+    specificity: { score: number; bullets: string[] };
+    differentiation: { score: number; bullets: string[] };
+    proof: { score: number; bullets: string[] };
+    execution: { score: number; bullets: string[] };
+  };
+  whatsWorking: string[];
+  toImprove: string[];
+}
+
 export const optimizeLinkedInProfile = async (inputs: {
   headline: string;
   about: string;
@@ -80,14 +93,14 @@ export const optimizeLinkedInProfile = async (inputs: {
        - 50–69: Generic, vague, or partially unclear positioning.
        - Below 50: Weak positioning requires fundamental rework.
 
-    6. Score Explanation (MANDATORY):
+    6. Score Explanation (MANDATORY STRUCTURE):
        - scoreMeaning: Briefly state the achievement level (e.g., "Top-Tier Positioning").
        - scoreExplanation: A detailed breakdown. YOU MUST justify the score by referencing the 5 criteria above. Explain exactly where they gained or lost points in Clarity, Specificity, Differentiation, Proof, and Execution. Mention how well they aligned with the Designation: ${inputs.targetIcp}.
 
     Return a JSON object with:
     - clarityScore: number
     - scoreMeaning: string
-    - scoreExplanation: string
+    - scoreExplanation: object (as defined below)
     - headlines: array of 3 strings
     - aboutSection: string
     - positioningAngles: string
@@ -99,7 +112,46 @@ export const optimizeLinkedInProfile = async (inputs: {
         properties: {
           clarityScore: { type: Type.NUMBER },
           scoreMeaning: { type: Type.STRING },
-          scoreExplanation: { type: Type.STRING },
+          scoreExplanation: { 
+            type: Type.OBJECT,
+            properties: {
+              overallSummary: { type: Type.STRING },
+              scoreBreakdown: {
+                type: Type.OBJECT,
+                properties: {
+                  clarity: { 
+                    type: Type.OBJECT,
+                    properties: { score: { type: Type.NUMBER }, bullets: { type: Type.ARRAY, items: { type: Type.STRING } } },
+                    required: ["score", "bullets"]
+                  },
+                  specificity: { 
+                    type: Type.OBJECT,
+                    properties: { score: { type: Type.NUMBER }, bullets: { type: Type.ARRAY, items: { type: Type.STRING } } },
+                    required: ["score", "bullets"]
+                  },
+                  differentiation: { 
+                    type: Type.OBJECT,
+                    properties: { score: { type: Type.NUMBER }, bullets: { type: Type.ARRAY, items: { type: Type.STRING } } },
+                    required: ["score", "bullets"]
+                  },
+                  proof: { 
+                    type: Type.OBJECT,
+                    properties: { score: { type: Type.NUMBER }, bullets: { type: Type.ARRAY, items: { type: Type.STRING } } },
+                    required: ["score", "bullets"]
+                  },
+                  execution: { 
+                    type: Type.OBJECT,
+                    properties: { score: { type: Type.NUMBER }, bullets: { type: Type.ARRAY, items: { type: Type.STRING } } },
+                    required: ["score", "bullets"]
+                  }
+                },
+                required: ["clarity", "specificity", "differentiation", "proof", "execution"]
+              },
+              whatsWorking: { type: Type.ARRAY, items: { type: Type.STRING } },
+              toImprove: { type: Type.ARRAY, items: { type: Type.STRING } }
+            },
+            required: ["overallSummary", "scoreBreakdown", "whatsWorking", "toImprove"]
+          },
           headlines: {
             type: Type.ARRAY,
             items: { type: Type.STRING }
