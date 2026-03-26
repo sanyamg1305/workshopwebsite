@@ -429,6 +429,53 @@ const OutputCard = ({ title, children, highlight = false, copyText, icon: Icon }
   </motion.div>
 );
 
+const ScoreTooltip = ({ title, definition, bullets, goal }: { title: string, definition: string, bullets: string[], goal: string }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="relative inline-block ml-1.5 align-middle">
+      <button
+        onMouseEnter={() => setIsOpen(true)}
+        onMouseLeave={() => setIsOpen(false)}
+        onClick={() => setIsOpen(!isOpen)}
+        className="opacity-70 hover:opacity-100 transition-opacity p-0.5"
+      >
+        <Info size={14} className="text-text-secondary group-hover:text-primary" />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            transition={{ duration: 0.15 }}
+            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-[280px] p-5 bg-black border border-white/10 rounded-2xl shadow-2xl z-50 pointer-events-none"
+          >
+            <div className="space-y-3 text-left">
+              <h5 className="text-sm font-black uppercase tracking-widest text-primary">{title}</h5>
+              <p className="text-[11px] font-medium text-white leading-relaxed">{definition}</p>
+              <ul className="space-y-1.5">
+                {bullets.map((b, i) => (
+                  <li key={i} className="flex items-center gap-2 text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                    <div className="w-1 h-1 rounded-full bg-primary" />
+                    {b}
+                  </li>
+                ))}
+              </ul>
+              <div className="pt-2 border-t border-white/5">
+                <p className="text-[10px] font-black uppercase tracking-widest text-primary/80">Goal: <span className="text-white">{goal}</span></p>
+              </div>
+            </div>
+            {/* Arrow */}
+            <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-black" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 // --- Steps ---
 
 const Step1ProfileCheck = () => {
@@ -608,11 +655,27 @@ const Step1ProfileCheck = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col items-center justify-center p-8 bg-section rounded-2xl border border-border group hover:border-primary transition-colors">
               <div className="text-6xl font-black text-primary mb-2 group-hover:scale-110 transition-transform">{state.outputs.profileClarityScore}</div>
-              <div className="text-sm font-bold uppercase tracking-widest text-text-secondary">Clarity Score</div>
+              <div className="flex items-center text-sm font-bold uppercase tracking-widest text-text-secondary">
+                Clarity Score
+                <ScoreTooltip 
+                  title="Clarity Score"
+                  definition="Measures how clearly your profile communicates who you help, what you do, and what outcome you deliver."
+                  bullets={["Positioning sharpness", "Message simplicity", "ICP alignment"]}
+                  goal="Make your profile instantly understandable in <5 seconds"
+                />
+              </div>
             </div>
             <div className="flex flex-col items-center justify-center p-8 bg-section rounded-2xl border border-border group hover:border-primary transition-colors">
               <div className="text-6xl font-black text-primary mb-2 group-hover:scale-110 transition-transform">{state.outputs.keywordScore}</div>
-              <div className="text-sm font-bold uppercase tracking-widest text-text-secondary">Keyword Score</div>
+              <div className="flex items-center text-sm font-bold uppercase tracking-widest text-text-secondary">
+                Keyword Score
+                <ScoreTooltip 
+                  title="Keyword Score"
+                  definition="Measures how well your profile is optimized for discoverability on LinkedIn."
+                  bullets={["Presence of relevant keywords", "Alignment with your target ICP searches", "Role + industry keyword coverage"]}
+                  goal="Help your profile appear in more relevant searches"
+                />
+              </div>
             </div>
           </div>
 
