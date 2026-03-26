@@ -37,7 +37,8 @@ import {
   Upload,
   RotateCcw,
   History,
-  Mail
+  Mail,
+  Info
 } from 'lucide-react';
 import * as gemini from './services/gemini';
 import { supabase } from './services/supabase';
@@ -161,6 +162,8 @@ export interface WorkshopState {
     globalSolution?: string;
     profileImprovements?: string[];
   };
+  isGenerating: boolean;
+  generationError: string | null;
 }
 
 const WorkshopContext = createContext<{
@@ -575,40 +578,19 @@ const Step1ProfileCheck = () => {
           placeholder="Select Tone(s)"
         />
 
-        {state.outputs.profileClarityScore === 0 ? (
-          <div className="flex justify-center pt-4">
-            <ActionButton
-              onClick={handleOptimize}
-              loading={loading}
-              label="Optimize My Profile"
-              microtext="Build authority & clarity"
-              disabled={!state.inputs.linkedinHeadline || !state.inputs.linkedinAbout || state.inputs.targetIcp.length === 0 || state.inputs.tonePreference.length === 0 || !state.inputs.offer || !state.inputs.companyName || (!state.inputs.leadRole.length && !state.inputs.leadRoleOther)}
-            />
-          </div>
-        ) : (
-          <div className="space-y-6">
+        <div className="mt-8 space-y-6">
+          {state.outputs.profileClarityScore > 0 && (
             <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
               <p className="text-emerald-500 font-bold text-sm">✓ Profile Optimization Complete</p>
-            </div>
-            <div className="flex flex-col items-center gap-4">
-              <ActionButton
-                onClick={() => {
-                  completeStep(1);
-                  setStep(2);
-                }}
-                label="Generate ICP Profiles"
-                microtext="Identify who you should be targeting"
-              />
-              <button
+              <button 
                 onClick={handleOptimize}
-                disabled={loading}
-                className="text-text-secondary hover:text-primary transition-all text-xs font-bold uppercase tracking-widest"
+                className="mt-2 text-[10px] font-black uppercase tracking-widest text-text-secondary hover:text-primary transition-all"
               >
-                {loading ? "Optimizing..." : "Regenerate Profile"}
+                Regenerate Optimization
               </button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {error && (
@@ -860,44 +842,16 @@ const Step2ICPBuilder = () => {
           <button onClick={() => setError(null)} className="px-3 py-1.5 bg-red-500/20 rounded-lg font-bold hover:bg-red-500/30 transition-colors text-xs">Dismiss</button>
         </div>
       )}
-      <div className="pt-4 space-y-4">
-        {state.outputs.icps.length === 0 ? (
-          <div className="flex justify-center pt-8">
-            <ActionButton
+      <div className="mt-8 space-y-6">
+        {state.outputs.icps && state.outputs.icps.length > 0 && (
+          <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
+            <p className="text-emerald-500 font-bold text-sm">✓ {state.outputs.icps.length} ICP Profiles Generated</p>
+            <button 
               onClick={handleGenerate}
-              loading={loading}
-              disabled={loading || ([1, 2, 3].every(num => {
-                const roles = state.inputs[`icp${num}_roles` as keyof typeof state.inputs];
-                const sizes = state.inputs[`icp${num}_sizes` as keyof typeof state.inputs];
-                const inds = state.inputs[`icp${num}_industries` as keyof typeof state.inputs];
-                return !(roles && roles.length > 0) && !(sizes && sizes.length > 0) && !(inds && inds.length > 0);
-              }))}
-              label={loading ? "Analyzing Business..." : "Generate ICP Profiles"}
-              microtext="Identify who you should be targeting"
-            />
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
-              <p className="text-emerald-500 font-bold text-sm">✓ Targeted ICPs Identified</p>
-            </div>
-            <div className="flex flex-col items-center gap-4">
-              <ActionButton
-                onClick={() => {
-                  completeStep(2);
-                  setStep(3);
-                }}
-                label="Generate Value Proposition"
-                microtext="Turn ICPs into clear value propositions"
-              />
-              <button
-                onClick={handleGenerate}
-                disabled={loading}
-                className="text-text-secondary hover:text-primary transition-all text-xs font-bold uppercase tracking-widest"
-              >
-                {loading ? "Analyzing..." : "Regenerate ICPs"}
-              </button>
-            </div>
+              className="mt-2 text-[10px] font-black uppercase tracking-widest text-text-secondary hover:text-primary transition-all"
+            >
+              Regenerate ICPs
+            </button>
           </div>
         )}
       </div>
@@ -1123,13 +1077,7 @@ const Step3ValueProp = () => {
             ))}
           </div>
 
-          <div className="flex flex-col items-center gap-6 mt-12 bg-section p-8 rounded-3xl border border-border">
-            <ActionButton
-              onClick={() => completeAndGoToStep(3, 4)}
-              label="Generate Website Assets"
-              microtext="Convert positioning into copy"
-            />
-            
+          <div className="flex flex-col items-center gap-3 mt-12 bg-section p-6 rounded-3xl border border-border">
             <div className="flex gap-4">
               <button
                 onClick={handleGenerate}
@@ -1341,13 +1289,7 @@ const Step4WebsiteBuilder = () => {
           )}
 
           <div className="flex justify-center pt-8">
-            <ActionButton
-              onClick={handleGenerate}
-              loading={loading}
-              label={loading ? "Engineering Prompt..." : "Generate Website Assets"}
-              microtext="Create high-converting landing page copy"
-              disabled={loading}
-            />
+             {/* Main action moved to footer button */}
           </div>
         </div>
       )}
@@ -1468,42 +1410,19 @@ const Step5GTMStrategy = () => {
           <button onClick={() => setError(null)} className="px-3 py-1.5 bg-red-500/20 rounded-lg font-bold hover:bg-red-500/30 transition-colors text-xs">Dismiss</button>
         </div>
       )}
-      <div className="pt-4 space-y-4">
-        {!strategy ? (
-          <div className="flex justify-center pt-8">
-            <ActionButton
-              onClick={handleGenerate}
-              loading={loading}
-              label="Build GTM Strategy"
-              microtext="Map out your distribution roadmap"
-              disabled={loading}
-            />
-          </div>
-        ) : (
-          <div className="space-y-6">
+        <div className="mt-8 space-y-6">
+          {strategy && (
             <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
               <p className="text-emerald-500 font-bold text-sm">✓ GTM Roadmap Synchronized</p>
-            </div>
-            <div className="flex flex-col items-center gap-4">
-              <ActionButton
-                onClick={() => {
-                  completeStep(5);
-                  setStep(6);
-                }}
-                label="Generate Outreach"
-                microtext="Create a structured outbound system"
-              />
-              <button
+              <button 
                 onClick={handleGenerate}
-                disabled={loading}
-                className="text-text-secondary hover:text-primary transition-all text-xs font-bold uppercase tracking-widest"
+                className="mt-2 text-[10px] font-black uppercase tracking-widest text-text-secondary hover:text-primary transition-all"
               >
-                {loading ? "Regenerating..." : "Regenerate Strategy"}
+                Regenerate GTM Strategy
               </button>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
 
       {strategy && (
         <div className="space-y-8">
@@ -1936,40 +1855,19 @@ const Step6OutreachEngine = () => {
           </div>
         </div>
 
-        {!out ? (
-          <div className="flex justify-center pt-8">
-            <ActionButton
-              onClick={handleGenerate}
-              loading={loading}
-              label="Generate Outreach Strategy"
-              microtext={`Create ${state.inputs.outreachAngle}-led messaging`}
-              disabled={loading}
-            />
-          </div>
-        ) : (
-          <div className="space-y-6">
+        <div className="mt-8 space-y-6">
+          {out && (
             <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
               <p className="text-emerald-500 font-bold text-sm">✓ {state.inputs.outreachAngle} Campaign Generated</p>
-            </div>
-            <div className="flex flex-col items-center gap-4">
-              <ActionButton
-                onClick={() => {
-                  completeStep(6);
-                  setStep(7);
-                }}
-                label="Finalize Strategy Report"
-                microtext="Download your complete playbook"
-              />
-              <button
+              <button 
                 onClick={handleGenerate}
-                disabled={loading}
-                className="text-text-secondary hover:text-primary transition-all text-xs font-bold uppercase tracking-widest"
+                className="mt-2 text-[10px] font-black uppercase tracking-widest text-text-secondary hover:text-primary transition-all"
               >
-                {loading ? "Regenerating..." : "Regenerate Single Angle"}
+                Regenerate Outreach
               </button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {error && (
@@ -2547,7 +2445,9 @@ export default function App() {
             outreachEngineOutput: null,
             leadMagnets: [],
             globalSolution: '',
-          }
+          },
+          isGenerating: false,
+          generationError: null
         };
       } catch (e) {
         console.error("Error parsing lead data", e);
@@ -2579,6 +2479,8 @@ export default function App() {
         valuePropTables: [],
         globalSolution: '',
       },
+      isGenerating: false,
+      generationError: null,
     };
   });
 
@@ -2860,6 +2762,7 @@ export default function App() {
   const setSubmissionId = (id: string) => setState(prev => ({ ...prev, submissionId: id }));
 
   const generateOutput = async (step: StepId) => {
+    setState(prev => ({ ...prev, isGenerating: true, generationError: null }));
     const { inputs } = state;
     let newOutputs = { ...state.outputs };
 
@@ -2993,9 +2896,10 @@ export default function App() {
         newOutputs.outreachEngineOutput = outreach;
       }
 
-      setState(prev => ({ ...prev, outputs: newOutputs, completedSteps: [...prev.completedSteps, step] }));
-    } catch (err) {
+      setState(prev => ({ ...prev, outputs: newOutputs, completedSteps: [...prev.completedSteps, step], isGenerating: false, generationError: null }));
+    } catch (err: any) {
       console.error("Error generating output:", err);
+      setState(prev => ({ ...prev, isGenerating: false, generationError: err.message || "Something went wrong." }));
       throw err;
     }
   };
@@ -3141,44 +3045,128 @@ export default function App() {
                 </motion.div>
               </AnimatePresence>
 
-               {/* Navigation Footer */}
-              <div className="mt-20 pt-8 border-t border-border flex items-center justify-between">
+               <div className="mt-20 pt-8 border-t border-border flex items-center justify-between">
                 <button
                   onClick={() => setStep(Math.max(1, state.currentStep - 1) as StepId)}
-                  disabled={state.currentStep === 1}
+                  disabled={state.currentStep === 1 || state.isGenerating}
                   className="px-6 py-3 rounded-xl font-bold text-text-secondary hover:bg-section transition-all disabled:opacity-0"
                 >
                   Back
                 </button>
-                {state.currentStep < 7 && (
                   <div className="relative group">
                     <button
-                      onClick={() => {
-                        if (state.completedSteps.includes(state.currentStep as StepId)) {
+                      disabled={state.isGenerating}
+                      onClick={async () => {
+                        const isCompleted = state.completedSteps.includes(state.currentStep as StepId);
+                        if (!isCompleted) {
+                          try {
+                            await generateOutput(state.currentStep as StepId);
+                          } catch (e) {
+                            console.error("Footer Generation Failed:", e);
+                          }
+                        } else {
                           setStep(Math.min(7, state.currentStep + 1) as StepId);
                         }
                       }}
-                      disabled={!state.completedSteps.includes(state.currentStep as StepId)}
                       className={`
-                        px-8 py-3 rounded-xl font-bold transition-all flex items-center gap-2
-                        ${state.completedSteps.includes(state.currentStep as StepId)
-                          ? 'bg-primary text-black hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-primary/20'
-                          : 'bg-section text-text-secondary opacity-50 cursor-not-allowed grayscale'
-                        }
+                        px-8 py-4 rounded-xl font-black transition-all flex items-center gap-3 shadow-xl
+                        ${state.isGenerating ? 'bg-section text-text-secondary cursor-wait translate-y-1' : 'bg-primary text-black hover:scale-[1.02] active:scale-[0.98] hover:shadow-primary/30'}
                       `}
                     >
-                        {state.currentStep === 1 ? 'Generate ICP' : 
-                         state.currentStep === 2 ? 'Build Value Proposition' :
-                         state.currentStep === 3 ? 'Generate Website Assets' :
-                         state.currentStep === 4 ? 'Create Strategy' :
-                         state.currentStep === 5 ? 'Generate Outreach' :
-                         state.currentStep === 6 ? 'Finalize Strategy Report' :
-                         'Next Step'}
-                        <ArrowRight size={18} />
-                      </button>
+                      {state.isGenerating ? (
+                        <><Loader2 className="animate-spin" size={20} /> Generating Assets...</>
+                      ) : (
+                        <>
+                          {state.completedSteps.includes(state.currentStep as StepId) ? (
+                            <>
+                              {state.currentStep === 1 ? 'Go to ICP Builder' : 
+                               state.currentStep === 2 ? 'Go to Value Proposition' :
+                               state.currentStep === 3 ? 'Generate Website Assets' :
+                               state.currentStep === 4 ? 'Create Strategy' :
+                               state.currentStep === 5 ? 'Generate Outreach' :
+                               state.currentStep === 6 ? 'Finalize Strategy Report' :
+                               'Next Step'}
+                            </>
+                          ) : (
+                            <>
+                              {state.currentStep === 1 ? 'Optimize Profile' : 
+                               state.currentStep === 2 ? 'Generate ICPs' :
+                               state.currentStep === 3 ? 'Generate Value Prop' :
+                               state.currentStep === 4 ? 'Build Website Prompt' :
+                               state.currentStep === 5 ? 'Generate GTM Strategy' :
+                               state.currentStep === 6 ? 'Generate Outreach' :
+                               'Generate Assets'}
+                            </>
+                          )}
+                          <ArrowRight size={20} className={state.isGenerating ? 'hidden' : ''} />
+                        </>
+                      )}
+                    </button>
+                    {state.generationError && (
+                      <div className="absolute bottom-full right-0 mb-4 w-64 p-3 bg-red-500 text-white text-xs font-bold rounded-xl shadow-xl animate-in fade-in slide-in-from-bottom-2">
+                        {state.generationError}
+                      </div>
+                    )}
                   </div>
-                )}
               </div>
+
+              {/* Premium Icon-Driven Footer */}
+              <footer className="mt-32 pt-16 border-t border-border/50 text-center space-y-10 pb-10">
+                <p className="text-xs font-bold text-text-secondary uppercase tracking-[0.3em]">
+                  Explore, connect, or build your growth engine.
+                </p>
+                
+                <div className="flex flex-wrap justify-center gap-8 md:gap-16">
+                  {[
+                    { 
+                      icon: <Linkedin size={24} />, 
+                      label: "Connect", 
+                      href: "https://www.linkedin.com/in/tejasjhaveri/",
+                      tooltip: "LinkedIn"
+                    },
+                    { 
+                      icon: <Image size={24} />, 
+                      label: "Behind the scenes", 
+                      href: "https://www.instagram.com/tejas_jhaveri/",
+                      tooltip: "Instagram"
+                    },
+                    { 
+                      icon: <Calendar size={24} />, 
+                      label: "Book a call", 
+                      href: "https://calendly.com/founder-myntmore/30min?month=2026-03",
+                      tooltip: "Calendly"
+                    },
+                    { 
+                      icon: <Mail size={24} />, 
+                      label: "Get insights", 
+                      href: "https://myntmore.com/website-newsletter/",
+                      tooltip: "Newsletter"
+                    },
+                    { 
+                      icon: <Layers size={24} />, 
+                      label: "Explore services", 
+                      href: "https://myntmoreservices.notion.site/Myntmore-Core-Services-19d522641d38809d94bae2cad1b5c957?source=copy_link",
+                      tooltip: "Services"
+                    }
+                  ].map((item, idx) => (
+                    <motion.a
+                      key={idx}
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group flex flex-col items-center gap-3 opacity-60 hover:opacity-100 transition-all duration-300"
+                      whileHover={{ scale: 1.1 }}
+                    >
+                      <div className="p-4 rounded-2xl bg-section border border-border group-hover:border-primary group-hover:bg-primary/5 group-hover:shadow-[0_0_20px_rgba(255,230,0,0.15)] transition-all">
+                        {item.icon}
+                      </div>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-text-secondary group-hover:text-primary transition-colors">
+                        {item.label}
+                      </span>
+                    </motion.a>
+                  ))}
+                </div>
+              </footer>
             </div>
           </div>
         </main>
