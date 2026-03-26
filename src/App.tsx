@@ -840,7 +840,42 @@ const Step2ICPBuilder = () => {
     setLoading(true);
     setError(null);
     
+    // Ensure we have latest state before proceeding
     setTimeout(async () => {
+      const inputs = state.inputs as any;
+      const num = activeIcp;
+
+      // 1. NORMALIZE INPUTS (MANDATORY)
+      const roles = [
+        ...(inputs[`icp${num}_roles`] || []),
+        ...(inputs[`icp${num}_rolesOther`]
+          ? inputs[`icp${num}_rolesOther`].split(",").map((r: string) => r.trim()).filter(Boolean)
+          : [])
+      ];
+
+      const industries = [
+        ...(inputs[`icp${num}_industries`] || []),
+        ...(inputs[`icp${num}_industriesOther`]
+          ? inputs[`icp${num}_industriesOther`].split(",").map((i: string) => i.trim()).filter(Boolean)
+          : [])
+      ];
+
+      const companySizes = inputs[`icp${num}_sizes`] || [];
+
+      // 2. DEBUG LOG (TEMPORARY)
+      console.log(`[ICP ${num} Validation]`, {
+        roles,
+        industries,
+        companySizes
+      });
+
+      // 3. VALIDATE NORMALIZED DATA
+      if (!roles.length || !industries.length || !companySizes.length) {
+        setError("Please complete all required fields (Roles, Industries, and Company Sizes) before generating.");
+        setLoading(false);
+        return;
+      }
+
       const firstError = document.querySelector(".border-red-500, .border-red-500\\/50");
       if (firstError) {
         firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -849,20 +884,12 @@ const Step2ICPBuilder = () => {
       }
 
       try {
-        // SAFE ACCESS & VALIDATION GUARD
-        const currentIcp = buildIcp(activeIcp, state.inputs);
-        if (!currentIcp || !currentIcp.roles.length) {
-          setError("Please define at least one role/designation for this ICP.");
-          setLoading(false);
-          return;
-        }
-
         await generateOutput(2);
       } catch (err: any) {
         setError(err.message || "Something went wrong. Please try again.");
       }
       setLoading(false);
-    }, 100);
+    }, 0);
   };
 
   const renderIcpForm = (num: 1 | 2 | 3) => {
