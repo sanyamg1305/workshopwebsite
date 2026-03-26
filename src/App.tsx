@@ -38,7 +38,9 @@ import {
   RotateCcw,
   History,
   Mail,
-  Info
+  Info,
+  Flame,
+  AlertCircle
 } from 'lucide-react';
 import * as gemini from './services/gemini';
 import { supabase } from './services/supabase';
@@ -847,6 +849,14 @@ const Step2ICPBuilder = () => {
       }
 
       try {
+        // SAFE ACCESS & VALIDATION GUARD
+        const currentIcp = buildIcp(activeIcp, state.inputs);
+        if (!currentIcp || !currentIcp.roles.length) {
+          setError("Please define at least one role/designation for this ICP.");
+          setLoading(false);
+          return;
+        }
+
         await generateOutput(2);
       } catch (err: any) {
         setError(err.message || "Something went wrong. Please try again.");
@@ -871,27 +881,27 @@ const Step2ICPBuilder = () => {
         <MultiSelectDropdown showErrors={showErrors}
           label="Designation / Role"
           options={ROLES}
-          selected={state.inputs[`icp${num}_roles` as keyof WorkshopState['inputs']] as string[]}
+          selected={(state.inputs?.[`icp${num}_roles` as keyof WorkshopState['inputs']] as string[]) || []}
           onChange={(val) => updateInput(`icp${num}_roles` as any, val)}
-          otherValue={state.inputs[`icp${num}_rolesOther` as keyof WorkshopState['inputs']] as string}
+          otherValue={(state.inputs?.[`icp${num}_rolesOther` as keyof WorkshopState['inputs']] as string) || ""}
           onOtherChange={(val) => updateInput(`icp${num}_rolesOther` as any, val)}
         />
 
         <MultiSelectDropdown showErrors={showErrors}
           label="Company Size"
           options={SIZES}
-          selected={state.inputs[`icp${num}_sizes` as keyof WorkshopState['inputs']] as string[]}
+          selected={(state.inputs?.[`icp${num}_sizes` as keyof WorkshopState['inputs']] as string[]) || []}
           onChange={(val) => updateInput(`icp${num}_sizes` as any, val)}
-          otherValue={state.inputs[`icp${num}_sizesOther` as keyof WorkshopState['inputs']] as string}
+          otherValue={(state.inputs?.[`icp${num}_sizesOther` as keyof WorkshopState['inputs']] as string) || ""}
           onOtherChange={(val) => updateInput(`icp${num}_sizesOther` as any, val)}
         />
 
         <MultiSelectDropdown showErrors={showErrors}
           label="Industry"
           options={INDUSTRIES}
-          selected={state.inputs[`icp${num}_industries` as keyof WorkshopState['inputs']] as string[]}
+          selected={(state.inputs?.[`icp${num}_industries` as keyof WorkshopState['inputs']] as string[]) || []}
           onChange={(val) => updateInput(`icp${num}_industries` as any, val)}
-          otherValue={state.inputs[`icp${num}_industriesOther` as keyof WorkshopState['inputs']] as string}
+          otherValue={(state.inputs?.[`icp${num}_industriesOther` as keyof WorkshopState['inputs']] as string) || ""}
           onOtherChange={(val) => updateInput(`icp${num}_industriesOther` as any, val)}
         />
         <div className="flex items-center gap-4 mt-8">
@@ -2238,6 +2248,38 @@ const Step7Summary = () => {
   );
 };
 
+const ResetModal = ({ onConfirm, onCancel }: { onConfirm: () => void, onCancel: () => void }) => (
+  <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-xl flex items-center justify-center p-4">
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.9, y: 20 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      className="max-w-md w-full bg-section border-2 border-red-500/20 rounded-3xl p-8 shadow-2xl text-center"
+    >
+      <div className="w-20 h-20 bg-red-500/10 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-red-500/20">
+        <RotateCcw className="text-red-500" size={40} />
+      </div>
+      <h2 className="text-3xl font-black mb-4">Reset Workshop?</h2>
+      <p className="text-text-secondary mb-8 leading-relaxed">
+        This will <span className="text-red-500 font-bold uppercase">permanently erase</span> all your current progress and generated assets. You'll start over from the beginning.
+      </p>
+      <div className="space-y-3">
+        <button
+          onClick={onConfirm}
+          className="w-full py-4 bg-red-500 text-white rounded-xl font-black text-lg hover:bg-red-600 transition-all shadow-xl shadow-red-500/20 flex items-center justify-center gap-2"
+        >
+          Yes, Reset Everything
+        </button>
+        <button
+          onClick={onCancel}
+          className="w-full py-4 bg-bg text-text-secondary border border-border rounded-xl font-bold text-lg hover:bg-section transition-all"
+        >
+          Cancel
+        </button>
+      </div>
+    </motion.div>
+  </div>
+);
+
 const ResumeModal = ({ onResume, onStartOver }: { onResume: () => void, onStartOver: () => void }) => (
   <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
     <motion.div 
@@ -2430,7 +2472,116 @@ const Step0LeadCapture = React.memo(({
   );
 });
 
-// --- Main App ---
+const INITIAL_WORKSHOP_INPUTS = {
+  fullName: '',
+  workEmail: '',
+  phone: '',
+  companyName: '',
+  leadRole: [],
+  leadRoleOther: '',
+  linkedinUrl: '',
+  linkedinHeadline: '',
+  linkedinAbout: '',
+  offer: '',
+  targetIcp: [],
+  targetIcpOther: '',
+  tonePreference: [],
+  tonePreferenceOther: '',
+  // ICP 1
+  icp1_roles: [],
+  icp1_rolesOther: '',
+  icp1_sizes: [],
+  icp1_sizesOther: '',
+  icp1_industries: [],
+  icp1_industriesOther: '',
+  // ICP 2
+  icp2_roles: [],
+  icp2_rolesOther: '',
+  icp2_sizes: [],
+  icp2_sizesOther: '',
+  icp2_industries: [],
+  icp2_industriesOther: '',
+  // ICP 3
+  icp3_roles: [],
+  icp3_rolesOther: '',
+  icp3_sizes: [],
+  icp3_sizesOther: '',
+  icp3_industries: [],
+  icp3_industriesOther: '',
+  industry: [],
+  industryOther: '',
+  companySize: [],
+  companySizeOther: '',
+  geography: [],
+  geographyOther: '',
+  decisionMaker: [],
+  decisionMakerOther: '',
+  painPoints: [],
+  painPointsOther: '',
+  budget: [],
+  budgetOther: '',
+  outcome: [],
+  outcomeOther: '',
+  method: [],
+  methodOther: '',
+  replacement: [],
+  replacementOther: '',
+  brandName: '',
+  primaryColor: '#FFE600',
+  secondaryColor: '#000000',
+  inspirationImage: null,
+  outreachChannel: 'Both' as const,
+  freeOfferType: 'Interactive Tool' as const,
+  freeOfferTypeOther: '',
+  toolName: '',
+  toolDescription: '',
+  strategicNotes: '',
+  narrativeAngles: [],
+  narrativeAnglesOther: '',
+  dmAngle: [],
+  dmAngleOther: '',
+  dmTone: [],
+  dmToneOther: '',
+  campaignType: [],
+  campaignTypeOther: '',
+  tone: [],
+  toneOther: '',
+  numFollowUps: '3',
+  numFollowUpsOther: '',
+  outreachAngle: 'Authority' as const,
+  outreachAngleOther: '',
+  cta: [],
+  ctaOther: '',
+};
+
+const INITIAL_WORKSHOP_STATE: Omit<WorkshopState, 'isCheckingStatus'> = {
+  currentStep: 0,
+  completedSteps: [],
+  submissionId: null,
+  leadFormFilled: false,
+  inputs: INITIAL_WORKSHOP_INPUTS,
+  outputs: {
+    profileClarityScore: 0,
+    scoreMeaning: '',
+    scoreExplanation: '',
+    optimizedHeadlines: [],
+    optimizedAbout: '',
+    positioningAngles: '',
+    keywordScore: 0,
+    icps: [],
+    icpSummary: '',
+    valueProp: '',
+    valuePropTables: [],
+    websitePrompt: '',
+    gtmStrategy: null,
+    outreachEngineOutput: null,
+    leadMagnets: [],
+    globalSolution: '',
+    profileImprovements: [],
+  },
+  isGenerating: false,
+  generationError: null,
+};
 
 export default function App() {
   const [state, setState] = useState<WorkshopState>(() => {
@@ -2440,7 +2591,7 @@ export default function App() {
       try {
         const parsed = JSON.parse(fullStateSaved);
         console.log("[Persistence] Restored full state from localStorage");
-        return parsed;
+        return { ...parsed, isCheckingStatus: false };
       } catch (e) {
         console.error("[Persistence] Error parsing fullStateSaved", e);
       }
@@ -2448,158 +2599,31 @@ export default function App() {
 
     // 2. Fallback: Initialize with defaults
     const savedLeadData = localStorage.getItem('userLeadData');
-    const initialInputs = {
-      fullName: '',
-      workEmail: '',
-      phone: '',
-      companyName: '',
-      leadRole: [],
-      leadRoleOther: '',
-      linkedinUrl: '',
-      linkedinHeadline: '',
-      linkedinAbout: '',
-      targetIcp: [],
-      targetIcpOther: '',
-      tonePreference: [],
-      tonePreferenceOther: '',
-      offer: '',
-      
-      // ICP 1
-      icp1_roles: [],
-      icp1_rolesOther: '',
-      icp1_sizes: [],
-      icp1_sizesOther: '',
-      icp1_industries: [],
-      icp1_industriesOther: '',
-
-      // ICP 2
-      icp2_roles: [],
-      icp2_rolesOther: '',
-      icp2_sizes: [],
-      icp2_sizesOther: '',
-      icp2_industries: [],
-      icp2_industriesOther: '',
-
-      // ICP 3
-      icp3_roles: [],
-      icp3_rolesOther: '',
-      icp3_sizes: [],
-      icp3_sizesOther: '',
-      icp3_industries: [],
-      icp3_industriesOther: '',
-
-      industry: [],
-      industryOther: '',
-      companySize: [],
-      companySizeOther: '',
-      geography: [],
-      geographyOther: '',
-      decisionMaker: [],
-      decisionMakerOther: '',
-      painPoints: [],
-      painPointsOther: '',
-      budget: [],
-      budgetOther: '',
-      outcome: [],
-      outcomeOther: '',
-      method: [],
-      methodOther: '',
-      replacement: [],
-      replacementOther: '',
-      brandName: '',
-      primaryColor: '#FFC947',
-      secondaryColor: '#000000',
-      inspirationImage: null,
-      campaignType: [],
-      campaignTypeOther: '',
-      tone: [],
-      toneOther: '',
-      cta: [],
-      ctaOther: '',
-      numFollowUps: '3',
-      numFollowUpsOther: '',
-      outreachChannel: 'Both' as const,
-      outreachAngle: 'Authority' as const,
-      freeOfferType: 'Lead Magnet' as const,
-      freeOfferTypeOther: '',
-      toolName: '',
-      toolDescription: '',
-      strategicNotes: '',
-      narrativeAngles: [],
-      narrativeAnglesOther: '',
-      dmAngle: [],
-      dmAngleOther: '',
-      dmTone: [],
-      dmToneOther: '',
-    };
-
     if (savedLeadData) {
       try {
         const parsed = JSON.parse(savedLeadData);
         return {
+          ...INITIAL_WORKSHOP_STATE,
           currentStep: 1,
           completedSteps: [0],
           submissionId: parsed.submissionId || null,
           leadFormFilled: !!parsed.submissionId,
           isCheckingStatus: false,
-          inputs: { ...initialInputs, ...parsed },
-          outputs: {
-            profileClarityScore: 0,
-            scoreMeaning: '',
-            scoreExplanation: '',
-            optimizedHeadlines: [],
-            optimizedAbout: '',
-            positioningAngles: '',
-            keywordScore: 0,
-            icps: [],
-            icpSummary: '',
-            valueProp: '',
-            valuePropTables: [],
-            websitePrompt: '',
-            gtmStrategy: null,
-            outreachEngineOutput: null,
-            leadMagnets: [],
-            globalSolution: '',
-          },
-          isGenerating: false,
-          generationError: null
-        };
+          inputs: { ...INITIAL_WORKSHOP_INPUTS, ...parsed },
+        } as WorkshopState;
       } catch (e) {
         console.error("Error parsing lead data", e);
       }
     }
 
     return {
-      currentStep: 0,
-      completedSteps: [],
-      submissionId: null,
-      leadFormFilled: false,
+      ...INITIAL_WORKSHOP_STATE,
       isCheckingStatus: false,
-      inputs: initialInputs,
-      outputs: {
-        profileClarityScore: 0,
-        scoreMeaning: '',
-        scoreExplanation: '',
-        optimizedHeadlines: [],
-        optimizedAbout: '',
-        positioningAngles: '',
-        keywordScore: 0,
-        icps: [],
-        icpSummary: '',
-        valueProp: '',
-        websitePrompt: '',
-        gtmStrategy: null,
-        outreachEngineOutput: null,
-        leadMagnets: [],
-        valuePropTables: [],
-        globalSolution: '',
-      },
-      isGenerating: false,
-      generationError: null,
-    };
+    } as WorkshopState;
   });
 
   const [showResumeModal, setShowResumeModal] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
   const [sessionToResume, setSessionToResume] = useState<WorkshopState | null>(null);
   const { saveInBackground, isSaving: isSbSaving } = useNonBlockingSave();
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'syncing'>('idle');
@@ -2728,6 +2752,23 @@ export default function App() {
     localStorage.removeItem('workshop_progress_step');
     localStorage.removeItem('userLeadData');
     window.location.reload();
+  };
+
+  const handleResetWorkshop = () => {
+    localStorage.removeItem('workshop_v2_full_state');
+    localStorage.removeItem('userLeadData');
+    localStorage.removeItem('workshop_progress_step');
+    
+    // Reset state to initial using top-level constant
+    setState({
+      ...INITIAL_WORKSHOP_STATE,
+      leadFormFilled: true, // Keep form visibility consistent
+      currentStep: 1,
+      completedSteps: [0],
+      isCheckingStatus: false,
+    });
+    
+    setShowResetModal(false);
   };
 
   const handleGoogleLogin = async () => {
@@ -3139,7 +3180,14 @@ export default function App() {
               ))}
             </nav>
           </div>
-          <div className="absolute bottom-0 w-full p-8 border-t border-border bg-bg">
+          <div className="absolute bottom-0 w-full p-8 border-t border-border bg-bg space-y-4">
+            <button
+              onClick={() => setShowResetModal(true)}
+              className="w-full py-3 border border-red-500/30 text-red-500/70 hover:bg-red-500 hover:text-white transition-all rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 group"
+            >
+              <RotateCcw size={12} className="group-hover:rotate-180 transition-transform duration-500" />
+              Reset & Start Over
+            </button>
             <div className="flex items-center gap-3 text-text-secondary text-sm">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               Workshop Live Mode
@@ -3338,6 +3386,12 @@ export default function App() {
           <ResumeModal 
             onResume={handleResume} 
             onStartOver={handleStartOver} 
+          />
+        )}
+        {showResetModal && (
+          <ResetModal 
+            onConfirm={handleResetWorkshop} 
+            onCancel={() => setShowResetModal(false)} 
           />
         )}
       </AnimatePresence>
