@@ -840,42 +840,46 @@ const Step2ICPBuilder = () => {
     setLoading(true);
     setError(null);
     
-    // Ensure we have latest state before proceeding
-    setTimeout(async () => {
-      const inputs = state.inputs as any;
-      const num = activeIcp;
-
-      // 1. NORMALIZE INPUTS (MANDATORY)
+    // 1. SINGLE SOURCE OF TRUTH: Build ICP objects accounting for "Other" inputs
+    const inputs = state.inputs as any;
+    const icps = [1, 2, 3].map(index => {
       const roles = [
-        ...(inputs[`icp${num}_roles`] || []),
-        ...(inputs[`icp${num}_rolesOther`]
-          ? inputs[`icp${num}_rolesOther`].split(",").map((r: string) => r.trim()).filter(Boolean)
+        ...(inputs[`icp${index}_roles`] || []),
+        ...(inputs[`icp${index}_rolesOther`]
+          ? inputs[`icp${index}_rolesOther`].split(",").map((r: string) => r.trim()).filter(Boolean)
           : [])
       ];
 
       const industries = [
-        ...(inputs[`icp${num}_industries`] || []),
-        ...(inputs[`icp${num}_industriesOther`]
-          ? inputs[`icp${num}_industriesOther`].split(",").map((i: string) => i.trim()).filter(Boolean)
+        ...(inputs[`icp${index}_industries`] || []),
+        ...(inputs[`icp${index}_industriesOther`]
+          ? inputs[`icp${index}_industriesOther`].split(",").map((i: string) => i.trim()).filter(Boolean)
           : [])
       ];
 
-      const companySizes = inputs[`icp${num}_sizes`] || [];
+      const companySizes = inputs[`icp${index}_sizes`] || [];
 
-      // 2. DEBUG LOG (TEMPORARY)
-      console.log(`[ICP ${num} Validation]`, {
-        roles,
-        industries,
-        companySizes
-      });
+      return { roles, industries, companySizes };
+    });
 
-      // 3. VALIDATE NORMALIZED DATA
-      if (!roles.length || !industries.length || !companySizes.length) {
-        setError("Please complete all required fields (Roles, Industries, and Company Sizes) before generating.");
-        setLoading(false);
-        return;
-      }
+    // 2. DEBUG LOG (TEMPORARY)
+    console.log("Built ICPs:", icps);
 
+    // 3. VALIDATE: At least one ICP must be fully complete
+    const hasValidICP = icps.some(icp => 
+      icp.roles.length > 0 && 
+      icp.industries.length > 0 && 
+      icp.companySizes.length > 0
+    );
+
+    if (!hasValidICP) {
+      setError("Please complete all required fields (Role, Size, and Industry) for at least one ICP before generating.");
+      setLoading(false);
+      return;
+    }
+
+    // Ensure we have latest state before proceeding
+    setTimeout(async () => {
       const firstError = document.querySelector(".border-red-500, .border-red-500\\/50");
       if (firstError) {
         firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
