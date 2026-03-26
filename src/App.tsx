@@ -2776,7 +2776,7 @@ export default function App() {
               ...safeArr<string>(industries),
               ...safeStr(indOther).split(',').map((r: string) => r.trim()).filter(Boolean),
             ],
-            companySizes: safeArr<string>(sizes),
+            sizes: safeArr<string>(sizes),
           };
         });
 

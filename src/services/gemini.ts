@@ -175,9 +175,9 @@ export const generateDetailedICPs = async (inputs: {
   const ai = getAI();
   const icpInputsStr = inputs.icps.map((icp, idx) => `
     ICP ${idx + 1} Inputs:
-    - Roles: ${icp.roles.join(', ')}
-    - Company Sizes: ${icp.sizes.join(', ')}
-    - Industries: ${icp.industries.join(', ')}
+    - Roles: ${safeArr(icp.roles).join(', ')}
+    - Company Sizes: ${safeArr(icp.sizes).join(', ')}
+    - Industries: ${safeArr(icp.industries).join(', ')}
   `).join('\n');
 
   const response = await ai.models.generateContent({
