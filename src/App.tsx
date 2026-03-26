@@ -2421,6 +2421,19 @@ const Step0LeadCapture = React.memo(({
 
 export default function App() {
   const [state, setState] = useState<WorkshopState>(() => {
+    // 1. FAULT-TOLERANT: Check for full state in localStorage first
+    const fullStateSaved = localStorage.getItem('workshop_v2_full_state');
+    if (fullStateSaved) {
+      try {
+        const parsed = JSON.parse(fullStateSaved);
+        console.log("[Persistence] Restored full state from localStorage");
+        return parsed;
+      } catch (e) {
+        console.error("[Persistence] Error parsing fullStateSaved", e);
+      }
+    }
+
+    // 2. Fallback: Initialize with defaults
     const savedLeadData = localStorage.getItem('userLeadData');
     const initialInputs = {
       fullName: '',
@@ -2572,7 +2585,7 @@ export default function App() {
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [sessionToResume, setSessionToResume] = useState<WorkshopState | null>(null);
   const { saveInBackground, isSaving: isSbSaving } = useNonBlockingSave();
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'syncing'>('idle');
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -2630,48 +2643,60 @@ export default function App() {
   };
 
 
-  // Auto-save progress to Firestore & Supabase (Debounced & Background)
+  // IMPROVED: Fault-Tolerant Hybrid Persistence Layer (LocalStorage + Cloud Sync)
   useEffect(() => {
-    if (user && state.leadFormFilled && state.currentStep > 0) {
-      setSaveStatus('saving');
-      
-      const syncData = async () => {
-        try {
-          // 1. Firestore Sync (updateDoc)
-          const docRef = doc(db, 'users', user.uid, 'workshop', 'active');
-          await updateDoc(docRef, { ...state });
-          
-          // 2. Supabase Sync (Non-blocking hook pattern)
-          // We fire this and don't await it to ensure zero UI impact
-          saveInBackground('workshop_submissions', {
-            user_uid: user.uid,
-            user_email: user.email,
-            full_name: state.inputs.fullName,
-            work_email: state.inputs.workEmail,
-            phone: state.inputs.phone,
-            company_name: state.inputs.companyName,
-            lead_role: state.inputs.leadRole,
-            current_step: state.currentStep,
-            workshop_inputs: state.inputs,
-            workshop_outputs: state.outputs
-          });
+    if (state.leadFormFilled && state.currentStep > 0) {
+      // 1. INSTANT LOCAL PERSISTENCE (Zero Data Loss)
+      // This happens on every state change, no debounce. 
+      // Handled in a try-catch to ensure app stability.
+      try {
+        localStorage.setItem('workshop_v2_full_state', JSON.stringify(state));
+        if (saveStatus === 'idle' || saveStatus === 'saved') setSaveStatus('saving'); // Indicating local save
+      } catch (e) {
+        console.error("[Persistence] LocalStorage Sync Failed", e);
+      }
 
-          setSaveStatus('saved');
-        } catch (err) {
-          console.error("Persistence Sync Error:", err);
-          // Fallback to setDoc if updateDoc fails
+      // 2. DEBOUNCED CLOUD PERSISTENCE (Firestore & Supabase)
+      if (user) {
+        // Change status to syncing only after debounce starts
+        const syncToCloud = async () => {
+          setSaveStatus('syncing');
           try {
+            // A. Firestore Background Sync
             const docRef = doc(db, 'users', user.uid, 'workshop', 'active');
-            await setDoc(docRef, state);
-            setSaveStatus('saved');
-          } catch (innerErr) {
-            setSaveStatus('idle');
-          }
-        }
-      };
+            await updateDoc(docRef, { ...state });
+            
+            // B. Supabase Non-Blocking sync
+            saveInBackground('workshop_submissions', {
+              user_uid: user.uid,
+              user_email: user.email,
+              full_name: state.inputs.fullName,
+              work_email: state.inputs.workEmail,
+              phone: state.inputs.phone,
+              company_name: state.inputs.companyName,
+              lead_role: state.inputs.leadRole,
+              current_step: state.currentStep,
+              workshop_inputs: state.inputs,
+              workshop_outputs: state.outputs
+            });
 
-      const timer = setTimeout(syncData, 1000);
-      return () => clearTimeout(timer);
+            setSaveStatus('saved');
+          } catch (err) {
+            console.warn("[Persistence] Cloud Sync Warning (Retrying on next change):", err);
+            // Fallback for document creation if update fails
+            try {
+              const docRef = doc(db, 'users', user.uid, 'workshop', 'active');
+              await setDoc(docRef, state);
+              setSaveStatus('saved');
+            } catch (innerErr) {
+              setSaveStatus('idle');
+            }
+          }
+        };
+
+        const timer = setTimeout(syncToCloud, 1000);
+        return () => clearTimeout(timer);
+      }
     }
   }, [user, state, saveInBackground]);
 
@@ -3022,11 +3047,17 @@ export default function App() {
             <div className="flex items-center justify-between mb-12">
               <img src="/logo.png" alt="Logo" className="h-10 w-auto object-contain max-w-[160px]" style={{ aspectRatio: 'auto' }} />
               {saveStatus !== 'idle' && (
-                <div className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full flex items-center gap-1.5 transition-all duration-500 ${saveStatus === 'saving' ? 'bg-primary/10 text-primary animate-pulse' : 'bg-green-500/10 text-green-600'}`}>
-                  {saveStatus === 'saving' ? (
-                    <><Loader2 className="animate-spin" size={10} /> Saving</>
+                <div className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full flex items-center gap-1.5 transition-all duration-300 ${
+                  saveStatus === 'syncing' ? 'bg-primary/20 text-primary animate-pulse' : 
+                  saveStatus === 'saving' ? 'bg-blue-500/10 text-blue-400' :
+                  'bg-green-500/10 text-green-600'
+                }`}>
+                  {saveStatus === 'syncing' ? (
+                    <><Loader2 className="animate-spin" size={10} /> Syncing...</>
+                  ) : saveStatus === 'saving' ? (
+                    <><CheckCircle2 size={10} className="text-blue-400" /> Saved Locally</>
                   ) : (
-                    <><CheckCircle2 size={10} /> Saved ✓</>
+                    <><CheckCircle2 size={10} /> All changes saved</>
                   )}
                 </div>
               )}
