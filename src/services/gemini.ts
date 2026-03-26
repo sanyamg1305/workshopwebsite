@@ -1,4 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
+import { safeArr } from "../utils/workshop";
 
 const GLOBAL_WRITING_RULES = `
 GLOBAL WRITING RULE (NON-NEGOTIABLE):

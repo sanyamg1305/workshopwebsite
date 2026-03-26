@@ -53,7 +53,7 @@ import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { DebouncedInput, DebouncedTextarea } from './components/DebouncedInput';
 import { useNonBlockingSave } from './hooks/useNonBlockingSave';
 import { ROLES, SIZES, INDUSTRIES, TONES, NARRATIVE_ANGLES } from './constants/workshop';
-import { buildIcp, normalizeInputList } from './utils/workshop';
+import { buildIcp, normalizeInputList, safeStr, safeArr } from './utils/workshop';
 
 // ─────────────────────────────────────────────
 // UTILITY: safe normalisation helpers
@@ -159,12 +159,7 @@ export interface WorkshopState {
 }
 
 // --- WORKSHOP SAFETY LAYER (CENTRALIZED) ---
-export function safeStr(v: any, fallback = ''): string {
-  return typeof v === 'string' ? v : fallback;
-}
-export function safeArr<T>(v: any): T[] {
-  return Array.isArray(v) ? v : [];
-}
+// Imported from ./utils/workshop
 
 export const buildSafeInputs = (inputs: any) => ({
   fullName: safeStr(inputs?.fullName),

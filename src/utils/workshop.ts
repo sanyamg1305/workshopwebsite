@@ -2,6 +2,14 @@
  * Shared utility for building ICP objects from the workshop state inputs.
  * Ensures consistent data extraction and validation across UI and API layers.
  */
+ 
+export function safeStr(v: any, fallback = ''): string {
+  return typeof v === 'string' ? v : fallback;
+}
+
+export function safeArr<T>(v: any): T[] {
+  return Array.isArray(v) ? v : [];
+}
 
 export const buildIcp = (num: number, inputs: any) => {
   // SAFE ACCESS: Ensure inputs exists and fallback to empty arrays
