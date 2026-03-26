@@ -27,7 +27,7 @@ import {
   Linkedin,
   Image
 } from 'lucide-react';
-import { WorkshopState } from '../App';
+import { WorkshopState, buildSafeInputs, buildSafeOutputs, safeStr, safeArr } from '../App';
 import { LeadMagnet } from '../services/gemini';
 
 interface StrategyReportProps {
@@ -61,36 +61,19 @@ const Layer3 = ({ children, title }: { children: React.ReactNode, title: string 
 );
 
 export const StrategyReport = ({ state }: StrategyReportProps) => {
-  const inputs = state?.inputs ?? {};
-  const outputs = state?.outputs ?? {};
+  const si = buildSafeInputs(state?.inputs);
+  const so = buildSafeOutputs(state?.outputs);
   
-  // SAFE STATE SHAPE
-  const safeInputs = {
-    brandName: inputs?.brandName || "Workshop Client",
-    companyName: inputs?.companyName || "the target market",
-    fullName: inputs?.fullName || "Stakeholder",
-    yourRole: inputs?.yourRole || [],
-    offer: inputs?.offer || "",
-    targetIcpDesignation: inputs?.targetIcpDesignation || [],
-    primaryColor: inputs?.primaryColor || "#000000",
-    secondaryColor: inputs?.secondaryColor || "#FFFFFF",
-    outreachChannel: inputs?.outreachChannel || "Both",
-    outreachAngle: inputs?.outreachAngle || "Authority",
-    linkedinAbout: inputs?.linkedinAbout || "",
-    ...(inputs || {})
-  };
-
-  const safeOutputs = outputs as any;
-  const icps = safeOutputs.icps || [];
-  const valuePropTables = safeOutputs.valuePropTables || [];
-  const gtmStrategy = safeOutputs.gtmStrategy || { leadGen: { outreach: [] }, leadMagnets: [] };
-  const outreachEngine = safeOutputs.outreachEngineOutput;
+  const icps = so.icps;
+  const valuePropTables = so.valuePropTables;
+  const gtmStrategy = so.gtmStrategy;
+  const outreachEngine = so.outreachEngineOutput;
   const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-  // Layer 1/2 Data Extraction
-  const profileScore = safeOutputs.profileClarityScore || 72;
-  const keywordScore = safeOutputs.keywordScore || 65;
-  const clarityScoreMeaning = safeOutputs.scoreMeaning || "Standard";
+  // Score extraction
+  const profileScore = so.profileClarityScore;
+  const keywordScore = so.keywordScore;
+  const clarityScoreMeaning = so.scoreMeaning;
 
   return (
     <div id="strategy-report" className="bg-white text-black p-0 w-[21cm] min-h-[29.7cm] mx-auto shadow-2xl print:shadow-none print:m-0 font-sans selection:bg-yellow-200 antialiased overflow-x-hidden">
@@ -123,10 +106,10 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
 
           <div className="max-w-xl space-y-4">
              <p className="text-3xl font-black uppercase tracking-tight leading-tight text-gray-900">
-                {safeOutputs.globalSolution?.split('.')[0] || `Strategic Distribution Engine for ${safeInputs.brandName}`}
+                {so.globalSolution?.split('.')[0] || `Strategic Distribution Engine for ${si.brandName}`}
              </p>
              <p className="text-base text-gray-500 leading-relaxed font-medium">
-                A performance-engineered GTM strategy designed to penetrate {safeInputs.companyName || 'the target market'} through high-authority positioning and systematic outreach.
+                A performance-engineered GTM strategy designed to penetrate {si.companyName || 'the target market'} through high-authority positioning and systematic outreach.
              </p>
           </div>
         </div>
@@ -134,8 +117,8 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
         <div className="grid grid-cols-2 gap-24 border-t-2 border-black pt-12">
           <div className="space-y-3">
             <p className="text-[11px] font-black uppercase tracking-[0.5em] text-gray-300">Organization Representative</p>
-            <p className="text-3xl font-black uppercase tracking-tight leading-none">{safeInputs.brandName || "Workshop Client"}</p>
-            <p className="text-sm font-bold text-gray-500 mt-2">{safeInputs.fullName} — {safeInputs?.yourRole?.[0] || 'Stakeholder'}</p>
+            <p className="text-3xl font-black uppercase tracking-tight leading-none">{si.brandName || "Workshop Client"}</p>
+            <p className="text-sm font-bold text-gray-500 mt-2">{si.fullName} — {safeInputs?.yourRole?.[0] || 'Stakeholder'}</p>
           </div>
           <div className="space-y-3 text-right">
             <p className="text-[11px] font-black uppercase tracking-[0.5em] text-gray-300">Strategic Release</p>
@@ -155,13 +138,13 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
 
         <div className="grid grid-cols-1 gap-12">
           <Layer1 
-            title={safeInputs.brandName + " Growth Playbook"}
-            outcome={safeOutputs.globalSolution?.split('.')[0]}
+            title={si.brandName + " Growth Playbook"}
+            outcome={so.globalSolution?.split('.')[0]}
           >
             <ul className="grid grid-cols-3 gap-8 mt-8">
               <li className="p-6 bg-black text-white rounded-3xl flex flex-col justify-between">
                 <span className="text-[8px] font-black uppercase tracking-widest text-primary mb-4">Core Mission</span>
-                <p className="text-xs font-bold italic leading-tight uppercase">"{safeInputs.offer?.substring(0, 60)}..."</p>
+                <p className="text-xs font-bold italic leading-tight uppercase">"{si.offer?.substring(0, 60)}..."</p>
               </li>
               <li className="p-6 border-2 border-black rounded-3xl flex flex-col justify-between">
                 <span className="text-[8px] font-black uppercase tracking-widest text-gray-300 mb-4">Market Focus</span>
@@ -213,11 +196,11 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
         </div>
 
         <div className="space-y-12">
-            <Layer1 title="Authority Headline Outcome" outcome={outputs.optimizedHeadlines?.[0]}>
+            <Layer1 title="Authority Headline Outcome" outcome={so.optimizedHeadlines?.[0]}>
                <div className="mt-6 flex items-center gap-12">
                   <div className="space-y-1">
                      <span className="text-[8px] font-black uppercase tracking-widest text-gray-400">Positioning Pivot</span>
-                     <p className="text-sm font-bold italic">"{outputs.optimizedHeadlines?.[1] || "Strategic Authority Optimization"}"</p>
+                     <p className="text-sm font-bold italic">"{so.optimizedHeadlines?.[1] || "Strategic Authority Optimization"}"</p>
                   </div>
                   <div className="text-right ml-auto">
                      <span className="text-[8px] font-black uppercase tracking-widest text-gray-400">Impact Score</span>
@@ -227,11 +210,11 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
             </Layer1>
 
            <Layer2 title="Strategic Score Analysis">
-              {typeof outputs.scoreExplanation !== 'string' ? (
+              {typeof so.scoreExplanation !== 'string' ? (
                 <div className="space-y-8">
                   <div className="pb-4 border-b border-gray-100">
                     <h5 className="text-[9px] font-black uppercase text-gray-400 italic mb-2">Overall Strategic Position</h5>
-                    <p className="text-xs font-bold leading-relaxed italic">"{outputs.scoreExplanation.overallSummary}"</p>
+                    <p className="text-xs font-bold leading-relaxed italic">"{so.scoreExplanation.overallSummary}"</p>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-x-12 gap-y-8">
@@ -242,7 +225,7 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
                       { id: 'proof', label: 'Proof' },
                       { id: 'execution', label: 'Execution' }
                     ].map((dim) => {
-                      const data = (outputs.scoreExplanation as any).scoreBreakdown[dim.id];
+                      const data = (so.scoreExplanation as any).scoreBreakdown[dim.id];
                       return (
                         <div key={dim.id} className="space-y-3">
                           <div className="flex justify-between items-center border-b border-gray-50 pb-1">
@@ -266,7 +249,7 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
                     <div className="space-y-4">
                       <h5 className="text-[9px] font-black uppercase text-emerald-600 italic">Core Strengths</h5>
                       <ul className="space-y-2">
-                        {outputs.scoreExplanation.whatsWorking.map((item, i) => (
+                        {so.scoreExplanation.whatsWorking.map((item, i) => (
                           <li key={i} className="text-[9px] font-bold text-gray-700 flex items-center gap-2">
                             <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
                             {item}
@@ -277,7 +260,7 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
                     <div className="space-y-4">
                       <h5 className="text-[9px] font-black uppercase text-primary italic">Priority Improvements</h5>
                       <ul className="space-y-2">
-                        {outputs.scoreExplanation.toImprove.map((item, i) => (
+                        {so.scoreExplanation.toImprove.map((item, i) => (
                           <li key={i} className="text-[9px] font-bold text-gray-700 flex items-center gap-2">
                             <div className="w-1.5 h-1.5 bg-primary rounded-full" />
                             {item}
@@ -290,14 +273,14 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
               ) : (
                 <div className="space-y-4">
                    <h5 className="text-[9px] font-black uppercase text-gray-400 italic">Clarity Metrics</h5>
-                   <p className="text-xs font-medium leading-relaxed">{outputs.scoreExplanation}</p>
+                   <p className="text-xs font-medium leading-relaxed">{so.scoreExplanation}</p>
                 </div>
               )}
            </Layer2>
 
            <Layer3 title="Full Engagement Narrative (LinkedIn About)">
               <div className="columns-2 gap-12 whitespace-pre-wrap">
-                 {outputs.optimizedAbout}
+                 {so.optimizedAbout}
               </div>
            </Layer3>
         </div>
@@ -373,7 +356,7 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
         </div>
 
         <div className="space-y-20">
-           <Layer1 title="Core Market Positioning" outcome={outputs.globalSolution?.split('.')[0]}>
+           <Layer1 title="Core Market Positioning" outcome={so.globalSolution?.split('.')[0]}>
               <div className="mt-8 flex items-center gap-10 border-t border-gray-100 pt-8">
                  <div className="space-y-1">
                     <span className="text-[8px] font-black uppercase text-gray-400">Primary Focus</span>
@@ -442,11 +425,11 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
                  </div>
                  <div className="flex gap-6 border-l border-white/10 pl-10">
                     <div className="flex flex-col items-center gap-2">
-                       <div className="w-10 h-10 rounded-full border-2 border-primary shadow-lg shadow-primary/20" style={{ backgroundColor: safeInputs.primaryColor || '#000' }}></div>
+                       <div className="w-10 h-10 rounded-full border-2 border-primary shadow-lg shadow-primary/20" style={{ backgroundColor: si.primaryColor || '#000' }}></div>
                        <span className="text-[8px] font-black uppercase tracking-widest text-gray-500">Primary</span>
                     </div>
                     <div className="flex flex-col items-center gap-2">
-                       <div className="w-10 h-10 rounded-full border-2 border-gray-700 shadow-md" style={{ backgroundColor: safeInputs.secondaryColor || '#fff' }}></div>
+                       <div className="w-10 h-10 rounded-full border-2 border-gray-700 shadow-md" style={{ backgroundColor: si.secondaryColor || '#fff' }}></div>
                        <span className="text-[8px] font-black uppercase tracking-widest text-gray-500">Secondary</span>
                     </div>
                  </div>
@@ -472,10 +455,10 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
               </div>
            </Layer2>
 
-           {outputs.websitePrompt && (
+           {so.websitePrompt && (
              <Layer3 title="Full Engineering Intelligence (AI Studio Prompt)">
                 <div className="bg-gray-50 p-6 rounded-2xl font-mono text-[11px] text-gray-400 whitespace-pre-wrap max-h-[400px] overflow-hidden relative">
-                   {outputs.websitePrompt}
+                   {so.websitePrompt}
                    <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-gray-50 to-transparent flex items-end justify-center pb-4">
                       <span className="text-[9px] font-black uppercase text-gray-300">Preserved in Appendix for full access</span>
                    </div>
@@ -524,7 +507,7 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
                  <div className="space-y-4">
                     <h5 className="text-[10px] font-black uppercase text-gray-400 italic">Strategic Channel Split</h5>
                     <div className="p-4 bg-black text-white rounded-xl text-center">
-                       <p className="text-xs font-black uppercase tracking-widest italic">{safeInputs.outreachChannel || 'LinkedIn + Authority Email'}</p>
+                       <p className="text-xs font-black uppercase tracking-widest italic">{si.outreachChannel || 'LinkedIn + Authority Email'}</p>
                     </div>
                  </div>
               </Layer2>
@@ -692,7 +675,7 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
               <div className="grid grid-cols-2 gap-12 text-[11px]">
                  <div className="space-y-4">
                     <h5 className="text-[9px] font-black uppercase text-black">Mission Context</h5>
-                    <p className="opacity-70">{safeInputs.linkedinAbout || "N/A"}</p> 
+                    <p className="opacity-70">{si.linkedinAbout || "N/A"}</p> 
                  </div>
                  <div className="space-y-4">
                     <h5 className="text-[9px] font-black uppercase text-black">Target ICP Focus</h5>
@@ -704,7 +687,7 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
                  <p className="opacity-70 italic">{gtmStrategy?.strategicNarrative || "N/A"}</p>
                  <div className="mt-8 p-6 bg-gray-50 rounded-2xl">
                     <h5 className="text-[9px] font-black uppercase text-black mb-4">Full LinkedIn Profile Logic</h5>
-                    <p className="whitespace-pre-wrap text-[10px]">{typeof outputs.scoreExplanation === "string" ? outputs.scoreExplanation : outputs.scoreExplanation.overallSummary}</p>
+                    <p className="whitespace-pre-wrap text-[10px]">{typeof so.scoreExplanation === "string" ? so.scoreExplanation : so.scoreExplanation.overallSummary}</p>
                  </div>
               </div>
            </Layer3>
@@ -719,7 +702,7 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
                     </div>
                     <div className="flex justify-between">
                        <span>Campaign Angle</span>
-                       <span className="text-primary">{safeInputs.outreachAngle || 'Authority'}</span>
+                       <span className="text-primary">{si.outreachAngle || 'Authority'}</span>
                     </div>
                  </div>
               </div>

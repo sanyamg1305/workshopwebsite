@@ -1,26 +1,17 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
+import { WorkshopState, buildSafeInputs, buildSafeOutputs, safeStr, safeArr } from '../App';
 
-  const inputs = state?.inputs ?? {};
-  const outputs = state?.outputs ?? {};
-  
-  // GLOBAL SAFE INPUT LAYER
-  const safeInputs = {
-    brandName: inputs?.brandName || "Workshop Client",
-    companyName: inputs?.companyName || "the target market",
-    offer: inputs?.offer || "",
-    ...inputs
-  };
-
-  // SAFE OUTPUT LAYER
-  const safeOutputs = outputs as any;
+export const StrategyDocument = ({ state }: { state: WorkshopState }) => {
+  const si = buildSafeInputs(state?.inputs);
+  const so = buildSafeOutputs(state?.outputs);
 
   const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
   // Safety checks
   // Safety checks - ensure critical strategy data is present before rendering PDF
   const criticalFields = ['valueProp', 'icps', 'valuePropTables', 'gtmStrategy', 'leadMagnets'];
-  const isMissingData = criticalFields.some(f => !outputs[f] || (Array.isArray(outputs[f]) && outputs[f].length === 0));
+  const isMissingData = criticalFields.some(f => !so[f] || (Array.isArray(so[f]) && so[f].length === 0));
   
   if (isMissingData) {
     return (
@@ -34,10 +25,10 @@ import ReactMarkdown from 'react-markdown';
   return (
     <div className="bg-white text-black font-serif w-full max-w-[1000px] mx-auto pdf-container">
       <div className="h-screen flex flex-col justify-center items-center text-center p-12 border-8 border-black m-8 break-after-page">
-        <h1 className="text-6xl font-black mb-6 uppercase tracking-widest">{safeInputs.brandName || safeInputs.companyName || "Growth Strategy"}</h1>
+        <h1 className="text-6xl font-black mb-6 uppercase tracking-widest">{si.brandName || si.companyName || "Growth Strategy"}</h1>
         <div className="w-24 h-2 bg-black mx-auto mb-8"></div>
         <h2 className="text-3xl font-bold text-gray-800 mb-12 italic leading-relaxed max-w-2xl">
-          "{safeOutputs.valueProp || "Strategic Distribution & Authority Positioning"}"
+          "{so.valueProp || "Strategic Distribution & Authority Positioning"}"
         </h2>
         <div className="mt-auto space-y-4">
           <p className="text-xl font-bold tracking-widest uppercase">Go-To-Market & Growth Strategy</p>
@@ -55,31 +46,31 @@ import ReactMarkdown from 'react-markdown';
           <div className="space-y-6 text-lg leading-relaxed">
             <div>
               <h3 className="font-bold uppercase tracking-wider text-sm mb-2 text-gray-500">What The Business Does</h3>
-              <p>{safeInputs.offer || "Providing specialized expertise and high-value solutions."}</p>
+              <p>{si.offer || "Providing specialized expertise and high-value solutions."}</p>
             </div>
             <div>
               <h3 className="font-bold uppercase tracking-wider text-sm mb-2 text-gray-500">Who We Target</h3>
-              <p>{safeOutputs.icpSummary || "Strategic decision makers in specialized markets."}</p>
+              <p>{so.icpSummary || "Strategic decision makers in specialized markets."}</p>
             </div>
             <div>
               <h3 className="font-bold uppercase tracking-wider text-sm mb-2 text-gray-500">Core Positioning Insight</h3>
-              <p>{safeOutputs.positioningAngles || safeOutputs.globalSolution || "Leveraging clear narrative differentiation to accelerate pipeline growth."}</p>
+              <p>{so.positioningAngles || so.globalSolution || "Leveraging clear narrative differentiation to accelerate pipeline growth."}</p>
             </div>
             <div>
               <h3 className="font-bold uppercase tracking-wider text-sm mb-2 text-gray-500">Key Opportunity</h3>
-              <p>{safeOutputs.outreachCampaign?.strategySummary || "Systematizing outreach and inbound authority to capture demand natively."}</p>
+              <p>{so.outreachCampaign?.strategySummary || "Systematizing outreach and inbound authority to capture demand natively."}</p>
             </div>
           </div>
         </section>
 
         {/* 3. IDEAL CUSTOMER PROFILES */}
-        {outputs.icps && outputs.icps.length > 0 && (
+        {so.icps && so.icps.length > 0 && (
           <section className="break-after-page">
             <div className="border-b-4 border-black pb-4 mb-8">
               <h2 className="text-4xl font-black uppercase tracking-widest">Ideal Customer Profiles</h2>
             </div>
             <div className="space-y-12">
-              {outputs.icps.map((icp: any, i: number) => (
+              {so.icps.map((icp: any, i: number) => (
                 <div key={i} className="p-8 border-2 border-black">
                   <h3 className="text-2xl font-black uppercase mb-4">{icp.name}</h3>
                   <div className="space-y-6">
@@ -109,7 +100,7 @@ import ReactMarkdown from 'react-markdown';
         )}
 
         {/* 4. VALUE PROPOSITION TABLE */}
-        {outputs.valuePropTables && outputs.valuePropTables.length > 0 && (
+        {so.valuePropTables && so.valuePropTables.length > 0 && (
           <section className="break-inside-avoid mb-24">
             <div className="border-b-4 border-black pb-4 mb-8">
               <h2 className="text-4xl font-black uppercase tracking-widest">Value Proposition Matrix</h2>
@@ -126,7 +117,7 @@ import ReactMarkdown from 'react-markdown';
                   </tr>
                 </thead>
                 <tbody>
-                  {outputs.valuePropTables.map((row: any, i: number) => (
+                  {so.valuePropTables.map((row: any, i: number) => (
                     <tr key={i} className="border-b border-black">
                       <td className="p-4 font-bold border border-black">{row.icp}</td>
                       <td className="p-4 border border-black">{row.desiredOutcome}</td>
@@ -148,11 +139,11 @@ import ReactMarkdown from 'react-markdown';
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="p-6 bg-gray-50 border border-black">
               <h3 className="font-bold uppercase tracking-wider mb-4">Core Narrative Angle</h3>
-              <p className="text-lg italic">"{safeInputs.narrativeAngles?.join(', ') || 'Value-led differentiation'}"</p>
+              <p className="text-lg italic">"{si.narrativeAngles?.join(', ') || 'Value-led differentiation'}"</p>
             </div>
             <div className="p-6 bg-gray-50 border border-black">
               <h3 className="font-bold uppercase tracking-wider mb-4">Global Solution Focus</h3>
-              <p className="text-sm leading-relaxed">{safeOutputs.globalSolution || "Establishing systematic authority to drive market penetration and trust."}</p>
+              <p className="text-sm leading-relaxed">{so.globalSolution || "Establishing systematic authority to drive market penetration and trust."}</p>
             </div>
           </div>
         </section>
@@ -163,12 +154,12 @@ import ReactMarkdown from 'react-markdown';
             <h2 className="text-4xl font-black uppercase tracking-widest">Website Strategy</h2>
           </div>
           <div className="prose prose-lg max-w-none">
-            <ReactMarkdown>{outputs.websitePrompt || "Website structure pending generation."}</ReactMarkdown>
+            <ReactMarkdown>{so.websitePrompt || "Website structure pending generation."}</ReactMarkdown>
           </div>
         </section>
 
         {/* 7. GTM STRATEGY */}
-        {outputs.gtmStrategy && (
+        {so.gtmStrategy && (
           <section className="break-after-page">
             <div className="border-b-4 border-black pb-4 mb-8">
               <h2 className="text-4xl font-black uppercase tracking-widest">Go-To-Market Strategy</h2>
@@ -178,7 +169,7 @@ import ReactMarkdown from 'react-markdown';
               <div>
                 <h3 className="text-2xl font-bold uppercase mb-6 bg-black text-white inline-block px-4 py-2">Outbound Channels</h3>
                 <div className="grid grid-cols-2 gap-6">
-                    {outputs.gtmStrategy.leadGen?.outreach?.map((o: any, i: number) => (
+                    {so.gtmStrategy.leadGen?.outreach?.map((o: any, i: number) => (
                       <div key={i} className="p-6 border border-black space-y-4">
                         <h4 className="font-bold text-xl mb-2 text-primary">{o.icp}</h4>
                         {o.channelTips.map((ct: any, j: number) => (
@@ -201,9 +192,9 @@ import ReactMarkdown from 'react-markdown';
                 <div className="grid grid-cols-1 gap-4">
                   <div className="p-6 border border-black">
                     <p className="font-bold mb-2">Ideal Partners:</p>
-                    <p>{outputs.gtmStrategy.partnerGrowth?.idealPartners?.map((p: any) => p.partners?.join(', ')).join(' | ')}</p>
+                    <p>{so.gtmStrategy.partnerGrowth?.idealPartners?.map((p: any) => p.partners?.join(', ')).join(' | ')}</p>
                     <p className="font-bold mt-4 mb-2">Pitch Logic:</p>
-                    <p className="text-sm italic">{outputs.gtmStrategy.partnerGrowth?.outreach?.logic}</p>
+                    <p className="text-sm italic">{so.gtmStrategy.partnerGrowth?.outreach?.logic}</p>
                   </div>
                 </div>
               </div>
@@ -212,13 +203,13 @@ import ReactMarkdown from 'react-markdown';
         )}
 
         {/* 8. STRATEGIC LEAD MAGNETS */}
-        {outputs.leadMagnets && outputs.leadMagnets.length > 0 && (
+        {so.leadMagnets && so.leadMagnets.length > 0 && (
           <section className="break-inside-avoid mb-24">
             <div className="border-b-4 border-black pb-4 mb-10">
               <h2 className="text-4xl font-black uppercase tracking-widest">High-Converting Lead Magnets</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {outputs.leadMagnets.map((lm: any, i: number) => (
+              {so.leadMagnets.map((lm: any, i: number) => (
                 <div key={i} className="p-8 border-2 border-black bg-gray-50 flex flex-col justify-between">
                   <div className="space-y-6">
                     <div className="bg-black text-white px-3 py-1 inline-block text-[10px] font-bold uppercase tracking-widest">
@@ -253,26 +244,26 @@ import ReactMarkdown from 'react-markdown';
         )}
 
         {/* 9. OUTREACH CAMPAIGNS */}
-        {(outputs.outreachCampaign || outputs.dmMessages?.length > 0) && (
+        {(so.outreachCampaign || so.dmMessages?.length > 0) && (
           <section className="break-after-page">
             <div className="border-b-4 border-black pb-4 mb-8">
               <h2 className="text-4xl font-black uppercase tracking-widest">Outreach Sequencing</h2>
             </div>
 
-            {outputs.outreachCampaign && (
+            {so.outreachCampaign && (
               <div className="space-y-8 mb-12">
                 <h3 className="text-2xl font-bold uppercase bg-black text-white inline-block px-4 py-2">Email & Core Plays</h3>
                 <div className="p-6 border border-black">
                   <h4 className="font-bold mb-4 uppercase tracking-wider">Strategy Foundation</h4>
-                  <p className="italic">{outputs.outreachCampaign.strategySummary}</p>
+                  <p className="italic">{so.outreachCampaign.strategySummary}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
                   <div className="p-6 border border-black bg-gray-50">
                     <h4 className="font-bold mb-4 uppercase text-sm">Connection Note</h4>
-                    <pre className="whitespace-pre-wrap font-serif text-sm">{outputs.outreachCampaign?.linkedIn?.connectionRequest || "N/A"}</pre>
+                    <pre className="whitespace-pre-wrap font-serif text-sm">{so.outreachCampaign?.linkedIn?.connectionRequest || "N/A"}</pre>
                   </div>
-                  {outputs.outreachCampaign?.linkedIn?.followUps?.map((f: string, i: number) => (
+                  {so.outreachCampaign?.linkedIn?.followUps?.map((f: string, i: number) => (
                     <div key={i} className="p-6 border border-black bg-gray-50">
                       <h4 className="font-bold mb-4 uppercase text-sm">Follow-up {i + 1}</h4>
                       <pre className="whitespace-pre-wrap font-serif text-sm">{f || "N/A"}</pre>
@@ -282,11 +273,11 @@ import ReactMarkdown from 'react-markdown';
               </div>
             )}
 
-            {outputs.dmMessages && outputs.dmMessages.length > 0 && (
+            {so.dmMessages && so.dmMessages.length > 0 && (
               <div>
                 <h3 className="text-2xl font-bold uppercase mb-6 bg-black text-white inline-block px-4 py-2">LinkedIn DMs</h3>
                 <div className="space-y-6">
-                  {outputs.dmMessages.map((msg: any, i: number) => (
+                  {so.dmMessages.map((msg: any, i: number) => (
                     <div key={i} className="p-6 border border-black">
                       <h4 className="font-bold uppercase mb-2">{msg.name}</h4>
                       <p className="whitespace-pre-wrap mb-4 font-medium">"{msg.message}"</p>
@@ -308,7 +299,7 @@ import ReactMarkdown from 'react-markdown';
             <div className="p-8 bg-gray-50 border border-black">
               <h3 className="font-bold uppercase tracking-wider mb-6 text-xl">Headlines</h3>
               <ul className="space-y-4">
-                {outputs.optimizedHeadlines?.map((hl: string, i: number) => (
+                {so.optimizedHeadlines?.map((hl: string, i: number) => (
                   <li key={i} className="text-lg font-medium pl-4 border-l-4 border-black">{hl}</li>
                 ))}
               </ul>
@@ -316,7 +307,7 @@ import ReactMarkdown from 'react-markdown';
             <div className="p-8 border border-black">
               <h3 className="font-bold uppercase tracking-wider mb-6 text-xl">The About Section</h3>
               <div className="prose prose-lg max-w-none font-serif leading-relaxed whitespace-pre-wrap">
-                {outputs.optimizedAbout || "No about section generated."}
+                {so.optimizedAbout || "No about section generated."}
               </div>
             </div>
           </div>
