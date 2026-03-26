@@ -82,8 +82,8 @@ export interface WorkshopState {
     linkedinUrl: string;
     linkedinHeadline: string;
     linkedinAbout: string;
-    targetIcp: string[];
-    targetIcpOther: string;
+    targetIcpDesignation: string[];
+    targetIcpDesignationOther: string;
     tonePreference: string[];
     tonePreferenceOther: string;
     offer: string;
@@ -600,6 +600,18 @@ const Step1ProfileCheck = () => {
           />
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <MultiSelectDropdown showErrors={showErrors}
+            label="Ideal Customer Designation *"
+            options={['Founders/CEOs', 'VPs of Sales/Revenue', 'Marketing Leads', 'Product Manager', 'HR/L&D Leader', 'SMB Business Owners']}
+            selected={state?.inputs?.targetIcpDesignation || []}
+            onChange={(val) => updateInput('targetIcpDesignation', val)}
+            otherValue={state?.inputs?.targetIcpDesignationOther || ""}
+            onOtherChange={(val) => updateInput('targetIcpDesignationOther', val)}
+            placeholder="Select Target(s)"
+          />
+        </div>
+
         <div className="space-y-2">
           <label className="text-xs font-bold uppercase text-text-secondary">What do you offer?</label>
           <DebouncedInput
@@ -610,18 +622,6 @@ const Step1ProfileCheck = () => {
             onDebounce={(val) => updateInput('offer', val)}
           />
           <p className="text-[10px] text-text-secondary">Example: "Reduce hiring time → for Talent Leaders → using automation"</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <MultiSelectDropdown showErrors={showErrors}
-            label="Target ICP Designation"
-            options={ROLES}
-            selected={state.inputs.targetIcp}
-            onChange={(val) => updateInput('targetIcp', val)}
-            otherValue={state.inputs.targetIcpOther}
-            onOtherChange={(val) => updateInput('targetIcpOther', val)}
-            placeholder="Select ICP(s)"
-          />
         </div>
 
         <MultiSelectDropdown showErrors={showErrors}
@@ -2474,8 +2474,8 @@ const INITIAL_WORKSHOP_INPUTS = {
   linkedinHeadline: '',
   linkedinAbout: '',
   offer: '',
-  targetIcp: [],
-  targetIcpOther: '',
+  targetIcpDesignation: [],
+  targetIcpDesignationOther: '',
   tonePreference: [],
   tonePreferenceOther: '',
   // ICP 1
@@ -2582,7 +2582,13 @@ export default function App() {
       try {
         const parsed = JSON.parse(fullStateSaved);
         console.log("[Persistence] Restored full state from localStorage");
-        return { ...parsed, isCheckingStatus: false };
+        // DEEP MERGE: Ensure all mandatory keys exist even if user has an old state
+        return { 
+          ...INITIAL_WORKSHOP_STATE,
+          ...parsed, 
+          inputs: { ...INITIAL_WORKSHOP_INPUTS, ...(parsed.inputs || {}) },
+          isCheckingStatus: false 
+        } as WorkshopState;
       } catch (e) {
         console.error("[Persistence] Error parsing fullStateSaved", e);
       }
@@ -2617,7 +2623,7 @@ export default function App() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [sessionToResume, setSessionToResume] = useState<WorkshopState | null>(null);
   const { saveInBackground, isSaving: isSbSaving } = useNonBlockingSave();
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'syncing'>('idle');
+  const [saveStatus, setSaveStatus] useState<'idle' | 'saving' | 'saved' | 'syncing'>('idle');
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -2933,17 +2939,17 @@ export default function App() {
     try {
       if (step === 1) {
         const roleStr = normalizeInputList(currentInputs!.yourRole || [], currentInputs!.yourRoleOther || "");
-        const targetIcpStr = normalizeInputList(currentInputs!.targetIcp, currentInputs!.targetIcpOther);
-        const toneStr = normalizeInputList(currentInputs!.tonePreference, currentInputs!.tonePreferenceOther);
+        const targetIcpStr = normalizeInputList(currentInputs!.targetIcpDesignation || [], currentInputs!.targetIcpDesignationOther || "");
+        const toneStr = normalizeInputList(currentInputs!.tonePreference || [], currentInputs!.tonePreferenceOther || "");
 
         const result = await gemini.optimizeLinkedInProfile({
-          headline: currentInputs!.linkedinHeadline,
-          about: currentInputs!.linkedinAbout,
+          headline: currentInputs!.linkedinHeadline || "",
+          about: currentInputs!.linkedinAbout || "",
           role: roleStr,
-          company: currentInputs!.companyName,
+          company: currentInputs!.companyName || "Your Company",
           targetIcp: targetIcpStr,
           tone: toneStr,
-          offer: currentInputs!.offer
+          offer: currentInputs!.offer || ""
         });
 
         setState(prev => ({

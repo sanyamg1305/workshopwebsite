@@ -358,7 +358,7 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
               <div className="mt-8 flex items-center gap-10 border-t border-gray-100 pt-8">
                  <div className="space-y-1">
                     <span className="text-[8px] font-black uppercase text-gray-400">Primary Focus</span>
-                    <p className="text-sm font-bold uppercase text-primary italic leading-none">{inputs.targetIcp?.[0] || icps[0]?.name}</p> 
+                    <p className="text-sm font-bold uppercase text-primary italic leading-none">{inputs?.targetIcpDesignation?.[0] || icps[0]?.name}</p> 
                  </div>
                  <div className="h-4 w-px bg-gray-100" />
                  <div className="space-y-1">
