@@ -2623,7 +2623,7 @@ export default function App() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [sessionToResume, setSessionToResume] = useState<WorkshopState | null>(null);
   const { saveInBackground, isSaving: isSbSaving } = useNonBlockingSave();
-  const [saveStatus, setSaveStatus] useState<'idle' | 'saving' | 'saved' | 'syncing'>('idle');
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'syncing'>('idle');
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
