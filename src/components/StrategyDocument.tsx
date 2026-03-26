@@ -1,8 +1,20 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 
-export const StrategyDocument = ({ state }: { state: any }) => {
-  const { inputs, outputs } = state;
+  const inputs = state?.inputs ?? {};
+  const outputs = state?.outputs ?? {};
+  
+  // GLOBAL SAFE INPUT LAYER
+  const safeInputs = {
+    brandName: inputs?.brandName || "Workshop Client",
+    companyName: inputs?.companyName || "the target market",
+    offer: inputs?.offer || "",
+    ...inputs
+  };
+
+  // SAFE OUTPUT LAYER
+  const safeOutputs = outputs as any;
+
   const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
   // Safety checks
@@ -21,12 +33,11 @@ export const StrategyDocument = ({ state }: { state: any }) => {
 
   return (
     <div className="bg-white text-black font-serif w-full max-w-[1000px] mx-auto pdf-container">
-      {/* 1. COVER PAGE */}
       <div className="h-screen flex flex-col justify-center items-center text-center p-12 border-8 border-black m-8 break-after-page">
-        <h1 className="text-6xl font-black mb-6 uppercase tracking-widest">{inputs.brandName || inputs.companyName || "Growth Strategy"}</h1>
+        <h1 className="text-6xl font-black mb-6 uppercase tracking-widest">{safeInputs.brandName || safeInputs.companyName || "Growth Strategy"}</h1>
         <div className="w-24 h-2 bg-black mx-auto mb-8"></div>
         <h2 className="text-3xl font-bold text-gray-800 mb-12 italic leading-relaxed max-w-2xl">
-          "{outputs.valueProp}"
+          "{safeOutputs.valueProp || "Strategic Distribution & Authority Positioning"}"
         </h2>
         <div className="mt-auto space-y-4">
           <p className="text-xl font-bold tracking-widest uppercase">Go-To-Market & Growth Strategy</p>
@@ -44,19 +55,19 @@ export const StrategyDocument = ({ state }: { state: any }) => {
           <div className="space-y-6 text-lg leading-relaxed">
             <div>
               <h3 className="font-bold uppercase tracking-wider text-sm mb-2 text-gray-500">What The Business Does</h3>
-              <p>{inputs.offer}</p>
+              <p>{safeInputs.offer || "Providing specialized expertise and high-value solutions."}</p>
             </div>
             <div>
               <h3 className="font-bold uppercase tracking-wider text-sm mb-2 text-gray-500">Who We Target</h3>
-              <p>{outputs.icpSummary || "Strategic Decision Makers"}</p>
+              <p>{safeOutputs.icpSummary || "Strategic decision makers in specialized markets."}</p>
             </div>
             <div>
               <h3 className="font-bold uppercase tracking-wider text-sm mb-2 text-gray-500">Core Positioning Insight</h3>
-              <p>{outputs.positioningAngles || outputs.globalSolution || "Leveraging clear narrative differentiation to accelerate pipeline growth."}</p>
+              <p>{safeOutputs.positioningAngles || safeOutputs.globalSolution || "Leveraging clear narrative differentiation to accelerate pipeline growth."}</p>
             </div>
             <div>
               <h3 className="font-bold uppercase tracking-wider text-sm mb-2 text-gray-500">Key Opportunity</h3>
-              <p>{outputs.outreachCampaign?.strategySummary || "Systematizing outreach and inbound authority to capture demand natively."}</p>
+              <p>{safeOutputs.outreachCampaign?.strategySummary || "Systematizing outreach and inbound authority to capture demand natively."}</p>
             </div>
           </div>
         </section>
@@ -130,7 +141,6 @@ export const StrategyDocument = ({ state }: { state: any }) => {
           </section>
         )}
 
-        {/* 5. POSITIONING STRATEGY */}
         <section className="break-inside-avoid mb-24">
           <div className="border-b-4 border-black pb-4 mb-8">
             <h2 className="text-4xl font-black uppercase tracking-widest">Positioning Strategy</h2>
@@ -138,11 +148,11 @@ export const StrategyDocument = ({ state }: { state: any }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="p-6 bg-gray-50 border border-black">
               <h3 className="font-bold uppercase tracking-wider mb-4">Core Narrative Angle</h3>
-              <p className="text-lg italic">"{inputs.narrativeAngles?.join(', ') || 'Value-led differentiation'}"</p>
+              <p className="text-lg italic">"{safeInputs.narrativeAngles?.join(', ') || 'Value-led differentiation'}"</p>
             </div>
             <div className="p-6 bg-gray-50 border border-black">
               <h3 className="font-bold uppercase tracking-wider mb-4">Global Solution Focus</h3>
-              <p className="text-sm leading-relaxed">{outputs.globalSolution}</p>
+              <p className="text-sm leading-relaxed">{safeOutputs.globalSolution || "Establishing systematic authority to drive market penetration and trust."}</p>
             </div>
           </div>
         </section>

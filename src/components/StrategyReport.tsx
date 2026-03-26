@@ -61,7 +61,8 @@ const Layer3 = ({ children, title }: { children: React.ReactNode, title: string 
 );
 
 export const StrategyReport = ({ state }: StrategyReportProps) => {
-  const { inputs, outputs } = state;
+  const inputs = state?.inputs ?? {};
+  const outputs = state?.outputs ?? {};
   
   // SAFE STATE SHAPE
   const safeInputs = {
@@ -79,16 +80,17 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
     ...(inputs || {})
   };
 
-  const icps = outputs.icps || [];
-  const valuePropTables = outputs.valuePropTables || [];
-  const gtmStrategy = outputs.gtmStrategy || { leadGen: { outreach: [] }, leadMagnets: [] };
-  const outreachEngine = outputs.outreachEngineOutput;
+  const safeOutputs = outputs as any;
+  const icps = safeOutputs.icps || [];
+  const valuePropTables = safeOutputs.valuePropTables || [];
+  const gtmStrategy = safeOutputs.gtmStrategy || { leadGen: { outreach: [] }, leadMagnets: [] };
+  const outreachEngine = safeOutputs.outreachEngineOutput;
   const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
   // Layer 1/2 Data Extraction
-  const profileScore = outputs.profileClarityScore || 72;
-  const keywordScore = outputs.keywordScore || 65;
-  const clarityScoreMeaning = outputs.scoreMeaning || "Standard";
+  const profileScore = safeOutputs.profileClarityScore || 72;
+  const keywordScore = safeOutputs.keywordScore || 65;
+  const clarityScoreMeaning = safeOutputs.scoreMeaning || "Standard";
 
   return (
     <div id="strategy-report" className="bg-white text-black p-0 w-[21cm] min-h-[29.7cm] mx-auto shadow-2xl print:shadow-none print:m-0 font-sans selection:bg-yellow-200 antialiased overflow-x-hidden">
@@ -121,7 +123,7 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
 
           <div className="max-w-xl space-y-4">
              <p className="text-3xl font-black uppercase tracking-tight leading-tight text-gray-900">
-                {outputs.globalSolution?.split('.')[0] || `Strategic Distribution Engine for ${safeInputs.brandName}`}
+                {safeOutputs.globalSolution?.split('.')[0] || `Strategic Distribution Engine for ${safeInputs.brandName}`}
              </p>
              <p className="text-base text-gray-500 leading-relaxed font-medium">
                 A performance-engineered GTM strategy designed to penetrate {safeInputs.companyName || 'the target market'} through high-authority positioning and systematic outreach.
@@ -154,7 +156,7 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
         <div className="grid grid-cols-1 gap-12">
           <Layer1 
             title={safeInputs.brandName + " Growth Playbook"}
-            outcome={outputs.globalSolution?.split('.')[0]}
+            outcome={safeOutputs.globalSolution?.split('.')[0]}
           >
             <ul className="grid grid-cols-3 gap-8 mt-8">
               <li className="p-6 bg-black text-white rounded-3xl flex flex-col justify-between">

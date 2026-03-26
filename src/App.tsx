@@ -497,7 +497,10 @@ const Step1ProfileCheck = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // SAFE STATE SHAPE: Global fallbacks to prevent "undefined" crashes
+  // GLOBAL SAFE INPUT LAYER
+  const inputs = state?.inputs ?? {};
+  
+  // NORMALIZE ALL FIELDS (CRITICAL)
   const safeInputs = {
     yourRole: [],
     yourRoleOther: "",
@@ -510,8 +513,11 @@ const Step1ProfileCheck = () => {
     linkedinUrl: "",
     linkedinHeadline: "",
     linkedinAbout: "",
-    ...(state?.inputs || {})
+    ...inputs
   };
+
+  // SAFE OUTPUT LAYER
+  const safeOutputs = state?.outputs ?? {};
 
   const handleOptimize = async () => {
     setShowErrors(true);
@@ -652,7 +658,7 @@ const Step1ProfileCheck = () => {
         />
 
         <div className="mt-8 space-y-6">
-          {state.outputs.profileClarityScore > 0 && (
+          {(safeOutputs.profileClarityScore || 0) > 0 && (
             <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
               <p className="text-emerald-500 font-bold text-sm">✓ Profile Optimization Complete</p>
               <button 
@@ -672,7 +678,7 @@ const Step1ProfileCheck = () => {
         </div>
       )}
 
-      {state.outputs.profileClarityScore > 0 && (
+      {(safeOutputs.profileClarityScore || 0) > 0 && (
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -680,7 +686,7 @@ const Step1ProfileCheck = () => {
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col items-center justify-center p-8 bg-section rounded-2xl border border-border group hover:border-primary transition-colors">
-              <div className="text-6xl font-black text-primary mb-2 group-hover:scale-110 transition-transform">{state.outputs.profileClarityScore}</div>
+              <div className="text-6xl font-black text-primary mb-2 group-hover:scale-110 transition-transform">{safeOutputs.profileClarityScore || 0}</div>
               <div className="flex items-center text-sm font-bold uppercase tracking-widest text-text-secondary">
                 Clarity Score
                 <ScoreTooltip 
@@ -692,7 +698,7 @@ const Step1ProfileCheck = () => {
               </div>
             </div>
             <div className="flex flex-col items-center justify-center p-8 bg-section rounded-2xl border border-border group hover:border-primary transition-colors">
-              <div className="text-6xl font-black text-primary mb-2 group-hover:scale-110 transition-transform">{state.outputs.keywordScore}</div>
+              <div className="text-6xl font-black text-primary mb-2 group-hover:scale-110 transition-transform">{safeOutputs.keywordScore || 0}</div>
               <div className="flex items-center text-sm font-bold uppercase tracking-widest text-text-secondary">
                 Keyword Score
                 <ScoreTooltip 
@@ -712,13 +718,13 @@ const Step1ProfileCheck = () => {
                   <Flame size={14} />
                   Diagnostic Report
                 </h4>
-                {typeof state.outputs.scoreExplanation !== 'string' ? (
+                {safeOutputs.scoreExplanation && typeof safeOutputs.scoreExplanation !== 'string' ? (
                   <div className="space-y-8">
                     {/* Overall Summary */}
                     <div className="pb-6 border-b border-border">
                       <h5 className="text-[10px] font-black uppercase text-text-secondary mb-2 tracking-widest">🔹 Overall Summary</h5>
                       <p className="text-lg font-bold italic leading-snug">
-                        "{state.outputs.scoreExplanation.overallSummary}"
+                        "{safeOutputs.scoreExplanation.overallSummary || ""}"
                       </p>
                     </div>
 
@@ -733,17 +739,17 @@ const Step1ProfileCheck = () => {
                           { id: 'proof', label: 'Proof' },
                           { id: 'execution', label: 'Execution' }
                         ].map((dim) => {
-                          const data = (state.outputs.scoreExplanation as gemini.DiagnosticReport).scoreBreakdown[dim.id as keyof gemini.DiagnosticReport['scoreBreakdown']];
+                          const data = (safeOutputs.scoreExplanation as gemini.DiagnosticReport).scoreBreakdown?.[dim.id as keyof gemini.DiagnosticReport['scoreBreakdown']] ?? { score: 0, bullets: [] };
                           return (
                             <div key={dim.id} className="p-4 bg-bg rounded-2xl border border-border/50">
                               <div className="flex justify-between items-center mb-3">
                                 <span className="text-xs font-black uppercase tracking-wider">{dim.label}</span>
                                 <span className="text-primary font-black">
-                                  {data.score} <span className="text-[10px] opacity-40">/ 20</span>
+                                  {data.score || 0} <span className="text-[10px] opacity-40">/ 20</span>
                                 </span>
                               </div>
                               <ul className="space-y-1.5">
-                                {data.bullets.map((bullet, idx) => (
+                                {(data.bullets || []).map((bullet: string, idx: number) => (
                                   <li key={idx} className="text-[10px] font-medium leading-tight text-text-secondary flex items-start gap-1.5 italic">
                                     <div className="w-1 h-1 bg-primary/40 rounded-full mt-1.5 shrink-0" />
                                     {bullet}
@@ -764,7 +770,7 @@ const Step1ProfileCheck = () => {
                           🔹 What's Working
                         </h5>
                         <ul className="space-y-2">
-                          {state.outputs.scoreExplanation.whatsWorking.map((item, i) => (
+                          {(safeOutputs.scoreExplanation.whatsWorking || []).map((item: string, i: number) => (
                             <li key={i} className="text-xs font-bold flex items-center gap-2">
                               <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
                               {item}
@@ -778,7 +784,7 @@ const Step1ProfileCheck = () => {
                           🔹 What to Improve
                         </h5>
                         <ul className="space-y-2">
-                          {state.outputs.scoreExplanation.toImprove.map((item, i) => (
+                          {(safeOutputs.scoreExplanation.toImprove || []).map((item: string, i: number) => (
                             <li key={i} className="text-xs font-bold flex items-center gap-2">
                               <div className="w-1.5 h-1.5 bg-primary rounded-full" />
                               {item}
@@ -789,7 +795,7 @@ const Step1ProfileCheck = () => {
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm leading-relaxed">{state.outputs.scoreExplanation}</p>
+                  <p className="text-sm leading-relaxed">{safeOutputs.scoreExplanation || ""}</p>
                 )}
               </div>
             </div>
@@ -801,7 +807,7 @@ const Step1ProfileCheck = () => {
               Optimized Headlines
             </h4>
             <div className="space-y-3">
-              {state.outputs.optimizedHeadlines.map((h, i) => (
+              {(safeOutputs.optimizedHeadlines || []).map((h: string, i: number) => (
                 <div key={i} className="p-5 bg-section border border-border rounded-xl flex items-center justify-between group hover:border-primary/50 transition-all">
                   <span className="text-sm font-medium leading-relaxed">{h}</span>
                   <button 
@@ -818,9 +824,9 @@ const Step1ProfileCheck = () => {
             </div>
           </div>
 
-          <OutputCard title="Optimized About Section" copyText={state.outputs.optimizedAbout} icon={User}>
+          <OutputCard title="Optimized About Section" copyText={safeOutputs.optimizedAbout || ""} icon={User}>
             <div className="text-sm leading-relaxed whitespace-pre-wrap font-normal text-text-secondary">
-              {state.outputs.optimizedAbout}
+              {safeOutputs.optimizedAbout || ""}
             </div>
           </OutputCard>
 
@@ -828,7 +834,7 @@ const Step1ProfileCheck = () => {
             <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
               <button 
                 onClick={() => {
-                  navigator.clipboard.writeText(state.outputs.positioningAngles);
+                  navigator.clipboard.writeText(safeOutputs.positioningAngles || "");
                   alert('Positioning copied!');
                 }}
                 className="p-2 hover:bg-primary/10 rounded-lg text-primary"
@@ -840,7 +846,7 @@ const Step1ProfileCheck = () => {
               <Target size={16} />
               Positioning Angles
             </h4>
-            <p className="text-xl font-bold italic leading-relaxed">"{state.outputs.positioningAngles}"</p>
+            <p className="text-xl font-bold italic leading-relaxed">"{safeOutputs.positioningAngles || ""}"</p>
           </div>
         </motion.div>
       )}
@@ -855,10 +861,34 @@ const Step2ICPBuilder = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeIcp, setActiveIcp] = useState<1 | 2 | 3>(1);
 
-  // SAFE STATE SHAPE
+  // GLOBAL SAFE INPUT LAYER
+  const inputs = state?.inputs ?? {};
+  
+  // NORMALIZE ALL FIELDS (CRITICAL)
   const safeInputs = {
-    ...(state?.inputs || {})
+    icp1_roles: [],
+    icp1_rolesOther: "",
+    icp1_sizes: [],
+    icp1_sizesOther: "",
+    icp1_industries: [],
+    icp1_industriesOther: "",
+    icp2_roles: [],
+    icp2_rolesOther: "",
+    icp2_sizes: [],
+    icp2_sizesOther: "",
+    icp2_industries: [],
+    icp2_industriesOther: "",
+    icp3_roles: [],
+    icp3_rolesOther: "",
+    icp3_sizes: [],
+    icp3_sizesOther: "",
+    icp3_industries: [],
+    icp3_industriesOther: "",
+    ...inputs
   };
+
+  // SAFE OUTPUT LAYER
+  const safeOutputs = state?.outputs ?? {};
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -880,7 +910,7 @@ const Step2ICPBuilder = () => {
 
   const renderIcpForm = (num: 1 | 2 | 3) => {
     const prefix = `icp${num}_` as any;
-    const isCompleted = state.outputs.icps && state.outputs.icps.length >= num;
+    const isCompleted = (safeOutputs.icps || []).length >= num;
 
     return (
       <div className="space-y-6 bg-section p-8 rounded-3xl border border-border">
@@ -963,9 +993,9 @@ const Step2ICPBuilder = () => {
         </div>
       )}
       <div className="mt-8 space-y-6">
-        {state.outputs.icps && state.outputs.icps.length > 0 && (
+        {(safeOutputs.icps || []).length > 0 && (
           <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
-            <p className="text-emerald-500 font-bold text-sm">✓ {state.outputs.icps.length} ICP Profiles Generated</p>
+            <p className="text-emerald-500 font-bold text-sm">✓ {(safeOutputs.icps || []).length} ICP Profiles Generated</p>
             <button 
               onClick={handleGenerate}
               className="mt-2 text-[10px] font-black uppercase tracking-widest text-text-secondary hover:text-primary transition-all"
@@ -976,9 +1006,9 @@ const Step2ICPBuilder = () => {
         )}
       </div>
 
-      {state.outputs.icps && state.outputs.icps.length > 0 && (
+      {(safeOutputs.icps || []).length > 0 && (
         <div className="space-y-8">
-          {state.outputs.icps.map((icp, idx) => (
+          {(safeOutputs.icps || []).map((icp: gemini.DetailedICP, idx: number) => (
             <motion.div 
               key={idx}
               initial={{ opacity: 0, y: 20 }}
@@ -991,7 +1021,7 @@ const Step2ICPBuilder = () => {
                   <Target className="text-primary" size={24} />
                   <span className="text-xs font-black uppercase tracking-[0.2em] text-primary">ICP {idx + 1} Profile</span>
                 </div>
-                <h3 className="text-3xl font-black">{icp.name}</h3>
+                <h3 className="text-3xl font-black">{icp.name || ""}</h3>
               </div>
 
               <div className="p-8 space-y-8">
@@ -1065,16 +1095,21 @@ const Step3ValueProp = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // SAFE STATE SHAPE
+  // GLOBAL SAFE INPUT LAYER
+  const inputs = state?.inputs ?? {};
+  
+  // NORMALIZE ALL FIELDS (CRITICAL)
   const safeInputs = {
-    companyName: "",
-    productName: "",
-    productDescription: "",
-    targetAudience: "",
-    keyFeatures: "",
-    uniqueSellingPoints: "",
-    ...(state?.inputs || {})
+    narrativeAngles: [],
+    narrativeAnglesOther: "",
+    tonePreference: [],
+    tonePreferenceOther: "",
+    offer: "",
+    ...inputs
   };
+
+  // SAFE OUTPUT LAYER
+  const safeOutputs = state?.outputs ?? {};
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -1095,15 +1130,15 @@ const Step3ValueProp = () => {
         <p className="text-text-secondary">Generate structured, strategic value prop tables for your top 3 ICPs.</p>
       </div>
 
-      {state.outputs.valuePropTables.length === 0 ? (
+      {(safeOutputs.valuePropTables || []).length === 0 ? (
         <div className="space-y-6">
           <p className="text-text-secondary italic">No positioning generated yet. Using fallback data based on your ICPs.</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {state.outputs.icps.map((icp, i) => (
+            {(safeOutputs.icps || []).map((icp: gemini.DetailedICP, i: number) => (
               <div key={i} className="p-4 bg-section-alt border border-border rounded-xl">
-                <div className="text-xs font-bold text-primary mb-2">{icp.name}</div>
+                <div className="text-xs font-bold text-primary mb-2">{icp.name || ""}</div>
                 <div className="text-xs text-text-secondary leading-relaxed">
-                  Focus on solving: {icp.painPoints[0]}
+                  Focus on solving: {(icp.painPoints || [])[0] || "Target pains"}
                 </div>
               </div>
             ))}
@@ -1125,7 +1160,7 @@ const Step3ValueProp = () => {
           </div>
 
           <div className="grid grid-cols-1 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            {state.outputs.valuePropTables.map((row: any, i: number) => (
+            {(safeOutputs.valuePropTables || []).map((row: any, i: number) => (
               <div key={i} className="bg-section border border-border rounded-3xl overflow-hidden hover:border-primary transition-all group shadow-2xl relative">
                 {/* ICP Header */}
                 <div className="p-6 bg-section-alt border-b border-border flex items-center justify-between">
@@ -1223,14 +1258,20 @@ const Step4WebsiteBuilder = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // SAFE STATE SHAPE
+  // GLOBAL SAFE INPUT LAYER
+  const inputs = state?.inputs ?? {};
+  
+  // NORMALIZE ALL FIELDS (CRITICAL)
   const safeInputs = {
     brandName: "",
     primaryColor: "#000000",
     secondaryColor: "#FFFFFF",
     inspirationImage: null,
-    ...(state?.inputs || {})
+    ...inputs
   };
+
+  // SAFE OUTPUT LAYER
+  const safeOutputs = state?.outputs ?? {};
 
   const handleGenerate = async () => {
     setShowErrors(true);
@@ -1267,15 +1308,15 @@ const Step4WebsiteBuilder = () => {
         <p className="text-text-secondary">Generate a precision-engineered prompt to build your high-converting landing page in minutes.</p>
       </div>
 
-      {state.outputs.websitePrompt ? (
+      {safeOutputs.websitePrompt ? (
         <div className="space-y-8">
           <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
             <p className="text-emerald-500 font-bold text-sm">✓ Website Prompt Engineered Successfully</p>
           </div>
 
-          <OutputCard title="AI Studio Prompt" copyText={state.outputs.websitePrompt}>
+          <OutputCard title="AI Studio Prompt" copyText={safeOutputs.websitePrompt || ""}>
             <pre className="whitespace-pre-wrap font-mono text-sm bg-section p-4 rounded-xl border border-border overflow-x-auto text-text-secondary scrollbar-thin scrollbar-thumb-primary/20">
-              {state.outputs.websitePrompt}
+              {safeOutputs.websitePrompt || ""}
             </pre>
           </OutputCard>
 
@@ -1490,10 +1531,16 @@ const Step5GTMStrategy = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'leadGen' | 'partner' | 'event' | 'magnets'>('leadGen');
 
-  // SAFE STATE SHAPE
+  // GLOBAL SAFE INPUT LAYER
+  const inputs = state?.inputs ?? {};
+  
+  // NORMALIZE ALL FIELDS (CRITICAL)
   const safeInputs = {
-    ...(state?.inputs || {})
+    ...inputs
   };
+
+  // SAFE OUTPUT LAYER
+  const safeOutputs = state?.outputs ?? {};
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -1507,8 +1554,8 @@ const Step5GTMStrategy = () => {
     setLoading(false);
   };
 
-  const strategy = state.outputs.gtmStrategy;
-  const magnets: any[] = state.outputs.leadMagnets || [];
+  const strategy = safeOutputs.gtmStrategy;
+  const magnets = (safeOutputs.leadMagnets || []) as any[];
 
   return (
     <div className="space-y-8">
@@ -1589,14 +1636,14 @@ const Step5GTMStrategy = () => {
                     Outreach Strategy
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {strategy.leadGen.targeting.map((t, i) => (
+                    {(strategy?.leadGen?.targeting || []).map((t: any, i: number) => (
                       <div key={i} className="p-6 bg-section border border-border rounded-2xl space-y-3">
-                        <div className="text-xs font-black uppercase text-primary tracking-widest">{t.icp}</div>
+                        <div className="text-xs font-black uppercase text-primary tracking-widest">{t.icp || ""}</div>
                         <div className="space-y-2">
-                          <div className="text-sm font-bold">Roles: <span className="text-text-secondary font-normal">{t.roles}</span></div>
-                          <div className="text-sm font-bold">Size: <span className="text-text-secondary font-normal">{t.size}</span></div>
-                          <div className="text-sm font-bold">Industry: <span className="text-text-secondary font-normal">{t.industries}</span></div>
-                          <div className="text-sm font-bold">Geo: <span className="text-text-secondary font-normal">{t.geo}</span></div>
+                          <div className="text-sm font-bold">Roles: <span className="text-text-secondary font-normal">{t.roles || ""}</span></div>
+                          <div className="text-sm font-bold">Size: <span className="text-text-secondary font-normal">{t.size || ""}</span></div>
+                          <div className="text-sm font-bold">Industry: <span className="text-text-secondary font-normal">{t.industries || ""}</span></div>
+                          <div className="text-sm font-bold">Geo: <span className="text-text-secondary font-normal">{t.geo || ""}</span></div>
                         </div>
                       </div>
                     ))}
@@ -1609,11 +1656,11 @@ const Step5GTMStrategy = () => {
                     Channel Strategy
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {strategy.leadGen.channels.map((c, i) => (
+                    {(strategy?.leadGen?.channels || []).map((c: any, i: number) => (
                       <div key={i} className="p-6 bg-section border border-border rounded-2xl space-y-2">
-                        <div className="text-lg font-black">{c.channel}</div>
-                        <div className="text-sm text-text-secondary leading-relaxed"><span className="font-bold text-text">Why:</span> {c.why}</div>
-                        <div className="text-sm text-text-secondary leading-relaxed"><span className="font-bold text-text">Approach:</span> {c.approach}</div>
+                        <div className="text-lg font-black">{c.channel || ""}</div>
+                        <div className="text-sm text-text-secondary leading-relaxed"><span className="font-bold text-text">Why:</span> {c.why || ""}</div>
+                        <div className="text-sm text-text-secondary leading-relaxed"><span className="font-bold text-text">Approach:</span> {c.approach || ""}</div>
                       </div>
                     ))}
                   </div>
@@ -1670,11 +1717,11 @@ const Step5GTMStrategy = () => {
                     Funnel Design
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    {strategy.leadGen.funnel.map((f, i) => (
+                    {(strategy?.leadGen?.funnel || []).map((f: any, i: number) => (
                       <div key={i} className="p-6 bg-section border border-border rounded-2xl relative">
                         <div className="absolute -top-3 -left-3 w-8 h-8 bg-primary text-black rounded-full flex items-center justify-center font-black text-xs shadow-lg">{i + 1}</div>
-                        <div className="text-xs font-black uppercase tracking-widest text-primary mb-2">{f.step}</div>
-                        <div className="text-xs text-text-secondary leading-relaxed">{f.description}</div>
+                        <div className="text-xs font-black uppercase tracking-widest text-primary mb-2">{f.step || ""}</div>
+                        <div className="text-xs text-text-secondary leading-relaxed">{f.description || ""}</div>
                       </div>
                     ))}
                   </div>
@@ -1691,11 +1738,11 @@ const Step5GTMStrategy = () => {
                       Ideal Partners
                     </h3>
                     <div className="space-y-4">
-                      {strategy.partnerGrowth.idealPartners.map((ip, i) => (
+                      {(strategy?.partnerGrowth?.idealPartners || []).map((ip: any, i: number) => (
                         <div key={i} className="p-6 bg-section border border-border rounded-2xl space-y-2">
-                          <div className="text-xs font-black uppercase text-primary tracking-widest">{ip.icp}</div>
+                          <div className="text-xs font-black uppercase text-primary tracking-widest">{ip.icp || ""}</div>
                           <div className="flex flex-wrap gap-2">
-                            {ip.partners.map((p, j) => <span key={j} className="px-3 py-1 bg-section-alt rounded-full text-xs font-bold border border-border">{p}</span>)}
+                            {(ip.partners || []).map((p: string, j: number) => <span key={j} className="px-3 py-1 bg-section-alt rounded-full text-xs font-bold border border-border">{p}</span>)}
                           </div>
                         </div>
                       ))}
@@ -1708,7 +1755,7 @@ const Step5GTMStrategy = () => {
                       Partnership Models
                     </h3>
                     <div className="grid grid-cols-2 gap-4">
-                      {strategy.partnerGrowth.models.map((m, i) => (
+                      {(strategy?.partnerGrowth?.models || []).map((m: string, i: number) => (
                         <div key={i} className="p-4 bg-section border border-border rounded-xl text-sm font-bold flex items-center gap-2">
                           <CheckCircle2 size={16} className="text-primary" />
                           {m}
@@ -1764,7 +1811,7 @@ const Step5GTMStrategy = () => {
                       Event Types
                     </h3>
                     <div className="flex flex-wrap gap-3">
-                      {strategy.eventGrowth.types.map((t, i) => (
+                      {(strategy?.eventGrowth?.types || []).map((t: string, i: number) => (
                         <div key={i} className="px-6 py-3 bg-section border border-border rounded-xl font-bold text-sm shadow-sm">
                           {t}
                         </div>
@@ -1778,11 +1825,11 @@ const Step5GTMStrategy = () => {
                       Event Ideas
                     </h3>
                     <div className="space-y-4">
-                      {strategy.eventGrowth.ideas.map((id, i) => (
+                      {(strategy?.eventGrowth?.ideas || []).map((id: any, i: number) => (
                         <div key={i} className="p-6 bg-section border border-border rounded-2xl space-y-3">
-                          <div className="text-xs font-black uppercase text-primary tracking-widest">{id.icp}</div>
+                          <div className="text-xs font-black uppercase text-primary tracking-widest">{id.icp || ""}</div>
                           <ul className="space-y-2">
-                            {id.topics.map((topic, j) => (
+                            {(id.topics || []).map((topic: string, j: number) => (
                               <li key={j} className="text-sm flex items-start gap-2">
                                 <ArrowRight size={14} className="text-primary mt-1 shrink-0" />
                                 {topic}
@@ -1802,7 +1849,7 @@ const Step5GTMStrategy = () => {
                       Event Funnel
                     </h3>
                     <div className="p-6 bg-section border border-border rounded-2xl text-sm leading-relaxed text-text-secondary">
-                      {strategy.eventGrowth.funnel}
+                      {strategy?.eventGrowth?.funnel || ""}
                     </div>
                   </section>
 
@@ -1812,7 +1859,7 @@ const Step5GTMStrategy = () => {
                       Conversion Strategy
                     </h3>
                     <div className="p-6 bg-section border border-border rounded-2xl text-sm leading-relaxed text-text-secondary">
-                      {strategy.eventGrowth.conversion}
+                      {strategy?.eventGrowth?.conversion || ""}
                     </div>
                   </section>
                 </div>
@@ -1893,12 +1940,18 @@ const Step6OutreachEngine = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // SAFE STATE SHAPE
+  // GLOBAL SAFE INPUT LAYER
+  const inputs = state?.inputs ?? {};
+  
+  // NORMALIZE ALL FIELDS (CRITICAL)
   const safeInputs = {
-    outreachAngle: "",
+    outreachAngle: "Authority",
     outreachChannel: "Both",
-    ...(state?.inputs || {})
+    ...inputs
   };
+
+  // SAFE OUTPUT LAYER
+  const safeOutputs = state?.outputs ?? {};
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -1966,9 +2019,9 @@ const Step6OutreachEngine = () => {
         </div>
 
         <div className="mt-8 space-y-6">
-          {out && (
+          {safeOutputs.outreachEngineOutput && (
             <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
-              <p className="text-emerald-500 font-bold text-sm">✓ {state.inputs.outreachAngle} Campaign Generated</p>
+              <p className="text-emerald-500 font-bold text-sm">✓ {safeInputs.outreachAngle} Campaign Generated</p>
               <button 
                 onClick={handleGenerate}
                 className="mt-2 text-[10px] font-black uppercase tracking-widest text-text-secondary hover:text-primary transition-all"
@@ -2001,7 +2054,7 @@ const Step6OutreachEngine = () => {
               <Sparkles size={16} /> Strategy Hook: {safeInputs.outreachAngle}
             </h4>
             <p className="text-xl font-black leading-tight italic">
-              "{out.strategySummary}"
+              "{safeOutputs.outreachEngineOutput?.strategySummary || ""}"
             </p>
           </div>
 
@@ -2014,11 +2067,12 @@ const Step6OutreachEngine = () => {
               <div className="p-6 bg-section border border-border rounded-xl group hover:border-primary/30 transition-all">
                 <span className="block text-[10px] uppercase font-bold text-primary mb-2 tracking-widest">Connection Request</span>
                 <p className="text-sm leading-relaxed text-text-primary whitespace-pre-wrap">
-                  {out.linkedIn.connectionRequest}
+                  {safeOutputs.outreachEngineOutput?.linkedIn?.connectionRequest || ""}
                 </p>
                 <button 
                   onClick={() => {
-                    navigator.clipboard.writeText(out.linkedIn.connectionRequest);
+                    const req = safeOutputs.outreachEngineOutput?.linkedIn?.connectionRequest || "";
+                    navigator.clipboard.writeText(req);
                     alert('Copied!');
                   }}
                   className="mt-4 text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-1 hover:underline"
@@ -2027,7 +2081,7 @@ const Step6OutreachEngine = () => {
                 </button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {out.linkedIn.followUps.map((f, i) => (
+                {(safeOutputs.outreachEngineOutput?.linkedIn?.followUps || []).map((f: string, i: number) => (
                   <div key={i} className="p-4 bg-section/50 border border-border rounded-xl">
                     <span className="block text-[8px] uppercase font-bold text-text-secondary mb-2 text-right">Follow-up {i + 1}</span>
                     <p className="text-[11px] leading-relaxed italic text-text-secondary">"{f}"</p>
@@ -2046,15 +2100,16 @@ const Step6OutreachEngine = () => {
               <div className="p-6 bg-section border-2 border-primary/10 rounded-xl relative overflow-hidden group hover:border-primary/30 transition-all">
                 <div className="absolute top-0 right-0 bg-primary/10 px-3 py-1 text-[8px] font-black uppercase tracking-tighter">Primary Asset</div>
                 <div className="inline-block px-3 py-1 bg-bg rounded-lg border border-border text-[10px] font-bold uppercase tracking-widest text-primary mb-4">
-                  Subject: {out.email.subjectLine}
+                  Subject: {safeOutputs.outreachEngineOutput?.email?.subjectLine || ""}
                 </div>
                 <p className="text-sm leading-relaxed whitespace-pre-wrap text-text-primary">
-                  {out.email.body}
+                  {safeOutputs.outreachEngineOutput?.email?.body || ""}
                 </p>
                 <div className="flex gap-4 mt-6 pt-4 border-t border-border">
                   <button 
                     onClick={() => {
-                      navigator.clipboard.writeText(out.email.body);
+                      const body = safeOutputs.outreachEngineOutput?.email?.body || "";
+                      navigator.clipboard.writeText(body);
                       alert('Email body copied!');
                     }}
                     className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-1 hover:underline"
@@ -2063,7 +2118,8 @@ const Step6OutreachEngine = () => {
                   </button>
                   <button 
                     onClick={() => {
-                      navigator.clipboard.writeText(out.email.subjectLine);
+                      const sub = safeOutputs.outreachEngineOutput?.email?.subjectLine || "";
+                      navigator.clipboard.writeText(sub);
                       alert('Subject line copied!');
                     }}
                     className="text-[10px] font-bold uppercase tracking-widest text-text-secondary flex items-center gap-1 hover:underline"
@@ -2073,7 +2129,7 @@ const Step6OutreachEngine = () => {
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {out.email.followUps.map((f, i) => (
+                {(safeOutputs.outreachEngineOutput?.email?.followUps || []).map((f: string, i: number) => (
                   <div key={i} className="p-4 bg-section/50 border border-border rounded-xl">
                     <span className="block text-[8px] uppercase font-bold text-primary mb-2 text-right">Email Follow-up {i + 1}</span>
                     <p className="text-[11px] leading-relaxed italic text-text-secondary">"{f}"</p>
@@ -2092,9 +2148,22 @@ const Step7Summary = () => {
   const { state } = useWorkshop();
   const [error, setError] = useState<string | null>(null);
 
+  // GLOBAL SAFE INPUT LAYER
+  const inputs = state?.inputs ?? {};
+  
+  // NORMALIZE ALL FIELDS (CRITICAL)
+  const safeInputs = {
+    outreachChannel: "Both",
+    outreachAngle: "Authority",
+    ...inputs
+  };
+
+  // SAFE OUTPUT LAYER
+  const safeOutputs = state?.outputs ?? {};
+
   const handleDownload = () => {
     // 1. Validate Required Sections
-    const { profileClarityScore, icps, valuePropTables, gtmStrategy, outreachEngineOutput, globalSolution } = state.outputs;
+    const { profileClarityScore, icps, valuePropTables, gtmStrategy, outreachEngineOutput, globalSolution } = safeOutputs;
     
     console.log("PDF Data Validation:", { profileClarityScore, icps, valuePropTables, gtmStrategy, outreachEngineOutput, globalSolution });
 
@@ -2147,8 +2216,8 @@ const Step7Summary = () => {
             <h4 className="text-xs font-bold uppercase tracking-widest text-text-secondary">Target Market</h4>
           </div>
           <p className="text-sm leading-relaxed">
-            {state.outputs.icps.length > 0 
-              ? `${state.outputs.icps.length} ICPs identified, led by ${state.outputs.icps[0].name}.`
+            {(safeOutputs.icps || []).length > 0 
+              ? `${(safeOutputs.icps || []).length} ICPs identified, led by ${(safeOutputs.icps || [])[0]?.name || "Primary ICP"}.`
               : "Market segments defined based on your offering."}
           </p>
         </div>
@@ -2160,13 +2229,13 @@ const Step7Summary = () => {
             <h4 className="text-xs font-bold uppercase tracking-widest text-text-secondary">Core Positioning</h4>
           </div>
           <div className="space-y-2">
-            {state.outputs.valuePropTables.length > 0 ? (
+            {(safeOutputs.valuePropTables || []).length > 0 ? (
               <>
                 <div className="text-lg font-black text-primary leading-tight">
-                  {state.outputs.valuePropTables[0].desiredOutcome}
+                  {(safeOutputs.valuePropTables || [])[0]?.desiredOutcome || "Scale your operations"}
                 </div>
                 <p className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">
-                  Method: {state.outputs.valuePropTables[0].method}
+                  Method: {(safeOutputs.valuePropTables || [])[0]?.method || "Strategic Implementation"}
                 </p>
               </>
             ) : (
@@ -2182,9 +2251,9 @@ const Step7Summary = () => {
             <h4 className="text-xs font-bold uppercase tracking-widest text-text-secondary">Outreach Strategy</h4>
           </div>
           <div className="space-y-2">
-            <div className="text-sm font-bold">{state.inputs.outreachChannel} | {state.inputs.outreachAngle}</div>
-            {state.outputs.outreachEngineOutput && (
-              <p className="text-[11px] text-text-secondary italic line-clamp-3">"{state.outputs.outreachEngineOutput.strategySummary}"</p>
+            <div className="text-sm font-bold">{safeInputs.outreachChannel} | {safeInputs.outreachAngle}</div>
+            {safeOutputs.outreachEngineOutput && (
+              <p className="text-[11px] text-text-secondary italic line-clamp-3">"{safeOutputs.outreachEngineOutput.strategySummary || ""}"</p>
             )}
           </div>
         </div>
@@ -2220,7 +2289,7 @@ const Step7Summary = () => {
         />
         <button
           onClick={() => {
-            navigator.clipboard.writeText(JSON.stringify(state.outputs, null, 2));
+            navigator.clipboard.writeText(JSON.stringify(safeOutputs, null, 2));
             alert('Full strategy data copied!');
           }}
           className="text-text-secondary hover:text-primary transition-all text-xs font-bold uppercase tracking-widest flex items-center gap-2"
