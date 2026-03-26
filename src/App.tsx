@@ -1067,35 +1067,25 @@ const Step3ValueProp = () => {
 
   // SAFE STATE SHAPE
   const safeInputs = {
+    companyName: "",
+    productName: "",
+    productDescription: "",
+    targetAudience: "",
+    keyFeatures: "",
+    uniqueSellingPoints: "",
     ...(state?.inputs || {})
   };
 
   const handleGenerate = async () => {
-    setShowErrors(true);
-    setTimeout(async () => {
-      const firstError = document.querySelector(".border-red-500, .border-red-500\\/50");
-      if (firstError) {
-        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return;
-      }
-      
-      setLoading(true);
-      setError(null);
-
-      // DEPENDENCY GUARD: ICPs must be present
-      if (!state.outputs.icps || state.outputs.icps.length === 0) {
-        setError("Complete ICP step first");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        await generateOutput(3);
-      } catch (err: any) {
-        setError(err.message || "Something went wrong. Please try again.");
-      }
+    setLoading(true);
+    setError(null);
+    try {
+      await generateOutput(3);
+    } catch (err: any) {
+      setError(err.message || "Failed to generate value prop.");
+    } finally {
       setLoading(false);
-    }, 100);
+    }
   };
 
   return (
@@ -1246,13 +1236,6 @@ const Step4WebsiteBuilder = () => {
     setShowErrors(true);
     setLoading(true);
     setError(null);
-
-    // BRAND VALIDATION
-    if (!safeInputs.brandName?.trim()) {
-      setError("Enter a brand name first");
-      setLoading(false);
-      return;
-    }
 
     try {
       await generateOutput(4);
@@ -1512,31 +1495,16 @@ const Step5GTMStrategy = () => {
     ...(state?.inputs || {})
   };
 
-  const handleGenerate = async () => {    setShowErrors(true);
-    setTimeout(async () => {
-      const firstError = document.querySelector(".border-red-500, .border-red-500\\/50");
-      if (firstError) {
-        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return;
-      }
-      
-      setLoading(true);
-      setError(null);
+  const handleGenerate = async () => {
+    setLoading(true);
+    setError(null);
 
-      // DEPENDENCY GUARD: ICPs and Value Prop must be present
-      if (!state.outputs.icps?.length || !state.outputs.valuePropTables?.length) {
-        setError("Complete ICP and Value Prop steps first");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        await generateOutput(5);
-      } catch (err: any) {
-        setError(err.message || "Something went wrong. Please try again.");
-      }
-      setLoading(false);
-    }, 100);
+    try {
+      await generateOutput(5);
+    } catch (err: any) {
+      setError(err.message || "Something went wrong. Please try again.");
+    }
+    setLoading(false);
   };
 
   const strategy = state.outputs.gtmStrategy;
@@ -1933,37 +1901,15 @@ const Step6OutreachEngine = () => {
   };
 
   const handleGenerate = async () => {
-    setShowErrors(true);
-    setTimeout(async () => {
-      const firstError = document.querySelector(".border-red-500, .border-red-500\\/50");
-      if (firstError) {
-        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return;
-      }
-      
-      setLoading(true);
-      setError(null);
+    setLoading(true);
+    setError(null);
 
-      // DEPENDENCY GUARD
-      if (!state.outputs.gtmStrategy) {
-        setError("Complete GTM Strategy step first");
-        setLoading(false);
-        return;
-      }
-
-      if (!safeInputs.outreachAngle) {
-        setError("Please select a strategic angle first.");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        await generateOutput(6);
-      } catch (err: any) {
-        setError(err.message || "Something went wrong. Please try again.");
-      }
-      setLoading(false);
-    }, 100);
+    try {
+      await generateOutput(6);
+    } catch (err: any) {
+      setError(err.message || "Something went wrong. Please try again.");
+    }
+    setLoading(false);
   };
 
   const angles = ['Authority', 'ROI', 'Pain-led', 'Contrarian', 'Curiosity', 'Offer-led'];
@@ -2979,16 +2925,31 @@ export default function App() {
     
     // Captured via functional setState to ensure we have the absolute latest snapshot
     setState(prev => {
-      // SAFE STATE SHAPE: Apply mandatory defaults to prevent crashes during generation
+      // SAFE STATE SHAPE: Apply mandatory defaults to every single possible field
       const safeInputs = {
+        fullName: "",
+        workEmail: "",
+        phone: "",
+        companyName: "Your Company",
+        brandName: "Your Brand",
+        linkedinHeadline: "",
+        linkedinAbout: "",
         yourRole: [],
         yourRoleOther: "",
-        companyName: "",
-        offer: "",
+        offer: "Strategic Growth",
         targetIcpDesignation: [],
         targetIcpDesignationOther: "",
         tonePreference: [],
         tonePreferenceOther: "",
+        outreachChannel: "Both",
+        outreachAngle: "Authority",
+        primaryColor: "#000000",
+        secondaryColor: "#FFFFFF",
+        inspirationImage: null,
+        // ICP fields (1-3)
+        icp1_roles: [], icp1_rolesOther: "", icp1_industries: [], icp1_industriesOther: "", icp1_sizes: [],
+        icp2_roles: [], icp2_rolesOther: "", icp2_industries: [], icp2_industriesOther: "", icp2_sizes: [],
+        icp3_roles: [], icp3_rolesOther: "", icp3_industries: [], icp3_industriesOther: "", icp3_sizes: [],
         ...(prev?.inputs || {})
       } as WorkshopState['inputs'];
 
@@ -3052,22 +3013,11 @@ export default function App() {
         // DEBUG LOG (TEMPORARY)
         console.log("Built ICPs for Generation:", icps);
 
-        const validIcps = icps.filter(icp =>
-          icp.roles.length > 0 &&
-          icp.industries.length > 0 &&
-          icp.companySizes.length > 0
-        ).map((icp, idx) => ({
-          ...icp,
-          name: `ICP ${idx + 1}`
-        }));
-
-        if (!validIcps.length) {
-          throw new Error("Please define at least one ICP properly (Roles, Industries, and Sizes are required)");
-        }
+        const validIcps = icps.length > 0 ? icps : [{ roles: ["Strategic Target"], industries: ["B2B"], companySizes: ["Growth Stage"] }];
 
         const result = await gemini.generateDetailedICPs({
           icps: validIcps,
-          offer: currentInputs!.offer
+          offer: currentInputs!.offer || "Strategic Growth"
         });
 
         setState(prev => ({
@@ -3075,20 +3025,20 @@ export default function App() {
           outputs: {
             ...prev.outputs,
             icps: result,
-            icpSummary: `Generated ${validIcps.length} detailed strategic ICP(s): ${result.map((r: any) => r.name).join(', ')}`
+            icpSummary: `Generated ${result.length} detailed strategic ICP(s): ${result.map((r: any) => r.name).join(', ')}`
           }
         }));
       } else if (step === 3) {
-        // DEPENDENCY GUARD: Ensure ICPs exist
-        if (!currentOutputs!.icps || currentOutputs!.icps.length === 0) {
-          throw new Error("Complete ICP step first");
-        }
+        // NON-BLOCKING: Use fallback if ICPs are missing
+        const icpsToUse = currentOutputs!.icps?.length 
+          ? currentOutputs!.icps 
+          : [{ name: "Target Segment", painPoints: ["Missing optimization"] }];
 
         const narrativeAngles = normalizeInputArray(currentInputs!.narrativeAngles || [], currentInputs!.narrativeAnglesOther);
         const tonePreference = normalizeInputArray(currentInputs!.tonePreference || [], currentInputs!.tonePreferenceOther);
 
         const vpTables = await gemini.generateValuePropTables({
-          icps: currentOutputs!.icps,
+          icps: icpsToUse,
           offer: currentInputs!.offer,
           narrativeAngles: narrativeAngles.length > 0 ? narrativeAngles : ["Authority", "ROI"],
           tonePreference: tonePreference.length > 0 ? tonePreference : ["Professional"]
@@ -3171,7 +3121,7 @@ export default function App() {
           primaryProblem: currentOutputs!.icps?.[0]?.painPoints?.[0] || "Inefficiency",
           valueProp: currentOutputs!.globalSolution || currentOutputs!.valueProp || "Strategic growth",
           icpSummary: currentOutputs!.icpSummary,
-          gtmStrategy: JSON.stringify(currentOutputs!.gtmStrategy).substring(0, 2000),
+          gtmStrategy: JSON.stringify(currentOutputs!.gtmStrategy || {}).substring(0, 2000),
           angle: currentInputs!.outreachAngle || 'Authority',
           channel: currentInputs!.outreachChannel || 'Both'
         });

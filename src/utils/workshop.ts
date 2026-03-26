@@ -26,13 +26,11 @@ export const buildIcp = (num: number, inputs: any) => {
   const sizes = extractList(rawSizes, inputs?.[`icp${num}_sizesOther`] || "");
   const industries = extractList(rawIndustries, inputs?.[`icp${num}_industriesOther`] || "");
 
-  // STRICT VALIDATION: At least roles must be present to be a valid profile
-  if (!roles.length && !sizes.length && !industries.length) return null;
-  
+  // RELAXED: Always return an object with whatever's available
   return {
-    roles,
-    sizes,
-    industries,
+    roles: roles.length ? roles : ["Target Role"],
+    sizes: sizes.length ? sizes : ["Target Size"],
+    industries: industries.length ? industries : ["Target Industry"],
   };
 };
 
