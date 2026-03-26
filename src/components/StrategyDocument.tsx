@@ -6,7 +6,18 @@ export const StrategyDocument = ({ state }: { state: any }) => {
   const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
   // Safety checks
-  if (!outputs.valueProp) return null;
+  // Safety checks - ensure critical strategy data is present before rendering PDF
+  const criticalFields = ['valueProp', 'icps', 'valuePropTables', 'gtmStrategy', 'leadMagnets'];
+  const isMissingData = criticalFields.some(f => !outputs[f] || (Array.isArray(outputs[f]) && outputs[f].length === 0));
+  
+  if (isMissingData) {
+    return (
+      <div className="p-12 text-center border-4 border-dashed border-black/10 rounded-3xl m-8">
+        <h2 className="text-2xl font-black uppercase mb-4 text-gray-300">Strategy Report Incomplete</h2>
+        <p className="text-gray-400 font-serif italic text-sm">Please complete all 7 workshop steps to generate your full strategy asset bundle before exporting.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white text-black font-serif w-full max-w-[1000px] mx-auto pdf-container">
@@ -190,23 +201,40 @@ export const StrategyDocument = ({ state }: { state: any }) => {
           </section>
         )}
 
-        {/* 8. LEAD MAGNET IDEAS */}
-        {outputs.gtmStrategy?.leadMagnets && (
+        {/* 8. STRATEGIC LEAD MAGNETS */}
+        {outputs.leadMagnets && outputs.leadMagnets.length > 0 && (
           <section className="break-inside-avoid mb-24">
-            <div className="border-b-4 border-black pb-4 mb-8">
-              <h2 className="text-4xl font-black uppercase tracking-widest">Lead Magnets / Asset Engine</h2>
+            <div className="border-b-4 border-black pb-4 mb-10">
+              <h2 className="text-4xl font-black uppercase tracking-widest">High-Converting Lead Magnets</h2>
             </div>
-            <div className="space-y-6">
-              {outputs.gtmStrategy.leadMagnets.map((lm: any, i: number) => (
-                <div key={i} className="p-6 border-l-4 border-black bg-gray-50">
-                  <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-xl font-bold uppercase">{lm.name}</h3>
-                    <span className="text-xs font-bold border border-black px-2 py-1 uppercase">{lm.cta}</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {outputs.leadMagnets.map((lm: any, i: number) => (
+                <div key={i} className="p-8 border-2 border-black bg-gray-50 flex flex-col justify-between">
+                  <div className="space-y-6">
+                    <div className="bg-black text-white px-3 py-1 inline-block text-[10px] font-bold uppercase tracking-widest">
+                      {lm.icpName || `Target ICP Designation`}
+                    </div>
+                    <h3 className="text-2xl font-black uppercase leading-tight border-b-2 border-black/10 pb-4">
+                      {lm.name}
+                    </h3>
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-[10px] font-bold uppercase text-gray-500 mb-1 tracking-widest">Functional Description</p>
+                        <p className="text-base leading-relaxed">{lm.description}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold uppercase text-gray-500 mb-1 tracking-widest">Strategic Lever</p>
+                        <p className="text-sm italic leading-relaxed text-gray-700">"{lm.whyIcpWantsIt}"</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-3 text-sm">
-                    <p><strong>What It Does:</strong> {lm.whatItDoes}</p>
-                    <p><strong>Why It Works:</strong> {lm.whyItWorks}</p>
-                    <p><strong>Outreach Hook:</strong> <span className="italic">"{lm.howToUse}"</span></p>
+                  <div className="mt-8 p-4 bg-white border border-black rounded-xl shadow-sm">
+                    <p className="text-[10px] font-black uppercase text-black mb-2 flex items-center gap-2">
+                       Outreach Integration
+                    </p>
+                    <p className="text-xs font-medium leading-relaxed text-gray-600 italic">
+                      {lm.howItTiesToOutreach}
+                    </p>
                   </div>
                 </div>
               ))}

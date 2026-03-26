@@ -42,19 +42,20 @@ export const optimizeLinkedInProfile = async (inputs: {
        - If Sales/Revenue Head: Focus on pipeline, efficiency, scale, and concrete results.
        - If Freelancer/Consultant: Focus on specialized expertise, speed, and direct impact.
     2. COMPANY ALIGNMENT: Mention or reflect the scale and nature of ${inputs.company} in the positioning.
-    3. POSITIONING: Make the profile feel like it belongs to a high-level executive in ${inputs.company}.
+    3. POSITIONING: Make the profile feel like it belongs to a high-level executive in ${inputs.company}. Use the Target ICP Designation (${inputs.targetIcp}) to tailor the Headline, About section, and Keywords.
 
     STRATEGIC GUIDELINES:
     1. Headlines: Provide 3 distinct options using different frameworks:
        - Option 1: Outcome-driven (I help [ICP] achieve [Outcome])
        - Option 2: Authority-driven ([Role] @ ${inputs.company} | [Specific Achievement])
        - Option 3: Benefit-driven (Helping [ICP] save [Time/Money] or gain [Benefit])
-       - Incorporate the Core Offer: ${inputs.offer} into the headlines.
+       - Incorporate the Core Offer: ${inputs.offer} into the headlines. Use the Designation: ${inputs.targetIcp} prominently.
        - CRITICAL HEADLINE RULES: NO full stops. NO periods. Use the pipe character " | " to structure.
        - FORMAT: MUST follow "Frame | Role | Outcome" or similar sharp structures.
 
     2. About Section: Write a compelling, first-person narrative in a professional "Founder-style" tone.
        - The About section MUST be EXACTLY 3 paragraphs. NO more, NO less.
+       - Use the Target ICP Designation: ${inputs.targetIcp} to speak directly to their pains and needs.
        - Paragraph 1 (Who/Problem): Who you are, who you help, and the core problem you solve.
        - Paragraph 2 (How/Method): How you solve it, your specific method/differentiation, and what you replace.
        - Paragraph 3 (Results/CTA): The outcomes you deliver, credibility markers, and a clear next-step CTA.
@@ -81,7 +82,7 @@ export const optimizeLinkedInProfile = async (inputs: {
 
     6. Score Explanation (MANDATORY):
        - scoreMeaning: Briefly state the achievement level (e.g., "Top-Tier Positioning").
-       - scoreExplanation: A detailed breakdown. YOU MUST justify the score by referencing the 5 criteria above. Explain exactly where they gained or lost points in Clarity, Specificity, Differentiation, Proof, and Execution.
+       - scoreExplanation: A detailed breakdown. YOU MUST justify the score by referencing the 5 criteria above. Explain exactly where they gained or lost points in Clarity, Specificity, Differentiation, Proof, and Execution. Mention how well they aligned with the Designation: ${inputs.targetIcp}.
 
     Return a JSON object with:
     - clarityScore: number
@@ -306,6 +307,14 @@ export const generateValueProp = async (outcome: string, method: string, replace
   return response.text.trim();
 };
 
+export interface LeadMagnet {
+  name: string;
+  description: string;
+  whyIcpWantsIt: string;
+  howItTiesToOutreach: string;
+  icpName: string;
+}
+
 export interface GTMStrategy {
   leadGen: {
     targeting: { icp: string; roles: string; size: string; industries: string; geo: string }[];
@@ -330,13 +339,7 @@ export interface GTMStrategy {
     funnel: string;
     conversion: string;
   };
-  leadMagnets: {
-    name: string;
-    whatItDoes: string;
-    whyItWorks: string;
-    howToUse: string;
-    cta: string;
-  }[];
+  leadMagnets: LeadMagnet[];
 }
 
 export const generateDetailedGTM = async (inputs: {
@@ -362,15 +365,18 @@ export const generateDetailedGTM = async (inputs: {
     - "How should you do it"
 
     The strategy must cover:
-    1. B2B Lead Generation (Targeting, Channels, Outreach Strategy with Tips, Funnel Design)
+    1. Outreach Strategy (formerly B2B Lead Gen) (Targeting, Channels, Outreach Strategy with Tips, Funnel Design)
         - Outreach Strategy: For each ICP, provide channel-specific tips and best practices (What to personalize, when to send, follow-up timing, subject line style, etc.). DO NOT provide message scripts here.
     2. Partner-Led Growth (Ideal Partners, Models, Outreach Pitch, Scale Strategy)
     3. Event-Led Growth (Event Types, Specific Ideas per ICP, Funnel, Conversion Strategy)
-    4. Lead Magnet Ideas: Generate ONLY 1 highly specific lead magnet for EACH ICP.
+    4. Lead Magnet Ideas (CRITICAL): Generate EXACTLY 1 high-quality lead magnet for EACH ICP.
        Rules:
-       - Must be directly tied to the ICP's pain point and immediately useful.
-       - DO NOT generate generic ebooks/guides. Use specific titles like 'Outbound message audit' or 'Hiring scorecard'.
-       - For each, provide: name, whatItDoes (1-2 lines outcome focused), whyItWorks (ICP pain alignment), howToUse (practical usage in outreach), cta (soft/direct/offer-first).
+       - Must be hyper-specific to the ICP's unique pain point and immediately usable.
+       - Outcome-driven: Solve a SPECIFIC bottleneck (e.g., "The [Outcome] [Asset Type] for [ICP]").
+       - Premium Naming: Use professional asset types (Playbook, Template, Audit, Framework, Scorecard, Calculator, Teardown, Blueprint, Roadmap).
+       - AVOID generic words like "Guide", "Ebook", "Tips", "Checklist".
+       - High Perceived Value: Must feel like a paid consulting deliverable.
+       - For each, provide: name, description (what it does), whyIcpWantsIt (outcome/pain alignment), howItTiesToOutreach (where to use: LinkedIn/Email/Landing Page), and icpName.
     
     QUALITY RULES:
     - EVERYTHING MUST BE CONTEXTUAL to the ICPs and Pain Points.
@@ -502,12 +508,12 @@ export const generateDetailedGTM = async (inputs: {
               type: Type.OBJECT,
               properties: {
                 name: { type: Type.STRING },
-                whatItDoes: { type: Type.STRING },
-                whyItWorks: { type: Type.STRING },
-                howToUse: { type: Type.STRING },
-                cta: { type: Type.STRING }
+                description: { type: Type.STRING },
+                whyIcpWantsIt: { type: Type.STRING },
+                howItTiesToOutreach: { type: Type.STRING },
+                icpName: { type: Type.STRING }
               },
-              required: ["name", "whatItDoes", "whyItWorks", "howToUse", "cta"]
+              required: ["name", "description", "whyIcpWantsIt", "howItTiesToOutreach", "icpName"]
             }
           }
         },
@@ -663,16 +669,13 @@ export const generateCampaignFlow = async (type: string, tone: string, cta: stri
 };
 
 export interface OutreachEngineOutput {
-  linkedIn?: {
-    connectionRequest: string;
-    followUps: string[]; // Exactly 3
-  };
-  email?: {
-    subjectLine: string;
-    body: string;
-    followUps: string[];
-  };
   strategySummary: string;
+  subjectLines: string[]; // Exactly 5
+  coldEmails: {
+    subject: string;
+    body: string;
+  }[]; // 3-4 total
+  shortOpeners: string[]; // 3-4 total
 }
 
 export const generateOutreachEngine = async (inputs: {
@@ -690,8 +693,8 @@ export const generateOutreachEngine = async (inputs: {
   const ai = getAI();
   
   const prompt = `
-    You are a world-class B2B Outreach Strategist and UX Simplification Layer.
-    Your task is to generate a HIGHLY FOCUSED, ANGLE-DRIVEN outreach sequence for:
+    You are a world-class B2B Outreach Strategist.
+    Your task is to generate a comprehensive outreach package strictly based on the following:
     
     CLIENT/OFFER:
     - Client: ${inputs.clientName} (${inputs.companyName})
@@ -701,60 +704,52 @@ export const generateOutreachEngine = async (inputs: {
     CONTEXT:
     - Industry: ${inputs.targetIndustry}
     - ICP/Pain: ${inputs.icpSummary}
-    - GTM Strategy: ${inputs.gtmStrategy}
     
-    STRATEGIC FOCUS (NON-NEGOTIABLE):
+    STRATEGIC FOCUS:
     - Selected Angle: ${inputs.angle}
-    - Target Channel(s): ${inputs.channel}
     
     -------------------------------------
-    ANGLE ENFORCEMENT RULES:
-    Each message must be 100% aligned to the "${inputs.angle}" angle:
-    - Authority: Show deep expertise, unique insights, and pattern recognition.
-    - ROI: Focus on measurable outcomes, numbers, and efficiency gains.
-    - Pain-led: Frame the specific messiness of the current state and the cost of inaction.
-    - Contrarian: Challenge industry assumptions with an unexpected observation.
-    - Curiosity: Start a conversation with a specific, non-obvious question.
-    - Offer-led: Primary focus is on a specific lead magnet or free diagnostic tool.
-    -------------------------------------
+    OUTPUT REQUIREMENTS:
     
-    CHANNEL SPECIFICATIONS:
-    1. LINKEDIN:
-       - Connection Request: < 300 chars, personalized, no fluff.
-       - 3 Follow-ups: Short, natural tone, each with a CLEAR INTENT. No robot-speak.
-    2. EMAIL:
-       - Subject Line: MUST be clearly separated from the body. Sharp, curious, no clickbait.
-       - Body: Structured, professional yet human, at least 150-200 words.
-       - 3 Follow-ups: Progressive value-add, clear CTAs.
+    A. SUBJECT LINES (Generate EXACTLY 5)
+    Rules:
+    - Max 8 words
+    - Each must be a DIFFERENT angle:
+      1. Pattern interrupt
+      2. Pain-based
+      3. Curiosity gap
+      4. Outcome-driven
+      5. Contrarian
+    - No generic phrases.
+    
+    B. COLD EMAILS (Generate 3 or 4)
+    Rules:
+    - Short (4–6 lines max)
+    - Use variables: {firstname}, {lastname}, {company}
+    - Personalized to the ICP and Pain Points
+    - Clear CTA
+    - No fluff.
+    
+    C. SHORT OPENERS (Generate 3 or 4)
+    Rules:
+    - 1–2 lines only
+    - Open-ended, designed to start a conversation
+    - Must feel natural and human.
     
     GLOBAL WRITING RULES:
-    - Use SIMPLE, HUMAN language. 
-    - Avoid jargon, complexity, and fluff.
-    - No em dashes (—). Use periods or line breaks.
-    - No corporate buzzwords or "help". Use "support", "strengthen", "guide".
-    - Placeholders: {firstname}, {company}.
-    - Tone: Human, non-robotic, sharp sentences.
+    - No em dashes (—).
+    - No corporate jargon.
+    - Sharp, clean sentences.
     
-    Return a JSON object matching this schema:
+    Return a JSON object with:
     {
-      "strategySummary": "2-3 lines explaining the psychological hook for this specific angle",
-      "linkedIn": {
-        "connectionRequest": "...",
-        "initialDM": "...",
-        "followUps": ["..."]
-      },
-      "email": {
-        "subjectLine": "...",
-        "body": "...",
-        "followUps": ["..."]
-      }
+      "strategySummary": "Explain the psychological hook for this angle (1-2 lines)",
+      "subjectLines": ["Subject 1", "Subject 2", "Subject 3", "Subject 4", "Subject 5"],
+      "coldEmails": [
+        { "subject": "...", "body": "..." }
+      ],
+      "shortOpeners": ["Opener 1", "Opener 2", "..."]
     }
-    
-    CRITICAL: 
-    - If channel is "LinkedIn", you MUST include the "linkedIn" key.
-    - If channel is "Email", you MUST include the "email" key.
-    - If channel is "Both", you MUST include BOTH "linkedIn" and "email" keys.
-    - DO NOT skip requested channels.
   `;
 
   const response = await ai.models.generateContent({
@@ -766,23 +761,21 @@ export const generateOutreachEngine = async (inputs: {
         type: Type.OBJECT,
         properties: {
           strategySummary: { type: Type.STRING },
-          linkedIn: {
-            type: Type.OBJECT,
-            properties: {
-              connectionRequest: { type: Type.STRING },
-              followUps: { type: Type.ARRAY, items: { type: Type.STRING } }
+          subjectLines: { type: Type.ARRAY, items: { type: Type.STRING } },
+          coldEmails: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                subject: { type: Type.STRING },
+                body: { type: Type.STRING }
+              },
+              required: ["subject", "body"]
             }
           },
-          email: {
-            type: Type.OBJECT,
-            properties: {
-              subjectLine: { type: Type.STRING },
-              body: { type: Type.STRING },
-              followUps: { type: Type.ARRAY, items: { type: Type.STRING } }
-            }
-          }
+          shortOpeners: { type: Type.ARRAY, items: { type: Type.STRING } }
         },
-        required: ["strategySummary", "linkedIn", "email"]
+        required: ["strategySummary", "subjectLines", "coldEmails", "shortOpeners"]
       }
     }
   });

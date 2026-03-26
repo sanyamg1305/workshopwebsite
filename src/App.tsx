@@ -41,8 +41,9 @@ import {
 } from 'lucide-react';
 import * as gemini from './services/gemini';
 import { supabase } from './services/supabase';
-import { auth, googleProvider } from './services/firebase';
+import { auth, googleProvider, db } from './services/firebase';
 import { onAuthStateChanged, signInWithPopup, signOut, User as FirebaseUser } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 // --- Types ---
 
@@ -153,6 +154,7 @@ export interface WorkshopState {
     websitePrompt: string;
     gtmStrategy: any | null;
     outreachEngineOutput: gemini.OutreachEngineOutput | null;
+    leadMagnets: gemini.LeadMagnet[];
     globalSolution?: string;
     profileImprovements?: string[];
   };
@@ -429,8 +431,8 @@ const Step1ProfileCheck = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const roles = ['Founder', 'CEO', 'Consultant', 'Freelancer', 'Agency Owner', 'Sales Leader', 'Marketing Director'];
-  const icps = ['SaaS Founders', 'Talent Leaders', 'Marketing Managers', 'Sales Directors', 'E-commerce Owners', 'Tech Recruiters', 'Operations Heads'];
+  const roles = ['Founder / Co-Founder', 'CEO / CXO', 'CTO / VP Engineering', 'Head of Product', 'Head of Growth', 'Head of Sales', 'Head of Marketing', 'RevOps Lead', 'SDR / BDR Manager', 'Enterprise Sales Leader', 'Partnerships Manager', 'Operations Head', 'Strategy Lead', 'Procurement Head'];
+  const icps = ['Founder / Co-Founder', 'CEO / CXO', 'CTO / VP Engineering', 'Head of Product', 'Head of Growth', 'Head of Sales', 'Head of Marketing', 'RevOps Lead', 'SDR / BDR Manager', 'Enterprise Sales Leader', 'Partnerships Manager', 'Operations Head', 'Strategy Lead', 'Procurement Head'];
   const tones = ['Bold', 'Professional', 'Casual', 'Witty', 'Direct', 'Empathetic', 'Data-driven'];
 
   const handleOptimize = async () => {    setShowErrors(true);
@@ -550,7 +552,7 @@ const Step1ProfileCheck = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <MultiSelectDropdown showErrors={showErrors}
-            label="Target ICP"
+            label="Target ICP Designation"
             options={icps}
             selected={state.inputs.targetIcp}
             onChange={(val) => updateInput('targetIcp', val)}
@@ -591,7 +593,7 @@ const Step1ProfileCheck = () => {
                   completeStep(1);
                   setStep(2);
                 }}
-                label="Define Your Target ICPs"
+                label="Generate ICP Profiles"
                 microtext="Identify who you should be targeting"
               />
               <button
@@ -765,10 +767,7 @@ const Step2ICPBuilder = () => {
   };
 
   const roles = [
-    'Founder', 'Co-founder', 'CEO', 'COO', 'CMO', 'Head of Marketing', 'Head of Sales', 
-    'VP Sales', 'Growth Lead', 'Demand Gen Manager', 'SDR Manager', 'Recruiter', 
-    'Head of Talent', 'CHRO', 'Product Manager', 'CTO', 'Operations Head', 
-    'Consultant', 'Agency Owner', 'Freelancer', 'Other'
+    'Founder / Co-Founder', 'CEO / CXO', 'CTO / VP Engineering', 'Head of Product', 'Head of Growth', 'Head of Sales', 'Head of Marketing', 'RevOps Lead', 'SDR / BDR Manager', 'Enterprise Sales Leader', 'Partnerships Manager', 'Operations Head', 'Strategy Lead', 'Procurement Head', 'Other'
   ];
   const sizes = ['1–10', '10–50', '50–200', '200–500', '500–1000', '1000+', 'Other'];
   const industries = [
@@ -870,7 +869,7 @@ const Step2ICPBuilder = () => {
                 const inds = state.inputs[`icp${num}_industries` as keyof typeof state.inputs];
                 return !(roles && roles.length > 0) && !(sizes && sizes.length > 0) && !(inds && inds.length > 0);
               }))}
-              label={loading ? "Analyzing Business..." : "Define Your Target ICPs"}
+              label={loading ? "Analyzing Business..." : "Generate ICP Profiles"}
               microtext="Identify who you should be targeting"
             />
           </div>
@@ -885,7 +884,7 @@ const Step2ICPBuilder = () => {
                   completeStep(2);
                   setStep(3);
                 }}
-                label="Generate Positioning Strategy"
+                label="Generate Value Proposition"
                 microtext="Turn ICPs into clear value propositions"
               />
               <button
@@ -1024,13 +1023,26 @@ const Step3ValueProp = () => {
       </div>
 
       {state.outputs.valuePropTables.length === 0 ? (
-        <ActionButton
-          onClick={handleGenerate}
-          loading={loading}
-          label="Infer Strategic Positioning"
-          microtext="Identify specific value per ICP"
-          disabled={loading}
-        />
+        <div className="space-y-6">
+          <p className="text-text-secondary italic">No positioning generated yet. Using fallback data based on your ICPs.</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {state.outputs.icps.map((icp, i) => (
+              <div key={i} className="p-4 bg-section-alt border border-border rounded-xl">
+                <div className="text-xs font-bold text-primary mb-2">{icp.name}</div>
+                <div className="text-xs text-text-secondary leading-relaxed">
+                  Focus on solving: {icp.painPoints[0]}
+                </div>
+              </div>
+            ))}
+          </div>
+          <ActionButton
+            onClick={handleGenerate}
+            loading={loading}
+            label="Generate Value Proposition"
+            microtext="Identify specific value per ICP"
+            disabled={loading}
+          />
+        </div>
       ) : (
         <div className="space-y-8 animate-in fade-in duration-500">
           <div className="p-6 bg-primary/10 border border-primary/20 rounded-2xl text-center">
@@ -1111,7 +1123,7 @@ const Step3ValueProp = () => {
           <div className="flex flex-col items-center gap-6 mt-12 bg-section p-8 rounded-3xl border border-border">
             <ActionButton
               onClick={() => completeAndGoToStep(3, 4)}
-              label="Build Website Messaging"
+              label="Generate Website Assets"
               microtext="Convert positioning into copy"
             />
             
@@ -1140,35 +1152,21 @@ const Step3ValueProp = () => {
 
 const Step4WebsiteBuilder = () => {
   const [showErrors, setShowErrors] = useState(false);
-  const { state, setStep, completeStep, completeAndGoToStep, updateInput, generateOutput } = useWorkshop();
+  const { state, setStep, completeStep, updateInput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleGenerate = async () => {    setShowErrors(true);
-    setTimeout(async () => {
-      const firstError = document.querySelector(".border-red-500, .border-red-500\\/50");
-      if (firstError) {
-        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return;
-      }
-      
-      setLoading(true);
-      if (typeof setError !== 'undefined') setError(null);
-      let success = false;
-      for (let attempt = 1; attempt <= 2; attempt++) {
-        try {
-          await generateOutput(4);
-          success = true;
-          break;
-        } catch (err) {
-          if (attempt === 2) {
-            if (typeof setError !== 'undefined') setError("Something went wrong. Please try again.");
-            else alert("Something went wrong. Please try again.");
-          }
-        }
-      }
+  const handleGenerate = async () => {
+    setShowErrors(true);
+    setLoading(true);
+    setError(null);
+    try {
+      await generateOutput(4);
+    } catch (err: any) {
+      setError(err.message || "Failed to generate website assets.");
+    } finally {
       setLoading(false);
-    }, 100);
+    }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1183,244 +1181,232 @@ const Step4WebsiteBuilder = () => {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="bg-primary/10 p-6 rounded-2xl border border-primary/20 flex items-center gap-4">
-        <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-black font-black text-xl shrink-0">👉</div>
-        <div>
-          <h3 className="font-bold text-lg">To generate your website, use Google AI Studio:</h3>
-          <a 
-            href="https://aistudio.google.com/apps" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-primary hover:underline font-medium"
-          >
-            https://aistudio.google.com/apps
-          </a>
-        </div>
-      </div>
-
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
-        <h2 className="text-2xl font-bold mb-2">Website Builder</h2>
-        <p className="text-text-secondary">Generate a structured prompt for your high-converting landing page.</p>
+        <h2 className="text-2xl font-black mb-2 flex items-center gap-2">
+          <Globe size={28} className="text-primary" />
+          Website Builder
+        </h2>
+        <p className="text-text-secondary">Generate a precision-engineered prompt to build your high-converting landing page in minutes.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <label className="text-xs font-bold uppercase text-text-secondary">Brand Name</label>
-          <input
-            type="text"
-            className="w-full px-4 py-3 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none"
-            placeholder="e.g. Myntmore"
-            value={state.inputs.brandName}
-            onChange={(e) => updateInput('brandName', e.target.value)}
-          />
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-xs font-bold uppercase text-text-secondary">Primary Color</label>
-            <div className="flex gap-2">
-              <input
-                type="color"
-                className="h-12 w-12 rounded-lg border border-border p-1 cursor-pointer shrink-0"
-                value={state.inputs.primaryColor}
-                onChange={(e) => updateInput('primaryColor', e.target.value)}
-              />
-              <input
-                type="text"
-                className="w-full px-3 py-3 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none font-mono text-xs"
-                value={state.inputs.primaryColor}
-                onChange={(e) => updateInput('primaryColor', e.target.value)}
-              />
-            </div>
+      {state.outputs.websitePrompt ? (
+        <div className="space-y-8">
+          <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
+            <p className="text-emerald-500 font-bold text-sm">✓ Website Prompt Engineered Successfully</p>
           </div>
-          <div className="space-y-2">
-            <label className="text-xs font-bold uppercase text-text-secondary">Secondary Color</label>
-            <div className="flex gap-2">
-              <input
-                type="color"
-                className="h-12 w-12 rounded-lg border border-border p-1 cursor-pointer shrink-0"
-                value={state.inputs.secondaryColor}
-                onChange={(e) => updateInput('secondaryColor', e.target.value)}
-              />
-              <input
-                type="text"
-                className="w-full px-3 py-3 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none font-mono text-xs"
-                value={state.inputs.secondaryColor}
-                onChange={(e) => updateInput('secondaryColor', e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
 
-        <div className="md:col-span-2 space-y-2">
-          <div className="flex justify-between items-end">
-            <label className="text-xs font-bold uppercase text-text-secondary">Design Inspiration (Screenshot)</label>
-            <a 
-              href="https://pinterest.com" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-[10px] font-black uppercase text-primary hover:underline flex items-center gap-1"
+          <OutputCard title="AI Studio Prompt" copyText={state.outputs.websitePrompt}>
+            <pre className="whitespace-pre-wrap font-mono text-sm bg-section p-4 rounded-xl border border-border overflow-x-auto text-text-secondary scrollbar-thin scrollbar-thumb-primary/20">
+              {state.outputs.websitePrompt}
+            </pre>
+          </OutputCard>
+
+          <div className="bg-primary/10 p-6 rounded-2xl border border-primary/20 flex items-center gap-4">
+            <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-black font-black text-xl shrink-0">👉</div>
+            <div>
+              <h3 className="font-bold text-lg">Your prompt is ready! Use Google AI Studio to build your site:</h3>
+              <a 
+                href="https://aistudio.google.com/apps" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-primary hover:underline font-medium break-all"
+              >
+                https://aistudio.google.com/apps
+              </a>
+              <p className="text-xs text-text-secondary mt-1">Copy the prompt above and paste it into AI Studio for instant code generation.</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center gap-6 mt-12 bg-section p-8 rounded-3xl border border-border">
+            <ActionButton
+              onClick={() => {
+                completeStep(4);
+                setStep(5);
+              }}
+              label="Create Strategy"
+              microtext="Turn your website into a distribution system"
+            />
+            <button
+              onClick={handleGenerate}
+              disabled={loading}
+              className="text-text-secondary hover:text-primary transition-all text-xs font-bold uppercase tracking-widest flex items-center gap-2"
             >
-              Get inspiration on Pinterest ↗
-            </a>
+              {loading && <Loader2 className="animate-spin" size={14} />}
+              Regenerate Prompt
+            </button>
           </div>
-          <div className="flex items-center gap-4">
-            <label className="flex-1 flex flex-col items-center justify-center h-32 border-2 border-dashed border-border rounded-2xl hover:border-primary hover:bg-primary/5 transition-all cursor-pointer group">
-              <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
-              <div className="flex flex-col items-center text-text-secondary group-hover:text-primary">
-                <Upload size={24} className="mb-2" />
-                <span className="text-sm font-bold">
-                  {state.inputs.inspirationImage ? 'Change Screenshot' : 'Upload UI Inspiration'}
-                </span>
-              </div>
-            </label>
-            {state.inputs.inspirationImage && (
-              <div className="w-32 h-32 rounded-2xl border border-border overflow-hidden relative group">
-                <img src={state.inputs.inspirationImage} alt="Inspiration" className="w-full h-full object-cover" />
-                <button 
-                  onClick={() => updateInput('inspirationImage', null)}
-                  className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white"
-                >
-                  Remove
-                </button>
-              </div>
-            )}
-          </div>
-          <p className="text-[10px] text-text-secondary">Upload a screenshot of a website layout you love. We'll infer the structure.</p>
         </div>
-      </div>
+      ) : (
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase text-text-secondary">Brand Name</label>
+              <input
+                type="text"
+                className="w-full px-4 py-3 rounded-xl border border-border bg-bg focus:border-primary/50 outline-none transition-all"
+                placeholder="e.g. Myntmore"
+                value={state.inputs.brandName}
+                onChange={(e) => updateInput('brandName', e.target.value)}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase text-text-secondary">Primary Color</label>
+                <div className="flex gap-2">
+                  <input
+                    type="color"
+                    className="h-12 w-12 rounded-lg border border-border p-1 cursor-pointer shrink-0 bg-transparent"
+                    value={state.inputs.primaryColor}
+                    onChange={(e) => updateInput('primaryColor', e.target.value)}
+                  />
+                  <input
+                    type="text"
+                    className="w-full px-3 py-3 rounded-xl border border-border bg-bg focus:border-primary/50 outline-none font-mono text-xs transition-all"
+                    value={state.inputs.primaryColor}
+                    onChange={(e) => updateInput('primaryColor', e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase text-text-secondary">Secondary Color</label>
+                <div className="flex gap-2">
+                  <input
+                    type="color"
+                    className="h-12 w-12 rounded-lg border border-border p-1 cursor-pointer shrink-0 bg-transparent"
+                    value={state.inputs.secondaryColor}
+                    onChange={(e) => updateInput('secondaryColor', e.target.value)}
+                  />
+                  <input
+                    type="text"
+                    className="w-full px-3 py-3 rounded-xl border border-border bg-bg focus:border-primary/50 outline-none font-mono text-xs transition-all"
+                    value={state.inputs.secondaryColor}
+                    onChange={(e) => updateInput('secondaryColor', e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
 
-            {error && (
-        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-sm flex items-start gap-3 shadow-sm mb-4">
-          <Zap size={20} className="text-red-500 mt-1 shrink-0" />
-          <div className="flex-1">
-            <p className="font-bold">Generation Failed</p>
-            <p className="mt-1">{error}</p>
+            <div className="md:col-span-2 space-y-2">
+              <div className="flex justify-between items-end">
+                <label className="text-xs font-bold uppercase text-text-secondary">Design Inspiration (Screenshot)</label>
+                <a 
+                  href="https://pinterest.com" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-[10px] font-black uppercase text-primary hover:underline flex items-center gap-1"
+                >
+                  Find UI Ideas on Pinterest ↗
+                </a>
+              </div>
+              <div className="flex items-center gap-4">
+                <label className="flex-1 flex flex-col items-center justify-center h-32 border-2 border-dashed border-border rounded-2xl hover:border-primary hover:bg-primary/5 transition-all cursor-pointer group">
+                  <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                  <div className="flex flex-col items-center text-text-secondary group-hover:text-primary">
+                    <Upload size={24} className="mb-2" />
+                    <span className="text-sm font-bold">
+                      {state.inputs.inspirationImage ? 'Change Screenshot' : 'Upload UI Inspiration'}
+                    </span>
+                  </div>
+                </label>
+                {state.inputs.inspirationImage && (
+                  <div className="w-32 h-32 rounded-2xl border border-border overflow-hidden relative group shadow-lg">
+                    <img src={state.inputs.inspirationImage} alt="Inspiration" className="w-full h-full object-cover" />
+                    <button 
+                      onClick={() => updateInput('inspirationImage', null)}
+                      className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white font-bold text-xs"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+              </div>
+              <p className="text-[10px] text-text-secondary">Upload a screenshot of a website layout you love. The AI will replicate the vibe.</p>
+            </div>
           </div>
-          <button onClick={() => setError(null)} className="px-3 py-1.5 bg-red-500/20 rounded-lg font-bold hover:bg-red-500/30 transition-colors text-xs">Dismiss</button>
-        </div>
-      )}
-      <div className="space-y-4">
-        {!state.outputs.websitePrompt ? (
+
+          {error && (
+            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-sm flex items-start gap-3 shadow-sm">
+              <Zap size={20} className="text-red-500 mt-1 shrink-0" />
+              <div className="flex-1">
+                <p className="font-bold leading-tight">Generation Failed</p>
+                <p className="mt-1 opacity-80">{error}</p>
+              </div>
+              <button onClick={() => setError(null)} className="px-3 py-1.5 bg-red-500/20 rounded-lg font-bold hover:bg-red-500/30 transition-colors text-xs shrink-0">Dismiss</button>
+            </div>
+          )}
+
           <div className="flex justify-center pt-8">
             <ActionButton
               onClick={handleGenerate}
               loading={loading}
-              label="Generate Website Assets"
+              label={loading ? "Engineering Prompt..." : "Generate Website Assets"}
               microtext="Create high-converting landing page copy"
               disabled={loading}
             />
           </div>
-        ) : (
-          <div className="space-y-6">
-            <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
-              <p className="text-emerald-500 font-bold text-sm">✓ Website Prompt Engineered Successfully</p>
-            </div>
-            <div className="flex flex-col items-center gap-4">
-              <ActionButton
-                onClick={() => {
-                  completeStep(4);
-                  setStep(5);
-                }}
-                label="Create Go-To-Market Plan"
-                microtext="Turn your website into a distribution system"
-              />
-              <button
-                onClick={handleGenerate}
-                disabled={loading}
-                className="text-text-secondary hover:text-primary transition-all text-xs font-bold uppercase tracking-widest"
-              >
-                {loading ? "Regenerating..." : "Regenerate Assets"}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
+      {/* AI STUDIO ENHANCEMENT PROMPTS - Always visible if prompt exists */}
       {state.outputs.websitePrompt && (
-        <div className="space-y-4">
-          <OutputCard title="AI Studio Prompt" copyText={state.outputs.websitePrompt}>
-            <pre className="whitespace-pre-wrap font-mono text-sm bg-section p-4 rounded-xl border border-border overflow-x-auto">
-              {state.outputs.websitePrompt}
-            </pre>
-          </OutputCard>
-          <div className="flex items-center gap-2 text-xs text-text-secondary bg-primary/10 p-3 rounded-lg border border-primary/20">
-            <Zap size={14} className="text-primary" />
-            <span>Pro tip: Copy this prompt and use it in AI Studio to build your site instantly.</span>
-          </div>
-
-          {/* AI STUDIO ENHANCEMENT PROMPTS */}
-          <div className="mt-12 space-y-4">
-            <div className="mb-6">
-              <h3 className="text-xl font-bold flex items-center gap-2"><Zap size={20} className="text-primary" /> ⚡ Improve Your Website Output</h3>
-              <p className="text-sm text-text-secondary mt-1">Use these prompts inside AI Studio to refine and enhance your generated website.</p>
-              <p className="text-[10px] font-bold uppercase text-primary tracking-widest mt-2 flex items-center gap-1"><ChevronRight size={12}/> Not happy with your output? Try these refinements</p>
+        <>
+          <div className="mt-12 space-y-6 pt-12 border-t border-border/50">
+            <div>
+              <h3 className="text-xl font-black flex items-center gap-2">
+                <Zap size={22} className="text-primary" /> 
+                Refine Your Output
+              </h3>
+              <p className="text-sm text-text-secondary mt-1">Found a gap? Use these targeted prompts inside AI Studio to polish your site.</p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {[
-                { title: "Conversion Optimization", desc: "Make the hero and CTAs more aggressive to maximize conversions.", prompt: "Optimize this website for maximum conversion. Make the hero section more compelling and ensure CTAs are clear, aggressive, and strategically placed." },
-                { title: "Visual Hierarchy", desc: "Improve the flow and scannability of the page.", prompt: "Improve the visual hierarchy of this page. Structure the sections so the user's eye naturally flows from the problem to the solution, using clear typography differences." },
-                { title: "Modern UI Upgrade", desc: "Give the site a premium, 2024 tech aesthetic.", prompt: "Upgrade the UI aesthetic to feel like a premium, modern tech startup from 2024. Use subtle gradients, bento-box layouts, and glassmorphism where appropriate." },
-                { title: "Mobile Optimization", desc: "Ensure perfect formatting for mobile users.", prompt: "Optimize this entire prompt for a mobile-first layout. Ensure font sizes, spacing, and stack orders are explicitly defined for mobile viewports." },
-                { title: "Branding Consistency", desc: "Align tone and visuals strictly with the brand.", prompt: "Review and rewrite the copy to perfectly match a bold, authoritative, yet approachable B2B tone. Ensure colors and CSS match the brand identity." },
-                { title: "High-Trust Website", desc: "Add social proof and credibility elements.", prompt: "Enhance the trust-building elements of this site. Integrate realistic placeholders for social proof, logos, testimonials, and data-backed claims." },
-                { title: "Speed & Performance", desc: "Optimize for fast loading times and lean code.", prompt: "Rewrite the generated HTML/CSS to be extremely lightweight and performant. Remove unnecessary wrappers and optimize for Core Web Vitals." }
+                { title: "Conversion Optimization", desc: "Sharpen CTAs and hooks.", prompt: "Optimize this website for maximum conversion. Make the hero section more compelling and ensure CTAs are clear, aggressive, and strategically placed." },
+                { title: "Visual Hierarchy", desc: "Improve section flow.", prompt: "Improve the visual hierarchy of this page. Structure the sections so the user's eye naturally flows from the problem to the solution, using clear typography differences." },
+                { title: "Modern UI Upgrade", desc: "Apply 2024 tech aesthetic.", prompt: "Upgrade the UI aesthetic to feel like a premium, modern tech startup from 2024. Use subtle gradients, bento-box layouts, and glassmorphism where appropriate." },
+                { title: "Mobile Layout", desc: "Force responsive stack orders.", prompt: "Optimize this entire prompt for a mobile-first layout. Ensure font sizes, spacing, and stack orders are explicitly defined for mobile viewports." },
+                { title: "Consistency Check", desc: "Align tone across sections.", prompt: "Review and rewrite the copy to perfectly match a bold, authoritative, yet approachable B2B tone. Ensure colors and CSS match the brand identity." },
+                { title: "Trust Markers", desc: "Add social proof hooks.", prompt: "Enhance the trust-building elements of this site. Integrate realistic placeholders for social proof, logos, testimonials, and data-backed claims." }
               ].map((p, i) => (
-                <div key={i} className="p-5 bg-section border border-border rounded-xl flex flex-col gap-3 group hover:border-primary transition-all">
-                  <div>
-                    <h4 className="font-bold text-sm text-white">{p.title}</h4>
-                    <p className="text-xs text-text-secondary mt-1">{p.desc}</p>
-                  </div>
+                <div key={i} className="p-5 bg-section-alt border border-border rounded-2xl flex flex-col gap-3 group hover:border-primary/50 transition-all">
+                  <h4 className="font-bold text-sm">{p.title}</h4>
+                  <p className="text-[11px] text-text-secondary leading-tight">{p.desc}</p>
                   <button 
                     onClick={() => {
                       navigator.clipboard.writeText(p.prompt);
                       alert('Prompt copied!');
                     }}
-                    className="w-full py-2 bg-bg text-xs font-bold uppercase tracking-widest text-text-secondary border border-border rounded-lg hover:border-primary hover:text-primary transition-all flex items-center justify-center gap-2"
+                    className="mt-auto py-2 bg-bg text-[10px] font-black uppercase tracking-wider text-text-secondary border border-border rounded-lg hover:border-primary hover:text-primary transition-all flex items-center justify-center gap-2"
                   >
-                    <Copy size={12} /> Copy Prompt
+                    <Copy size={10} /> Copy Prompt
                   </button>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* AI STUDIO FAQ */}
           <div className="mt-12 space-y-4">
-            <div className="mb-6">
-              <h3 className="text-xl font-bold flex items-center gap-2"><MessageSquare size={20} className="text-primary" /> ❓ AI Studio FAQ</h3>
-              <p className="text-sm text-text-secondary mt-1">Common issues and solutions when building websites using AI Studio.</p>
-              <p className="text-[10px] font-bold uppercase text-primary tracking-widest mt-2 flex items-center gap-1"><ChevronRight size={12}/> Facing issues? Check quick fixes below</p>
-            </div>
-            
-            <div className="space-y-2">
+            <h3 className="text-lg font-bold flex items-center gap-2">
+              <MessageSquare size={20} className="text-primary" /> 
+              Common Questions
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
-                { q: "How do I deploy my generated website?", a: "Copy the HTML/CSS from AI Studio, paste it into a local folder, push to GitHub, and connect the repository to Vercel." },
-                { q: "The AI output stops mid-generation. What do I do?", a: "Hit the 'Continue' button in AI Studio, or type 'continue exactly from where you left off' to resume the code generation." },
-                { q: "Why is the UI inconsistent across sections?", a: "AI sometimes shifts styles. Copy the 'Branding Consistency' enhancement prompt above and run it in the same chat." },
-                { q: "How do I regenerate a single section?", a: "Highlight the specific section in AI Studio and ask it to 'Rewrite only this section focusing on [specific need]'." },
-                { q: "The design is broken on mobile.", a: "Run the 'Mobile Optimization' enhancement prompt to force the AI to add proper responsive flex or grid classes." },
-                { q: "The copy feels too generic.", a: "Provide specific customer quotes or data points to the AI and ask it to replace the generic copy with your concrete facts." },
-                { q: "Can I customize the colors later?", a: "Yes. The AI typically uses CSS variables at the top of the generated code. Just edit the HEX values there." },
-                { q: "What is the best way to structure the prompt?", a: "The Prompt Generator handles this for you. Just paste what we gave you. Make sure the '8 sections' constraint remains intact." },
-                { q: "The AI ignored my inspiration image.", a: "Sometimes the AI prioritizes text over image. Add an explicit command in AI Studio: 'Strictly match the layout and block structure of the attached image'." },
-                { q: "How do I make the site load faster?", a: "Use the 'Speed & Performance' prompt to force the AI to write lean code without heavy external dependencies." }
+                { q: "How do I deploy?", a: "Copy HTML/CSS to a file, push to GitHub, and link to Vercel." },
+                { q: "AI cut off mid-code?", a: "Type 'continue code' in AI Studio." },
+                { q: "Broken design?", a: "Run the 'Modern UI Upgrade' prompt above." },
+                { q: "Generic copy?", a: "Supply your specific ROI metrics as reference." }
               ].map((faq, i) => (
-                <details key={i} className="group p-4 bg-section border border-border rounded-xl open:border-primary transition-all cursor-pointer">
-                  <summary className="font-bold text-sm text-white flex justify-between items-center group-open:text-primary list-none">
-                    {faq.q}
-                    <ChevronDown size={16} className="text-text-secondary group-open:text-primary group-open:rotate-180 transition-transform" />
-                  </summary>
-                  <p className="text-xs text-text-secondary mt-4 leading-relaxed border-t border-border pt-3">
-                    {faq.a}
-                  </p>
-                </details>
+                <div key={i} className="p-4 bg-section/50 border border-border rounded-xl">
+                  <p className="text-xs font-bold mb-1">{faq.q}</p>
+                  <p className="text-[11px] text-text-secondary">{faq.a}</p>
+                </div>
               ))}
             </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
@@ -1501,7 +1487,7 @@ const Step5GTMStrategy = () => {
                   completeStep(5);
                   setStep(6);
                 }}
-                label="Build Outreach Campaign"
+                label="Generate Outreach"
                 microtext="Create a structured outbound system"
               />
               <button
@@ -1526,7 +1512,7 @@ const Step5GTMStrategy = () => {
                 activeTab === 'leadGen' ? 'bg-primary text-black shadow-lg shadow-primary/20' : 'text-text-secondary hover:text-text hover:bg-section-alt'
               }`}
             >
-              B2B Lead Gen
+              Outreach Strategy
             </button>
             <button
               onClick={() => setActiveTab('partner')}
@@ -1534,7 +1520,7 @@ const Step5GTMStrategy = () => {
                 activeTab === 'partner' ? 'bg-primary text-black shadow-lg shadow-primary/20' : 'text-text-secondary hover:text-text hover:bg-section-alt'
               }`}
             >
-              Partner Growth
+              Partner Led Growth
             </button>
             <button
               onClick={() => setActiveTab('event')}
@@ -1542,7 +1528,7 @@ const Step5GTMStrategy = () => {
                 activeTab === 'event' ? 'bg-primary text-black shadow-lg shadow-primary/20' : 'text-text-secondary hover:text-text hover:bg-section-alt'
               }`}
             >
-              Event Growth
+              Event Led Growth
             </button>
             <button
               onClick={() => setActiveTab('magnets')}
@@ -1561,7 +1547,7 @@ const Step5GTMStrategy = () => {
                 <section className="space-y-4">
                   <h3 className="text-xl font-black flex items-center gap-2">
                     <Target size={24} className="text-primary" />
-                    Targeting Strategy
+                    Outreach Strategy
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {strategy.leadGen.targeting.map((t, i) => (
@@ -1981,8 +1967,9 @@ const Step6OutreachEngine = () => {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="space-y-10"
+          className="space-y-12"
         >
+          {/* Strategy Hook */}
           <div className="p-8 bg-primary/5 border-2 border-primary/20 rounded-3xl relative group overflow-hidden">
             <div className="absolute top-0 right-0 p-4 opacity-10">
               <Zap size={64} className="text-primary" />
@@ -1995,55 +1982,73 @@ const Step6OutreachEngine = () => {
             </p>
           </div>
 
-          {(state.inputs.outreachChannel === 'LinkedIn' || state.inputs.outreachChannel === 'Both') && out.linkedIn && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h3 className="text-lg font-black flex items-center gap-2 uppercase tracking-tight">
-                <Linkedin size={20} className="text-primary" /> LinkedIn Sequence
-              </h3>
-              
-              <div className="grid grid-cols-1 gap-6">
-                <OutputCard title="Connection Request (Max 300 Chars)" icon={User} copyText={out.linkedIn?.connectionRequest}>
-                  <p className="text-sm leading-relaxed">{out.linkedIn?.connectionRequest}</p>
+          {/* Subject Lines */}
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <h3 className="text-lg font-black flex items-center gap-2 uppercase tracking-tight">
+              <Zap size={20} className="text-primary" /> High-Conversion Subject Lines
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+              {out.subjectLines.map((subject, i) => (
+                <div key={i} className="flex items-center gap-4 p-4 bg-section border border-border rounded-xl group hover:border-primary/50 transition-all">
+                  <div className="w-8 h-8 rounded-full bg-bg flex items-center justify-center text-[10px] font-bold text-primary border border-border">
+                    {i + 1}
+                  </div>
+                  <p className="flex-1 font-bold text-sm">{subject}</p>
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(subject);
+                      alert('Subject copied!');
+                    }}
+                    className="p-2 hover:text-primary transition-colors"
+                  >
+                    <Copy size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Cold Emails */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-black flex items-center gap-2 uppercase tracking-tight">
+              <Mail size={20} className="text-primary" /> Multi-Angle Outreach Assets
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {out.coldEmails.map((email, i) => (
+                <OutputCard key={i} title={`Campaign Option ${i + 1}`} icon={Send} copyText={email.body}>
+                  <div className="space-y-3">
+                    <div className="p-2 bg-bg rounded-lg border border-border text-[10px] font-bold uppercase tracking-widest text-text-secondary">
+                      Subject: {email.subject}
+                    </div>
+                    <p className="text-xs leading-relaxed whitespace-pre-wrap">{email.body}</p>
+                  </div>
                 </OutputCard>
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="text-[10px] font-black uppercase text-text-secondary tracking-widest px-1">Follow-up Sequence</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {out.linkedIn?.followUps?.map((msg: string, i: number) => (
-                    <OutputCard key={i} title={`Follow-up ${i + 1}`} icon={Send} copyText={msg}>
-                      <p className="text-xs leading-relaxed italic">"{msg}"</p>
-                    </OutputCard>
-                  ))}
-                </div>
-              </div>
+              ))}
             </div>
-          )}
+          </div>
 
-          {(state.inputs.outreachChannel === 'Email' || state.inputs.outreachChannel === 'Both') && out.email && (
-            <div className="space-y-6 pt-10 border-t border-border animate-in fade-in slide-in-from-bottom-4 duration-700">
-              <h3 className="text-lg font-black flex items-center gap-2 uppercase tracking-tight">
-                <Mail size={20} className="text-primary" /> Cold Email Strategy
-              </h3>
-              
-              <OutputCard title={`Subject: ${out.email.subjectLine}`} icon={Zap} copyText={out.email.subjectLine}>
-                <div className="text-sm leading-relaxed whitespace-pre-wrap font-medium">
-                  {out.email.body}
+          {/* Short Openers */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-black flex items-center gap-2 uppercase tracking-tight">
+              <MessageSquare size={20} className="text-primary" /> Conversation Starters
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {out.shortOpeners.map((opener, i) => (
+                <div key={i} className="p-4 bg-section/50 border border-border rounded-xl hover:border-primary/30 transition-all">
+                  <p className="text-[11px] leading-relaxed italic text-text-secondary">"{opener}"</p>
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(opener);
+                      alert('Opener copied!');
+                    }}
+                    className="mt-3 text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-1 hover:underline"
+                  >
+                    <Copy size={10} /> Copy
+                  </button>
                 </div>
-              </OutputCard>
-
-              <div className="space-y-4">
-                <h4 className="text-[10px] font-black uppercase text-text-secondary tracking-widest px-1">Email Follow-ups</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {out.email?.followUps?.map((msg: string, i: number) => (
-                    <OutputCard key={i} title={`Email Follow-up ${i + 1}`} icon={Send} copyText={msg}>
-                      <p className="text-xs leading-relaxed">{msg}</p>
-                    </OutputCard>
-                  ))}
-                </div>
-              </div>
+              ))}
             </div>
-          )}
+          </div>
         </motion.div>
       )}
     </div>
@@ -2102,45 +2107,75 @@ const Step7Summary = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="p-8 border-2 border-border rounded-3xl bg-section shadow-sm group">
+        {/* ICP Summary */}
+        <div className="p-8 border-2 border-border rounded-3xl bg-section shadow-sm group hover:border-primary/30 transition-all">
           <div className="flex items-center gap-3 mb-4">
             <Target className="text-primary group-hover:scale-110 transition-transform" size={20} />
             <h4 className="text-xs font-bold uppercase tracking-widest text-text-secondary">Target Market</h4>
           </div>
-          <p className="text-sm leading-relaxed line-clamp-4">{state.outputs.icpSummary || "Strategy configured for multiple ICPs."}</p>
+          <p className="text-sm leading-relaxed">
+            {state.outputs.icps.length > 0 
+              ? `${state.outputs.icps.length} ICPs identified, led by ${state.outputs.icps[0].name}.`
+              : "Market segments defined based on your offering."}
+          </p>
         </div>
         
+        {/* Value Prop Summary */}
         <div className="p-8 border-2 border-primary/30 rounded-3xl bg-primary/5 shadow-sm group">
           <div className="flex items-center gap-3 mb-4">
             <Zap className="text-primary group-hover:scale-110 transition-transform" size={20} />
-            <h4 className="text-xs font-bold uppercase tracking-widest text-text-secondary">Value Prop</h4>
-          </div>
-          <p className="text-lg font-black text-primary leading-tight">{state.outputs.valueProp}</p>
-        </div>
-
-        <div className="p-8 border-2 border-border rounded-3xl bg-section shadow-sm group">
-          <div className="flex items-center gap-3 mb-4">
-            <Send className="text-primary group-hover:scale-110 transition-transform" size={20} />
-            <h4 className="text-xs font-bold uppercase tracking-widest text-text-secondary">Outreach Engine</h4>
+            <h4 className="text-xs font-bold uppercase tracking-widest text-text-secondary">Core Positioning</h4>
           </div>
           <div className="space-y-2">
-            <div className="text-sm font-bold">{state.inputs.outreachChannel} | {state.inputs.outreachAngle}</div>
-            {state.outputs.outreachEngineOutput && (
-              <p className="text-xs text-text-secondary italic line-clamp-3">"{state.outputs.outreachEngineOutput.strategySummary}"</p>
+            {state.outputs.valuePropTables.length > 0 ? (
+              <>
+                <div className="text-lg font-black text-primary leading-tight">
+                  {state.outputs.valuePropTables[0].desiredOutcome}
+                </div>
+                <p className="text-[10px] text-text-secondary uppercase font-bold tracking-wider">
+                  Method: {state.outputs.valuePropTables[0].method}
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-text-secondary italic">Positioning inferred from client metrics and pain points.</p>
             )}
           </div>
         </div>
 
-        <div className="p-8 border-2 border-border rounded-3xl bg-section shadow-sm group">
+        {/* Outreach Engine Summary */}
+        <div className="p-8 border-2 border-border rounded-3xl bg-section shadow-sm group hover:border-primary/30 transition-all">
+          <div className="flex items-center gap-3 mb-4">
+            <Send className="text-primary group-hover:scale-110 transition-transform" size={20} />
+            <h4 className="text-xs font-bold uppercase tracking-widest text-text-secondary">Outreach Strategy</h4>
+          </div>
+          <div className="space-y-2">
+            <div className="text-sm font-bold">{state.inputs.outreachChannel} | {state.inputs.outreachAngle}</div>
+            {state.outputs.outreachEngineOutput && (
+              <p className="text-[11px] text-text-secondary italic line-clamp-3">"{state.outputs.outreachEngineOutput.strategySummary}"</p>
+            )}
+          </div>
+        </div>
+
+        {/* Assets Ready Summary */}
+        <div className="p-8 border-2 border-border rounded-3xl bg-section shadow-sm group hover:border-primary/30 transition-all">
           <div className="flex items-center gap-3 mb-4">
             <Download className="text-primary group-hover:scale-110 transition-transform" size={20} />
-            <h4 className="text-xs font-bold uppercase tracking-widest text-text-secondary">Assets Ready</h4>
+            <h4 className="text-xs font-bold uppercase tracking-widest text-text-secondary">Strategy Assets</h4>
           </div>
-          <p className="text-xs text-text-secondary">
-             ✓ LinkedIn Profile Hook <br />
-             ✓ Multi-Channel Sequence <br />
-             ✓ Strategy Report PDF
-          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex items-center gap-2 text-[10px] font-bold text-text-secondary">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary" /> ICP Playbook
+            </div>
+            <div className="flex items-center gap-2 text-[10px] font-bold text-text-secondary">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary" /> Landing Page Prompt
+            </div>
+            <div className="flex items-center gap-2 text-[10px] font-bold text-text-secondary">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary" /> Sequence Assets
+            </div>
+            <div className="flex items-center gap-2 text-[10px] font-bold text-text-secondary">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary" /> Full GTM Plan
+            </div>
+          </div>
         </div>
       </div>
 
@@ -2484,6 +2519,7 @@ export default function App() {
             websitePrompt: '',
             gtmStrategy: null,
             outreachEngineOutput: null,
+            leadMagnets: [],
             globalSolution: '',
           }
         };
@@ -2513,6 +2549,7 @@ export default function App() {
         websitePrompt: '',
         gtmStrategy: null,
         outreachEngineOutput: null,
+        leadMagnets: [],
         valuePropTables: [],
         globalSolution: '',
       },
@@ -2520,7 +2557,7 @@ export default function App() {
   });
 
   const [showResumeModal, setShowResumeModal] = useState(false);
-  const [savedStep, setSavedStep] = useState<number | null>(null);
+  const [sessionToResume, setSessionToResume] = useState<WorkshopState | null>(null);
   const [showSaveIndicator, setShowSaveIndicator] = useState(false);
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(false);
@@ -2529,36 +2566,45 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
-      
       if (firebaseUser) {
         setState(prev => ({ ...prev, isCheckingStatus: true }));
         try {
-          const { data, error } = await supabase
-            .from('workshop_submissions')
-            .select('id, workshop_inputs')
-            .eq('user_uid', firebaseUser.uid)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
+          // Check for active session in Firestore
+          const docRef = doc(db, 'users', firebaseUser.uid, 'workshop', 'active');
+          const docSnap = await getDoc(docRef);
+          
+          if (docSnap.exists()) {
+            const savedState = docSnap.data() as WorkshopState;
+            setSessionToResume(savedState);
+            setShowResumeModal(true);
+          } else {
+            // Fallback to check if lead form is already filled in older system
+            const { data } = await supabase
+              .from('workshop_submissions')
+              .select('id, workshop_inputs')
+              .eq('user_uid', firebaseUser.uid)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
 
-          if (data) {
-            setState(prev => ({ 
-              ...prev, 
-              leadFormFilled: true,
-              submissionId: data.id,
-              // Optionally restore inputs if not already in state
-              inputs: { ...prev.inputs, ...(data.workshop_inputs || {}) }
-            }));
+            if (data) {
+              setState(prev => ({ 
+                ...prev, 
+                leadFormFilled: true,
+                submissionId: data.id,
+                inputs: { ...prev.inputs, ...(data.workshop_inputs || {}) }
+              }));
+            }
           }
         } catch (err) {
-          console.warn("No existing submission found for user", err);
+          console.warn("Error checking for existing session", err);
         } finally {
           setState(prev => ({ ...prev, isCheckingStatus: false }));
         }
       }
     });
     return () => unsubscribe();
-  }, []);
+  }, [db]);
 
   const handleLogout = async () => {
     try {
@@ -2569,33 +2615,28 @@ export default function App() {
     }
   };
 
-  // Check for saved progress on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('workshop_progress_step');
-    if (saved) {
-      const step = parseInt(saved, 10);
-      if (step > 0 && step !== state.currentStep) {
-        setSavedStep(step);
-        setShowResumeModal(true);
-      }
-    }
-  }, []);
 
-  // Auto-save progress
+  // Auto-save progress to Firestore
   useEffect(() => {
-    if (state.currentStep > 0) {
-      localStorage.setItem('workshop_progress_step', state.currentStep.toString());
-      
-      // Brief save indicator
-      setShowSaveIndicator(true);
-      const timer = setTimeout(() => setShowSaveIndicator(false), 2000);
+    if (user && state.leadFormFilled && state.currentStep > 0) {
+      const syncData = async () => {
+        try {
+          await setDoc(doc(db, 'users', user.uid, 'workshop', 'active'), state);
+          setShowSaveIndicator(true);
+          setTimeout(() => setShowSaveIndicator(false), 2000);
+        } catch (err) {
+          console.error("Firestore Sync Error:", err);
+        }
+      };
+
+      const timer = setTimeout(syncData, 1000);
       return () => clearTimeout(timer);
     }
-  }, [state.currentStep]);
+  }, [user, state]);
 
   const handleResume = () => {
-    if (savedStep !== null) {
-      setStep(savedStep as StepId);
+    if (sessionToResume) {
+      setState(sessionToResume);
     }
     setShowResumeModal(false);
   };
@@ -2640,7 +2681,17 @@ export default function App() {
     setError('');
 
     try {
-      // Save to Supabase
+      if (user) {
+        await setDoc(doc(db, 'users', user.uid, 'workshop', 'active'), {
+          ...state,
+          leadFormFilled: true,
+          currentStep: 1,
+          completedSteps: [0],
+          inputs: { ...state.inputs, fullName, workEmail, phone, companyName }
+        });
+      }
+
+      // Legacy support for Supabase tracking
       const { data, error: sbError } = await supabase
         .from('workshop_submissions')
         .insert({
@@ -2650,7 +2701,7 @@ export default function App() {
           work_email: workEmail,
           phone: phone,
           company_name: companyName,
-          lead_role: state.inputs.leadRole, // keep existing roles
+          lead_role: state.inputs.leadRole,
           current_step: 0,
           workshop_inputs: { ...state.inputs, fullName, workEmail, phone, companyName },
           workshop_outputs: state.outputs
@@ -2853,6 +2904,7 @@ export default function App() {
           industry: industryStr
         });
         newOutputs.gtmStrategy = strategy;
+        newOutputs.leadMagnets = strategy.leadMagnets;
       } else if (step === 6) {
         const ind = Array.isArray(inputs.industry) ? inputs.industry : [];
         // CRITICAL: Pass the outreach part of GTM if it exists as an object
