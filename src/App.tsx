@@ -2756,6 +2756,7 @@ export default function App() {
             positioningAngles: result.positioningAngles,
             keywordScore: result.keywordScore,
           }),
+          completedSteps: prev.completedSteps.includes(1) ? prev.completedSteps : [...prev.completedSteps, 1],
         }));
       } else if (step === 2) {
         // Build safe data-driven ICP inputs
@@ -2792,6 +2793,7 @@ export default function App() {
             icps: result,
             icpSummary: `Generated ${result.length} detailed strategic ICP(s): ${result.map((r: any) => safeStr(r?.name)).join(', ')}`,
           }),
+          completedSteps: prev.completedSteps.includes(2) ? prev.completedSteps : [...prev.completedSteps, 2],
         }));
       } else if (step === 3) {
         const icpsToUse = so.icps.length
@@ -2817,6 +2819,7 @@ export default function App() {
             valuePropTables: vpTables,
             globalSolution: globalSol,
           }),
+          completedSteps: prev.completedSteps.includes(3) ? prev.completedSteps : [...prev.completedSteps, 3],
         }));
       } else if (step === 4) {
         if (!si.brandName.trim()) throw new Error('Enter a brand name first');
@@ -3064,7 +3067,11 @@ export default function App() {
                     onClick={async () => {
                       const isCompleted = state.completedSteps.includes(state.currentStep as StepId);
                       if (!isCompleted) {
-                        try { await generateOutput(state.currentStep as StepId); } catch (e) { /* handled internally */ }
+                        try { 
+                          await generateOutput(state.currentStep as StepId);
+                          // AUTO REDIRECT: Once generated, move to the next section
+                          setStep(Math.min(7, state.currentStep + 1) as StepId);
+                        } catch (e) { /* handled internally */ }
                       } else {
                         setStep(Math.min(7, state.currentStep + 1) as StepId);
                       }
