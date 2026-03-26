@@ -62,6 +62,23 @@ const Layer3 = ({ children, title }: { children: React.ReactNode, title: string 
 
 export const StrategyReport = ({ state }: StrategyReportProps) => {
   const { inputs, outputs } = state;
+  
+  // SAFE STATE SHAPE
+  const safeInputs = {
+    brandName: inputs?.brandName || "Workshop Client",
+    companyName: inputs?.companyName || "the target market",
+    fullName: inputs?.fullName || "Stakeholder",
+    yourRole: inputs?.yourRole || [],
+    offer: inputs?.offer || "",
+    targetIcpDesignation: inputs?.targetIcpDesignation || [],
+    primaryColor: inputs?.primaryColor || "#000000",
+    secondaryColor: inputs?.secondaryColor || "#FFFFFF",
+    outreachChannel: inputs?.outreachChannel || "Both",
+    outreachAngle: inputs?.outreachAngle || "Authority",
+    linkedinAbout: inputs?.linkedinAbout || "",
+    ...(inputs || {})
+  };
+
   const icps = outputs.icps || [];
   const valuePropTables = outputs.valuePropTables || [];
   const gtmStrategy = outputs.gtmStrategy || { leadGen: { outreach: [] }, leadMagnets: [] };
@@ -104,10 +121,10 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
 
           <div className="max-w-xl space-y-4">
              <p className="text-3xl font-black uppercase tracking-tight leading-tight text-gray-900">
-                {outputs.globalSolution?.split('.')[0] || `Strategic Distribution Engine for ${inputs.brandName}`}
+                {outputs.globalSolution?.split('.')[0] || `Strategic Distribution Engine for ${safeInputs.brandName}`}
              </p>
              <p className="text-base text-gray-500 leading-relaxed font-medium">
-               A performance-engineered GTM strategy designed to penetrate {inputs.companyName || 'the target market'} through high-authority positioning and systematic outreach.
+                A performance-engineered GTM strategy designed to penetrate {safeInputs.companyName || 'the target market'} through high-authority positioning and systematic outreach.
              </p>
           </div>
         </div>
@@ -115,8 +132,8 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
         <div className="grid grid-cols-2 gap-24 border-t-2 border-black pt-12">
           <div className="space-y-3">
             <p className="text-[11px] font-black uppercase tracking-[0.5em] text-gray-300">Organization Representative</p>
-            <p className="text-3xl font-black uppercase tracking-tight leading-none">{inputs.brandName || "Workshop Client"}</p>
-            <p className="text-sm font-bold text-gray-500 mt-2">{inputs.fullName} — {inputs?.yourRole?.[0] || 'Stakeholder'}</p>
+            <p className="text-3xl font-black uppercase tracking-tight leading-none">{safeInputs.brandName || "Workshop Client"}</p>
+            <p className="text-sm font-bold text-gray-500 mt-2">{safeInputs.fullName} — {safeInputs?.yourRole?.[0] || 'Stakeholder'}</p>
           </div>
           <div className="space-y-3 text-right">
             <p className="text-[11px] font-black uppercase tracking-[0.5em] text-gray-300">Strategic Release</p>
@@ -136,13 +153,13 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
 
         <div className="grid grid-cols-1 gap-12">
           <Layer1 
-            title={inputs.brandName + " Growth Playbook"}
+            title={safeInputs.brandName + " Growth Playbook"}
             outcome={outputs.globalSolution?.split('.')[0]}
           >
             <ul className="grid grid-cols-3 gap-8 mt-8">
               <li className="p-6 bg-black text-white rounded-3xl flex flex-col justify-between">
                 <span className="text-[8px] font-black uppercase tracking-widest text-primary mb-4">Core Mission</span>
-                <p className="text-xs font-bold italic leading-tight uppercase">"{inputs.offer?.substring(0, 60)}..."</p>
+                <p className="text-xs font-bold italic leading-tight uppercase">"{safeInputs.offer?.substring(0, 60)}..."</p>
               </li>
               <li className="p-6 border-2 border-black rounded-3xl flex flex-col justify-between">
                 <span className="text-[8px] font-black uppercase tracking-widest text-gray-300 mb-4">Market Focus</span>
@@ -358,7 +375,7 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
               <div className="mt-8 flex items-center gap-10 border-t border-gray-100 pt-8">
                  <div className="space-y-1">
                     <span className="text-[8px] font-black uppercase text-gray-400">Primary Focus</span>
-                    <p className="text-sm font-bold uppercase text-primary italic leading-none">{inputs?.targetIcpDesignation?.[0] || icps[0]?.name}</p> 
+                    <p className="text-sm font-bold uppercase text-primary italic leading-none">{safeInputs?.targetIcpDesignation?.[0] || icps[0]?.name}</p> 
                  </div>
                  <div className="h-4 w-px bg-gray-100" />
                  <div className="space-y-1">
@@ -423,11 +440,11 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
                  </div>
                  <div className="flex gap-6 border-l border-white/10 pl-10">
                     <div className="flex flex-col items-center gap-2">
-                       <div className="w-10 h-10 rounded-full border-2 border-primary shadow-lg shadow-primary/20" style={{ backgroundColor: inputs.primaryColor || '#000' }}></div>
+                       <div className="w-10 h-10 rounded-full border-2 border-primary shadow-lg shadow-primary/20" style={{ backgroundColor: safeInputs.primaryColor || '#000' }}></div>
                        <span className="text-[8px] font-black uppercase tracking-widest text-gray-500">Primary</span>
                     </div>
                     <div className="flex flex-col items-center gap-2">
-                       <div className="w-10 h-10 rounded-full border-2 border-gray-700 shadow-md" style={{ backgroundColor: inputs.secondaryColor || '#fff' }}></div>
+                       <div className="w-10 h-10 rounded-full border-2 border-gray-700 shadow-md" style={{ backgroundColor: safeInputs.secondaryColor || '#fff' }}></div>
                        <span className="text-[8px] font-black uppercase tracking-widest text-gray-500">Secondary</span>
                     </div>
                  </div>
@@ -505,7 +522,7 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
                  <div className="space-y-4">
                     <h5 className="text-[10px] font-black uppercase text-gray-400 italic">Strategic Channel Split</h5>
                     <div className="p-4 bg-black text-white rounded-xl text-center">
-                       <p className="text-xs font-black uppercase tracking-widest italic">{inputs.outreachChannel || 'LinkedIn + Authority Email'}</p>
+                       <p className="text-xs font-black uppercase tracking-widest italic">{safeInputs.outreachChannel || 'LinkedIn + Authority Email'}</p>
                     </div>
                  </div>
               </Layer2>
@@ -673,7 +690,7 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
               <div className="grid grid-cols-2 gap-12 text-[11px]">
                  <div className="space-y-4">
                     <h5 className="text-[9px] font-black uppercase text-black">Mission Context</h5>
-                    <p className="opacity-70">{inputs.linkedinAbout || "N/A"}</p> 
+                    <p className="opacity-70">{safeInputs.linkedinAbout || "N/A"}</p> 
                  </div>
                  <div className="space-y-4">
                     <h5 className="text-[9px] font-black uppercase text-black">Target ICP Focus</h5>
@@ -700,7 +717,7 @@ export const StrategyReport = ({ state }: StrategyReportProps) => {
                     </div>
                     <div className="flex justify-between">
                        <span>Campaign Angle</span>
-                       <span className="text-primary">{inputs.outreachAngle || 'Authority'}</span>
+                       <span className="text-primary">{safeInputs.outreachAngle || 'Authority'}</span>
                     </div>
                  </div>
               </div>

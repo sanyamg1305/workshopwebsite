@@ -497,7 +497,24 @@ const Step1ProfileCheck = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleOptimize = async () => {    setShowErrors(true);
+  // SAFE STATE SHAPE: Global fallbacks to prevent "undefined" crashes
+  const safeInputs = {
+    yourRole: [],
+    yourRoleOther: "",
+    companyName: "",
+    offer: "",
+    targetIcpDesignation: [],
+    targetIcpDesignationOther: "",
+    tonePreference: [],
+    tonePreferenceOther: "",
+    linkedinUrl: "",
+    linkedinHeadline: "",
+    linkedinAbout: "",
+    ...(state?.inputs || {})
+  };
+
+  const handleOptimize = async () => {
+    setShowErrors(true);
     setTimeout(async () => {
       const firstError = document.querySelector(".border-red-500, .border-red-500\\/50");
       if (firstError) {
@@ -509,15 +526,15 @@ const Step1ProfileCheck = () => {
       setError(null);
 
       // SAFE GUARDS: Validate yourRole
-      const currentRole = state?.inputs?.yourRole || [];
-      const currentRoleOther = state?.inputs?.yourRoleOther || "";
+      const yourRole = safeInputs.yourRole || [];
+      const yourRoleOther = safeInputs.yourRoleOther || "";
       
-      if (!currentRole.length && !currentRoleOther.trim()) {
+      if (!yourRole.length && !yourRoleOther.trim()) {
         setError("Role is required. Please select or type your professional role.");
         setLoading(false);
         return;
       }
-      if (!state.inputs.companyName) {
+      if (!safeInputs.companyName) {
         setError("Please complete Role and Company to optimize your profile");
         setLoading(false);
         return;
@@ -545,8 +562,8 @@ const Step1ProfileCheck = () => {
           <input
             type="url"
             placeholder="https://linkedin.com/in/..."
-            className={`w-full px-4 py-3 rounded-xl border ${showErrors && (!state.inputs.linkedinUrl || String(state.inputs.linkedinUrl).trim() === "") ? "border-red-500" : "border-border"} focus:ring-2 focus:ring-primary/50 outline-none bg-bg`}
-            value={state.inputs.linkedinUrl}
+            className={`w-full px-4 py-3 rounded-xl border ${showErrors && (!safeInputs.linkedinUrl || safeInputs.linkedinUrl.trim() === "") ? "border-red-500" : "border-border"} focus:ring-2 focus:ring-primary/50 outline-none bg-bg`}
+            value={safeInputs.linkedinUrl}
             onChange={(e) => updateInput("linkedinUrl", e.target.value)}
           />
           
@@ -557,7 +574,7 @@ const Step1ProfileCheck = () => {
             type="text"
             placeholder="e.g. Founder @ XYZ | Helping..."
             className="w-full px-4 py-3 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg"
-            value={state.inputs.linkedinHeadline}
+            value={safeInputs.linkedinHeadline}
             onDebounce={(val) => updateInput('linkedinHeadline', val)}
           />
         </div>
@@ -567,10 +584,10 @@ const Step1ProfileCheck = () => {
           <DebouncedTextarea
             placeholder="Paste your About section here..."
             className="w-full px-4 py-3 rounded-xl border border-border focus:ring-2 focus:ring-primary/50 outline-none bg-bg min-h-[120px]"
-            value={state.inputs.linkedinAbout}
+            value={safeInputs.linkedinAbout}
             onDebounce={(val) => updateInput('linkedinAbout', val)}
           />
-          {!state.inputs.linkedinAbout && (
+          {!safeInputs.linkedinAbout && (
             <p className="text-[10px] text-primary/80 font-medium italic animate-pulse">
               Tip: For a more accurate score, include your About section.
             </p>
@@ -584,17 +601,17 @@ const Step1ProfileCheck = () => {
               type="text"
               required
               placeholder="e.g. Myntmore"
-              className={`w-full px-4 py-3 rounded-xl border ${showErrors && !state.inputs.companyName ? "border-red-500" : "border-border"} focus:ring-2 focus:ring-primary/50 outline-none bg-bg`}
-              value={state.inputs.companyName}
+              className={`w-full px-4 py-3 rounded-xl border ${showErrors && !safeInputs.companyName ? "border-red-500" : "border-border"} focus:ring-2 focus:ring-primary/50 outline-none bg-bg`}
+              value={safeInputs.companyName}
               onDebounce={(val) => updateInput("companyName", val)}
             />
           </div>
           <MultiSelectDropdown showErrors={showErrors}
             label="Your Professional Role / Niche"
             options={['Founder', 'Sales Leader', 'Growth Marketer', 'Content Creator', 'Consultant', 'Agency Owner', 'Professional Service']}
-            selected={state?.inputs?.yourRole || []}
+            selected={safeInputs.yourRole}
             onChange={(val) => updateInput('yourRole', val)}
-            otherValue={state?.inputs?.yourRoleOther || ""}
+            otherValue={safeInputs.yourRoleOther}
             onOtherChange={(val) => updateInput('yourRoleOther', val)}
             placeholder="Select Role(s)"
           />
@@ -604,9 +621,9 @@ const Step1ProfileCheck = () => {
           <MultiSelectDropdown showErrors={showErrors}
             label="Ideal Customer Designation *"
             options={['Founders/CEOs', 'VPs of Sales/Revenue', 'Marketing Leads', 'Product Manager', 'HR/L&D Leader', 'SMB Business Owners']}
-            selected={state?.inputs?.targetIcpDesignation || []}
+            selected={safeInputs.targetIcpDesignation}
             onChange={(val) => updateInput('targetIcpDesignation', val)}
-            otherValue={state?.inputs?.targetIcpDesignationOther || ""}
+            otherValue={safeInputs.targetIcpDesignationOther}
             onOtherChange={(val) => updateInput('targetIcpDesignationOther', val)}
             placeholder="Select Target(s)"
           />
@@ -617,8 +634,8 @@ const Step1ProfileCheck = () => {
           <DebouncedInput
             type="text"
             placeholder="e.g. We help [ICP] achieve [outcome] or X → Y for Z"
-            className={`w-full px-4 py-3 rounded-xl border ${showErrors && !state.inputs.offer ? "border-red-500" : "border-border"} focus:ring-2 focus:ring-primary/50 outline-none bg-bg`}
-            value={state.inputs.offer}
+            className={`w-full px-4 py-3 rounded-xl border ${showErrors && !safeInputs.offer ? "border-red-500" : "border-border"} focus:ring-2 focus:ring-primary/50 outline-none bg-bg`}
+            value={safeInputs.offer}
             onDebounce={(val) => updateInput('offer', val)}
           />
           <p className="text-[10px] text-text-secondary">Example: "Reduce hiring time → for Talent Leaders → using automation"</p>
@@ -627,9 +644,9 @@ const Step1ProfileCheck = () => {
         <MultiSelectDropdown showErrors={showErrors}
           label="Tone Preference"
           options={TONES}
-          selected={state.inputs.tonePreference}
+          selected={safeInputs.tonePreference}
           onChange={(val) => updateInput('tonePreference', val)}
-          otherValue={state.inputs.tonePreferenceOther}
+          otherValue={safeInputs.tonePreferenceOther}
           onOtherChange={(val) => updateInput('tonePreferenceOther', val)}
           placeholder="Select Tone(s)"
         />
@@ -838,6 +855,11 @@ const Step2ICPBuilder = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeIcp, setActiveIcp] = useState<1 | 2 | 3>(1);
 
+  // SAFE STATE SHAPE
+  const safeInputs = {
+    ...(state?.inputs || {})
+  };
+
   const handleGenerate = async () => {
     setLoading(true);
     setError(null);
@@ -872,27 +894,27 @@ const Step2ICPBuilder = () => {
         <MultiSelectDropdown showErrors={showErrors}
           label="Designation / Role"
           options={ROLES}
-          selected={(state.inputs?.[`icp${num}_roles` as keyof WorkshopState['inputs']] as string[]) || []}
+          selected={(safeInputs?.[`icp${num}_roles` as keyof WorkshopState['inputs']] as string[]) || []}
           onChange={(val) => updateInput(`icp${num}_roles` as any, val)}
-          otherValue={(state.inputs?.[`icp${num}_rolesOther` as keyof WorkshopState['inputs']] as string) || ""}
+          otherValue={(safeInputs?.[`icp${num}_rolesOther` as keyof WorkshopState['inputs']] as string) || ""}
           onOtherChange={(val) => updateInput(`icp${num}_rolesOther` as any, val)}
         />
 
         <MultiSelectDropdown showErrors={showErrors}
           label="Company Size"
           options={SIZES}
-          selected={(state.inputs?.[`icp${num}_sizes` as keyof WorkshopState['inputs']] as string[]) || []}
+          selected={(safeInputs?.[`icp${num}_sizes` as keyof WorkshopState['inputs']] as string[]) || []}
           onChange={(val) => updateInput(`icp${num}_sizes` as any, val)}
-          otherValue={(state.inputs?.[`icp${num}_sizesOther` as keyof WorkshopState['inputs']] as string) || ""}
+          otherValue={(safeInputs?.[`icp${num}_sizesOther` as keyof WorkshopState['inputs']] as string) || ""}
           onOtherChange={(val) => updateInput(`icp${num}_sizesOther` as any, val)}
         />
 
         <MultiSelectDropdown showErrors={showErrors}
           label="Industry"
           options={INDUSTRIES}
-          selected={(state.inputs?.[`icp${num}_industries` as keyof WorkshopState['inputs']] as string[]) || []}
+          selected={(safeInputs?.[`icp${num}_industries` as keyof WorkshopState['inputs']] as string[]) || []}
           onChange={(val) => updateInput(`icp${num}_industries` as any, val)}
-          otherValue={(state.inputs?.[`icp${num}_industriesOther` as keyof WorkshopState['inputs']] as string) || ""}
+          otherValue={(safeInputs?.[`icp${num}_industriesOther` as keyof WorkshopState['inputs']] as string) || ""}
           onOtherChange={(val) => updateInput(`icp${num}_industriesOther` as any, val)}
         />
         <div className="flex items-center gap-4 mt-8">
@@ -1042,6 +1064,11 @@ const Step3ValueProp = () => {
   const { state, setStep, completeAndGoToStep, updateOutput, generateOutput } = useWorkshop();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // SAFE STATE SHAPE
+  const safeInputs = {
+    ...(state?.inputs || {})
+  };
 
   const handleGenerate = async () => {
     setShowErrors(true);
@@ -1206,13 +1233,22 @@ const Step4WebsiteBuilder = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // SAFE STATE SHAPE
+  const safeInputs = {
+    brandName: "",
+    primaryColor: "#000000",
+    secondaryColor: "#FFFFFF",
+    inspirationImage: null,
+    ...(state?.inputs || {})
+  };
+
   const handleGenerate = async () => {
     setShowErrors(true);
     setLoading(true);
     setError(null);
 
     // BRAND VALIDATION
-    if (!state.inputs.brandName?.trim()) {
+    if (!safeInputs.brandName?.trim()) {
       setError("Enter a brand name first");
       setLoading(false);
       return;
@@ -1304,7 +1340,7 @@ const Step4WebsiteBuilder = () => {
                 type="text"
                 className="w-full px-4 py-3 rounded-xl border border-border bg-bg focus:border-primary/50 outline-none transition-all"
                 placeholder="e.g. Myntmore"
-                value={state.inputs.brandName}
+                value={safeInputs.brandName}
                 onDebounce={(val) => updateInput('brandName', val)}
               />
             </div>
@@ -1316,13 +1352,13 @@ const Step4WebsiteBuilder = () => {
                   <input
                     type="color"
                     className="h-12 w-12 rounded-lg border border-border p-1 cursor-pointer shrink-0 bg-transparent"
-                    value={state.inputs.primaryColor}
+                    value={safeInputs.primaryColor}
                     onChange={(e) => updateInput('primaryColor', e.target.value)}
                   />
                   <DebouncedInput
                     type="text"
                     className="w-full px-3 py-3 rounded-xl border border-border bg-bg focus:border-primary/50 outline-none font-mono text-xs transition-all"
-                    value={state.inputs.primaryColor}
+                    value={safeInputs.primaryColor}
                     onDebounce={(val) => updateInput('primaryColor', val)}
                   />
                 </div>
@@ -1333,13 +1369,13 @@ const Step4WebsiteBuilder = () => {
                   <input
                     type="color"
                     className="h-12 w-12 rounded-lg border border-border p-1 cursor-pointer shrink-0 bg-transparent"
-                    value={state.inputs.secondaryColor}
+                    value={safeInputs.secondaryColor}
                     onChange={(e) => updateInput('secondaryColor', e.target.value)}
                   />
                   <DebouncedInput
                     type="text"
                     className="w-full px-3 py-3 rounded-xl border border-border bg-bg focus:border-primary/50 outline-none font-mono text-xs transition-all"
-                    value={state.inputs.secondaryColor}
+                    value={safeInputs.secondaryColor}
                     onDebounce={(val) => updateInput('secondaryColor', val)}
                   />
                 </div>
@@ -1364,13 +1400,13 @@ const Step4WebsiteBuilder = () => {
                   <div className="flex flex-col items-center text-text-secondary group-hover:text-primary">
                     <Upload size={24} className="mb-2" />
                     <span className="text-sm font-bold">
-                      {state.inputs.inspirationImage ? 'Change Screenshot' : 'Upload UI Inspiration'}
+                      {safeInputs.inspirationImage ? 'Change Screenshot' : 'Upload UI Inspiration'}
                     </span>
                   </div>
                 </label>
-                {state.inputs.inspirationImage && (
+                {safeInputs.inspirationImage && (
                   <div className="w-32 h-32 rounded-2xl border border-border overflow-hidden relative group shadow-lg">
-                    <img src={state.inputs.inspirationImage} alt="Inspiration" className="w-full h-full object-cover" />
+                    <img src={safeInputs.inspirationImage} alt="Inspiration" className="w-full h-full object-cover" />
                     <button 
                       onClick={() => updateInput('inspirationImage', null)}
                       className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white font-bold text-xs"
@@ -1470,6 +1506,11 @@ const Step5GTMStrategy = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'leadGen' | 'partner' | 'event' | 'magnets'>('leadGen');
+
+  // SAFE STATE SHAPE
+  const safeInputs = {
+    ...(state?.inputs || {})
+  };
 
   const handleGenerate = async () => {    setShowErrors(true);
     setTimeout(async () => {
@@ -1884,6 +1925,13 @@ const Step6OutreachEngine = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // SAFE STATE SHAPE
+  const safeInputs = {
+    outreachAngle: "",
+    outreachChannel: "Both",
+    ...(state?.inputs || {})
+  };
+
   const handleGenerate = async () => {
     setShowErrors(true);
     setTimeout(async () => {
@@ -1903,7 +1951,7 @@ const Step6OutreachEngine = () => {
         return;
       }
 
-      if (!state.inputs.outreachAngle) {
+      if (!safeInputs.outreachAngle) {
         setError("Please select a strategic angle first.");
         setLoading(false);
         return;
@@ -1940,7 +1988,7 @@ const Step6OutreachEngine = () => {
                   key={c}
                   onClick={() => updateInput('outreachChannel', c)}
                   className={`flex-1 py-3 rounded-xl border font-bold text-sm transition-all ${
-                    state.inputs.outreachChannel === c 
+                    safeInputs.outreachChannel === c 
                       ? 'bg-primary border-primary text-black' 
                       : 'border-border text-text-secondary hover:border-primary/50'
                   }`}
@@ -1959,7 +2007,7 @@ const Step6OutreachEngine = () => {
                   key={a}
                   onClick={() => updateInput('outreachAngle', a)}
                   className={`py-2 rounded-xl border font-bold text-[10px] uppercase tracking-wider transition-all ${
-                    state.inputs.outreachAngle === a 
+                    safeInputs.outreachAngle === a 
                       ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' 
                       : 'border-border text-text-secondary hover:border-primary/50'
                   }`}
@@ -2004,7 +2052,7 @@ const Step6OutreachEngine = () => {
               <Zap size={64} className="text-primary" />
             </div>
             <h4 className="text-xs font-black uppercase text-primary mb-4 tracking-[0.2em] flex items-center gap-2">
-              <Sparkles size={16} /> Strategy Hook: {state.inputs.outreachAngle}
+              <Sparkles size={16} /> Strategy Hook: {safeInputs.outreachAngle}
             </h4>
             <p className="text-xl font-black leading-tight italic">
               "{out.strategySummary}"
@@ -2931,7 +2979,20 @@ export default function App() {
     
     // Captured via functional setState to ensure we have the absolute latest snapshot
     setState(prev => {
-      currentInputs = prev.inputs;
+      // SAFE STATE SHAPE: Apply mandatory defaults to prevent crashes during generation
+      const safeInputs = {
+        yourRole: [],
+        yourRoleOther: "",
+        companyName: "",
+        offer: "",
+        targetIcpDesignation: [],
+        targetIcpDesignationOther: "",
+        tonePreference: [],
+        tonePreferenceOther: "",
+        ...(prev?.inputs || {})
+      } as WorkshopState['inputs'];
+
+      currentInputs = safeInputs;
       currentOutputs = prev.outputs;
       return prev;
     });
